@@ -187,8 +187,10 @@ test.describe('Cover section', () => {
       };
     });
 
-    expect(styles.backgroundImage).toContain('rgb(154, 68, 98)');
+    // Anchored on the darker wine stop only (not the lighter one) so the white label clears
+    // 7:1 contrast against it — see palette.test.ts for the measured ratio.
     expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
+    expect(styles.backgroundImage).not.toContain('rgb(154, 68, 98)');
     expect(styles.borderTopColor).toBe('rgb(205, 168, 105)');
     expect(styles.borderRightColor).toBe('rgb(205, 168, 105)');
     expect(styles.borderBottomColor).toBe('rgb(205, 168, 105)');
@@ -213,8 +215,8 @@ test.describe('Cover section', () => {
 
     const gradientCount = (styles.backgroundImage.match(/[a-z-]+-gradient\(/gi) ?? []).length;
     expect(gradientCount).toBeGreaterThanOrEqual(2);
-    expect(styles.backgroundImage).toContain('rgb(154, 68, 98)');
     expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
+    expect(styles.backgroundImage).not.toContain('rgb(154, 68, 98)');
 
     // Split the resolved `box-shadow` on top-level commas only — a layer's own colour may be an
     // `rgba(...)` with internal commas, so a naive `.split(',')` would cut a layer in half.
@@ -241,6 +243,40 @@ test.describe('Cover section', () => {
     expect(outerLayers.length).toBeGreaterThanOrEqual(2);
 
     expect(styles.borderTopWidth).toBeGreaterThanOrEqual(2);
+  });
+
+  test('the open button is large enough to read easily on a short phone screen', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('./');
+
+    const button = page.getByRole('button', { name: 'Abrir invitación' });
+    const box = await button.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(240);
+    expect(box!.height).toBeGreaterThanOrEqual(56);
+
+    const fontSize = await button.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(fontSize).toBeGreaterThanOrEqual(20);
+  });
+
+  test('the open button label grows larger on a wide desktop viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('./');
+
+    const phoneFontSize = await page
+      .getByRole('button', { name: 'Abrir invitación' })
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await page.reload();
+
+    const desktopFontSize = await page
+      .getByRole('button', { name: 'Abrir invitación' })
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+
+    expect(desktopFontSize).toBeGreaterThan(phoneFontSize);
   });
 
   test('the open button label reads as premium serif with a visible keyboard focus', async ({
