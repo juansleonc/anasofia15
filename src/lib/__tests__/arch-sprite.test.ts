@@ -101,7 +101,7 @@ const BRANCH_IDS = ['leaf-olive', 'leaf-gold'];
 const BRANCH_LEAF_GRADIENT: Record<string, string> = { 'leaf-olive': 'leaf-olive-gradient', 'leaf-gold': 'leaf-gold-metal' };
 const LEAF_IDS = ['leaf-eucalyptus', 'leaf-olive', 'leaf-gold'];
 const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom'];
-const CLUSTER_IDS = ['leaf-laurel-cluster'];
+const CLUSTER_IDS = ['leaf-laurel-cluster', 'leaf-eucalyptus-cluster'];
 
 /** Both ends of a single stem path drawn with M plus absolute C or relative c curves. */
 function stemEnds(d: string): Point[] {
@@ -1028,6 +1028,22 @@ describe('ArchSprite foliage clusters', () => {
     expect(leaves.length).toBeGreaterThanOrEqual(15);
     const gold = leaves.filter((leaf) => leaf.getAttribute('fill') === 'url(#leaf-gold-metal)');
     expect(gold.length / leaves.length).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it('the eucalyptus cluster has >= 14 round leaves on 3 stems, >= 2 gold and >= 2 gilt', () => {
+    const el = symbol('leaf-eucalyptus-cluster');
+    const stems = clusterStems(el);
+    expect(stems.length).toBe(3);
+    for (const stem of stems) {
+      const [start] = stemEnds(stem.getAttribute('d') ?? '');
+      expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
+    }
+    const leaves = Array.from(el.querySelectorAll('ellipse[fill="url(#leaf-eucalyptus-gradient)"], ellipse[fill="url(#leaf-gold-metal)"]'));
+    expect(leaves.length).toBeGreaterThanOrEqual(14);
+    const gold = leaves.filter((leaf) => leaf.getAttribute('fill') === 'url(#leaf-gold-metal)');
+    expect(gold.length).toBeGreaterThanOrEqual(2);
+    const gilt = leaves.filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
+    expect(gilt.length).toBeGreaterThanOrEqual(2);
   });
 });
 
