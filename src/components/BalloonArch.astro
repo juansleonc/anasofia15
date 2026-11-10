@@ -1,41 +1,51 @@
 ---
-// Decorative balloon-and-flower arch that frames the cover: two independently generated layouts
-// (portrait vs landscape, see src/lib/cover-arch.ts) rendered as SVG, with only one shown at a
-// time via an aspect-ratio media query below. Every item is a <use> of a symbol defined once in
-// ArchSprite.astro. Purely decorative — aria-hidden and pointer-events: none — so it carries no
-// accessible content and never intercepts clicks on the title/button it sits above.
-import { ARCH_SPECS, archFadeMask, buildArch, type ArchLayout } from '../lib/cover-arch';
+// Decorative balloon-and-flower garland that frames the cover: two hand-composed layouts
+// (portrait vs landscape, see src/lib/cover-garland.ts) rendered as SVG in their authored paint
+// order, with only one shown at a time via an aspect-ratio media query below. Every item is a
+// <use> of a symbol defined once in ArchSprite.astro. Purely decorative — aria-hidden and
+// pointer-events: none — so it carries no accessible content and never intercepts clicks on the
+// title/button it sits above.
+import { GARLAND, garlandFadeMask, kindOf } from '../lib/cover-garland';
 
-const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: string }[] = [
-  { name: 'portrait', layout: buildArch(ARCH_SPECS.portrait), mask: archFadeMask(ARCH_SPECS.portrait) },
-  { name: 'landscape', layout: buildArch(ARCH_SPECS.landscape), mask: archFadeMask(ARCH_SPECS.landscape) },
-];
+const layoutNames = ['portrait', 'landscape'] as const;
+// Width per unit of crown height, so the portrait floor below can size the SVG from a crown height.
+const portraitAspect = GARLAND.portrait.width / GARLAND.portrait.clear.top;
 ---
 
-<div class="balloon-arch" data-testid="balloon-arch" aria-hidden="true">
+<div
+  class="balloon-arch"
+  data-testid="balloon-arch"
+  aria-hidden="true"
+  style={`--garland-portrait-aspect:${portraitAspect}`}
+>
   <div class="balloon-arch__shadow" data-testid="balloon-arch-shadow">
     {
-      layouts.map(({ name, layout, mask }) => (
-        <svg
-          class="balloon-arch__layout"
-          data-arch-layout={name}
-          viewBox={`0 0 ${layout.width} ${layout.height}`}
-          style={`mask-image:${mask};-webkit-mask-image:${mask}`}
-        >
-          {layout.items.map((item) => (
-            <use
-              href={`#${item.symbol}`}
-              data-arch-item={item.kind}
-              data-arch-symbol={item.symbol}
-              x={item.x - item.size / 2}
-              y={item.y - item.size / 2}
-              width={item.size}
-              height={item.size}
-              transform={`rotate(${item.rotate} ${item.x} ${item.y})`}
-            />
-          ))}
-        </svg>
-      ))
+      layoutNames.map((name) => {
+        const layout = GARLAND[name];
+        const mask = garlandFadeMask(layout);
+        return (
+          <svg
+            class="balloon-arch__layout"
+            data-arch-layout={name}
+            viewBox={`0 0 ${layout.width} ${layout.height}`}
+            style={`mask-image:${mask};-webkit-mask-image:${mask}`}
+          >
+            {layout.items.map((item) => (
+              <use
+                href={`#${item.symbol}`}
+                data-arch-item={kindOf(item.symbol)}
+                data-arch-symbol={item.symbol}
+                data-garland-depth={item.depth}
+                x={item.x - item.size / 2}
+                y={item.y - item.size / 2}
+                width={item.size}
+                height={item.size}
+                transform={`rotate(${item.rotate} ${item.x} ${item.y})`}
+              />
+            ))}
+          </svg>
+        );
+      })
     }
   </div>
 </div>
@@ -70,6 +80,15 @@ const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: strin
     width: 100%;
     height: auto;
     overflow: hidden;
+  }
+
+  /* Tall phones: a width-scaled crown would leave an empty gap, so the crown never ends above 36vh.
+     The SVG keeps its aspect ratio and grows past both sides, cropped symmetrically, which only
+     pushes the corner items further out of the text zone. */
+  .balloon-arch__layout[data-arch-layout='portrait'] {
+    width: max(100%, calc(36vh * var(--garland-portrait-aspect)));
+    margin-left: 50%;
+    transform: translateX(-50%);
   }
 
   .balloon-arch__layout[data-arch-layout='landscape'] {

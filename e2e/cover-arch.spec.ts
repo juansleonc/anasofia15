@@ -1,12 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
-import { ARCH_SPECS } from '../src/lib/cover-arch';
+import { GARLAND } from '../src/lib/cover-garland';
 
-// The decorative balloon-and-flower arch that frames the cover: two seeded SVG layouts, one per
-// aspect ratio (see src/lib/cover-arch.ts for the geometry), with only one shown at a time via a
-// CSS media query. Purely decorative — it carries no accessible content and must never sit above
+// The decorative balloon-and-flower garland that frames the cover: two hand-composed SVG layouts,
+// one per aspect ratio (see src/lib/cover-garland.ts for the data), with only one shown at a time
+// via a CSS media query. Purely decorative — it carries no accessible content and must never sit above
 // the page's real controls.
 
 const PHONE = { width: 375, height: 667 };
+const TALL_PHONE = { width: 390, height: 844 };
 const DESKTOP = { width: 1440, height: 800 };
 
 interface Rect {
@@ -25,16 +26,13 @@ async function visibleLayoutAttrs(page: Page, attr: string): Promise<(string | n
   }, attr);
 }
 
-async function visibleSvgMask(page: Page): Promise<{ rect: Rect; maskImage: string }> {
+async function visibleSvgMask(page: Page): Promise<string> {
   return page.evaluate(() => {
     const layouts = [...document.querySelectorAll('svg[data-arch-layout]')];
     const visible = layouts.find((svg) => getComputedStyle(svg).display !== 'none');
-    if (!visible) return { rect: { x: 0, y: 0, width: 0, height: 0 }, maskImage: '' };
+    if (!visible) return '';
     const style = getComputedStyle(visible);
-    const rect = visible.getBoundingClientRect();
-    const maskImage =
-      style.getPropertyValue('mask-image') || style.getPropertyValue('-webkit-mask-image');
-    return { rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }, maskImage };
+    return style.getPropertyValue('mask-image') || style.getPropertyValue('-webkit-mask-image');
   });
 }
 
@@ -79,27 +77,42 @@ test.describe('Balloon arch', () => {
     await expect(page.locator('[data-arch-layout="portrait"]')).toBeHidden();
   });
 
-  test('the visible layout includes every balloon, flower and leaf symbol', async ({ page }) => {
+  test('renders the curated garland in paint order', async ({ page }) => {
+    for (const [viewport, layout] of [
+      [PHONE, GARLAND.portrait],
+      [DESKTOP, GARLAND.landscape],
+    ] as const) {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const kinds = await visibleLayoutAttrs(page, 'data-arch-item');
+      expect(kinds).toHaveLength(layout.items.length);
+
+      const depths = (await visibleLayoutAttrs(page, 'data-garland-depth')).map(Number);
+      expect(depths).toEqual(layout.items.map((item) => item.depth));
+      expect(depths.every((depth, k) => k === 0 || depth >= depths[k - 1])).toBe(true);
+    }
+  });
+
+  test('the visible layout shows all three balloon finishes and all three leaf kinds', async ({
+    page,
+  }) => {
     for (const viewport of [PHONE, DESKTOP]) {
       await page.setViewportSize(viewport);
       await page.goto('./');
 
       const symbols = await visibleLayoutAttrs(page, 'data-arch-symbol');
+      expect(symbols).toContain('balloon-champagne');
+      expect(symbols).toContain('balloon-pink');
+      expect(
+        symbols.some((symbol) =>
+          ['balloon-rosegold', 'balloon-rosegold-satin', 'balloon-champagne-satin'].includes(
+            symbol ?? '',
+          ),
+        ),
+      ).toBe(true);
       expect(symbols).toEqual(
-        expect.arrayContaining([
-          'balloon-pink',
-          'balloon-rosegold',
-          'balloon-rosegold-satin',
-          'balloon-champagne',
-          'balloon-champagne-satin',
-          'rose-pink',
-          'rose-cream',
-          'peony-blush',
-          'blossom',
-          'leaf-eucalyptus',
-          'leaf-olive',
-          'leaf-gold',
-        ]),
+        expect.arrayContaining(['leaf-eucalyptus', 'leaf-olive', 'leaf-gold']),
       );
     }
   });
@@ -115,8 +128,8 @@ test.describe('Balloon arch', () => {
       expect(rects.length).toBeGreaterThan(0);
 
       const topBand = viewport.height * 0.1;
-      const leftStrip = viewport.width * 0.15;
-      const rightStrip = viewport.width * 0.85;
+      const leftStrip = viewport.width * 0.1;
+      const rightStrip = viewport.width * 0.9;
 
       expect(rects.some((rect) => rect.y <= topBand)).toBe(true);
       expect(rects.some((rect) => rect.x <= leftStrip)).toBe(true);
@@ -125,7 +138,7 @@ test.describe('Balloon arch', () => {
   });
 
   test('no arch item overlaps the title or the button', async ({ page }) => {
-    for (const viewport of [PHONE, { width: 390, height: 844 }, DESKTOP]) {
+    for (const viewport of [PHONE, TALL_PHONE, { width: 1366, height: 768 }, DESKTOP]) {
       await page.setViewportSize(viewport);
       await page.goto('./');
       await page.evaluate(() => document.fonts.ready.then(() => undefined));
@@ -148,29 +161,48 @@ test.describe('Balloon arch', () => {
     }
   });
 
-  test('side columns fade out instead of being cut', async ({ page }) => {
-    for (const viewport of [PHONE, DESKTOP]) {
+  test('the portrait garland fills at least a third of a tall phone', async ({ page }) => {
+    await page.setViewportSize(TALL_PHONE);
+    await page.goto('./');
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+    const svgRect = await page.locator('svg[data-arch-layout="portrait"]').boundingBox();
+    expect(svgRect).not.toBeNull();
+    const { width, clear } = GARLAND.portrait;
+    // The garland's own height on screen is its crown: the viewBox clear top at the rendered scale.
+    const crownBottom = svgRect!.y + clear.top * (svgRect!.width / width);
+    expect(crownBottom).toBeGreaterThanOrEqual(0.34 * TALL_PHONE.height);
+
+    const leadRect = await page.getByTestId('cover-title-lead').boundingBox();
+    const nameRect = await page.getByTestId('cover-celebrant-name').boundingBox();
+    const buttonRect = await page.getByRole('button', { name: 'Abrir invitación' }).boundingBox();
+    const targets = [leadRect, nameRect, buttonRect].filter((rect): rect is Rect => rect !== null);
+    expect(targets).toHaveLength(3);
+
+    const archRects = await visibleItemRects(page);
+    expect(archRects.length).toBeGreaterThan(0);
+    for (const archRect of archRects) {
+      for (const target of targets) {
+        expect(rectsIntersect(archRect, target)).toBe(false);
+      }
+    }
+
+    expect(leadRect!.y).toBeGreaterThanOrEqual(crownBottom);
+  });
+
+  test('the layout mask is opaque down to the fade start, then transparent', async ({ page }) => {
+    for (const [viewport, layout] of [
+      [PHONE, GARLAND.portrait],
+      [DESKTOP, GARLAND.landscape],
+    ] as const) {
       await page.setViewportSize(viewport);
       await page.goto('./');
 
-      const { rect: svgRect, maskImage } = await visibleSvgMask(page);
-      expect(maskImage).toContain('linear-gradient');
-      // "transparent" is normalized to its rgba() equivalent by the browser; the gradient must
-      // still end fully transparent at the 100% stop (the old hard-clip line).
+      const maskImage = await visibleSvgMask(page);
+      const opaqueTo = (layout.fadeStart / layout.height) * 100;
+      expect(maskImage).toMatch(new RegExp(`^linear-gradient\\(.*\\) ${opaqueTo}%, `));
+      // "transparent" is normalized to its rgba() equivalent by the browser.
       expect(maskImage.endsWith('rgba(0, 0, 0, 0) 100%)')).toBe(true);
-
-      const spec = viewport === PHONE ? ARCH_SPECS.portrait : ARCH_SPECS.landscape;
-      const fadeStartPx = svgRect.y + svgRect.height * (spec.fadeStart / spec.height);
-
-      const rects = await visibleItemRects(page);
-      const leftStrip = viewport.width * 0.15;
-      const rightStrip = viewport.width * 0.85;
-      const outerItems = rects.filter((rect) => {
-        const centerX = rect.x + rect.width / 2;
-        return centerX <= leftStrip || centerX >= rightStrip;
-      });
-
-      expect(outerItems.some((rect) => rect.y + rect.height > fadeStartPx)).toBe(true);
     }
   });
 
