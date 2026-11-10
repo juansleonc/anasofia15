@@ -59,6 +59,14 @@ test.describe('Background music toggle: present (real file dropped)', () => {
     expect(pausedOnLoad).toBe(true);
   });
 
+  test('audio element loops and never eagerly preloads the track', async ({ page }) => {
+    await page.goto('./');
+
+    const audio = page.getByTestId('background-audio');
+    await expect(audio).toHaveAttribute('loop', '');
+    await expect(audio).toHaveAttribute('preload', 'none');
+  });
+
   test('clicking "Abrir invitación" unlocks and starts playback', async ({ page }) => {
     await page.goto('./');
 

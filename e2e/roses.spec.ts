@@ -235,6 +235,7 @@ test.describe('Arch flowers have no halo', () => {
       const rPx = result.r * result.scale;
       let maxAlphaOuter = 0;
       let maxAlphaBand = 0;
+      let opaqueInside = 0;
       for (let y = 0; y < 256; y++) {
         for (let x = 0; x < 256; x++) {
           const alpha = result.pixels[(y * 256 + x) * 4 + 3];
@@ -243,12 +244,17 @@ test.describe('Arch flowers have no halo', () => {
             maxAlphaOuter = Math.max(maxAlphaOuter, alpha);
           } else if (r >= rPx) {
             maxAlphaBand = Math.max(maxAlphaBand, alpha);
+          } else if (alpha >= 200) {
+            opaqueInside++;
           }
         }
       }
 
       expect(maxAlphaOuter).toBeLessThanOrEqual(12);
       expect(maxAlphaBand).toBeLessThanOrEqual(64);
+      // A blank render (petals failed to paint at all) would otherwise pass the halo checks above
+      // vacuously — prove the symbol actually drew something substantial inside its own circle too.
+      expect(opaqueInside).toBeGreaterThanOrEqual(500);
     });
   }
 });
