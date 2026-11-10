@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ARCH_SPECS, buildArch, type ArchSpec } from '../cover-arch';
+import { ARCH_SPECS, archClearanceVars, buildArch, type ArchSpec } from '../cover-arch';
 
 const SPECS: ArchSpec[] = [ARCH_SPECS.portrait, ARCH_SPECS.landscape];
 
@@ -153,6 +153,15 @@ describe('buildArch', () => {
       expect(crownLeft).toBe(true);
       expect(crownRight).toBe(true);
     }
+  });
+});
+
+describe('archClearanceVars', () => {
+  it('derives the portrait and landscape band ratios from the specs', () => {
+    const vars = archClearanceVars(ARCH_SPECS);
+    const portraitRatio = ARCH_SPECS.portrait.band / ARCH_SPECS.portrait.width;
+    const landscapeRatio = ARCH_SPECS.landscape.band / ARCH_SPECS.landscape.width;
+    expect(vars).toBe(`--arch-band-portrait:${portraitRatio};--arch-band-landscape:${landscapeRatio}`);
   });
 });
 

@@ -341,6 +341,13 @@ function clampOutOfClearZone(item: ArchItem, spec: ArchSpec): ArchItem {
   };
 }
 
+/** Inline-style string tying the text clear-zone padding to the same band/width ratio as the geometry. */
+export function archClearanceVars(specs: typeof ARCH_SPECS): string {
+  const portraitRatio = specs.portrait.band / specs.portrait.width;
+  const landscapeRatio = specs.landscape.band / specs.landscape.width;
+  return `--arch-band-portrait:${portraitRatio};--arch-band-landscape:${landscapeRatio}`;
+}
+
 export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
   const points = spinePoints(spec);
