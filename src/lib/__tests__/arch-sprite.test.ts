@@ -862,6 +862,14 @@ describe('ArchSprite foliage', () => {
     expect(leaves.length).toBeGreaterThanOrEqual(7);
   });
 
+  it('leaf-eucalyptus carries 1-2 gilt leaf edges', () => {
+    const leaves = symbol('leaf-eucalyptus').querySelectorAll('[fill="url(#leaf-eucalyptus-gradient)"]');
+    const gilt = Array.from(leaves).filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
+    expect(leaves.length).toBeGreaterThanOrEqual(7);
+    expect(gilt.length).toBeGreaterThanOrEqual(1);
+    expect(gilt.length).toBeLessThanOrEqual(2);
+  });
+
   it('leaf-eucalyptus has one multi-subpath midrib vein path, one per leaf', () => {
     const vein = veinPath(symbol('leaf-eucalyptus'), 7);
     expect(vein).not.toBeUndefined();
