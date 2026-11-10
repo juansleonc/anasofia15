@@ -313,71 +313,11 @@ test.describe('Cover section', () => {
     }
   });
 
-  test('a thin gold frame surrounds the cover', async ({ page }) => {
+  test('does not render a gold frame around the cover', async ({ page }) => {
     await page.goto('./');
 
-    const frame = page.getByTestId('cover-frame');
-    await expect(frame).toHaveAttribute('aria-hidden', 'true');
-
-    const styles = await frame.evaluate((el) => {
-      const computed = getComputedStyle(el);
-      return {
-        pointerEvents: computed.pointerEvents,
-        borderTopColor: computed.borderTopColor,
-        borderRightColor: computed.borderRightColor,
-        borderBottomColor: computed.borderBottomColor,
-        borderLeftColor: computed.borderLeftColor,
-        borderTopWidth: parseFloat(computed.borderTopWidth),
-        borderRadius: parseFloat(computed.borderTopLeftRadius),
-      };
-    });
-
-    expect(styles.pointerEvents).toBe('none');
-    expect(styles.borderTopColor).toBe('rgb(205, 168, 105)');
-    expect(styles.borderRightColor).toBe('rgb(205, 168, 105)');
-    expect(styles.borderBottomColor).toBe('rgb(205, 168, 105)');
-    expect(styles.borderLeftColor).toBe('rgb(205, 168, 105)');
-    expect(styles.borderTopWidth).toBeGreaterThanOrEqual(0.5);
-    expect(styles.borderTopWidth).toBeLessThanOrEqual(2.5);
-    expect(styles.borderRadius).toBeGreaterThanOrEqual(12);
+    await expect(page.getByTestId('cover-frame')).toHaveCount(0);
   });
-
-  for (const viewport of [
-    { width: 375, height: 667 },
-    { width: 390, height: 844 },
-    { width: 1440, height: 800 },
-  ]) {
-    test(`the frame sits inside the viewport and around the text at ${viewport.width}x${viewport.height}`, async ({
-      page,
-    }) => {
-      await page.setViewportSize(viewport);
-      await page.goto('./');
-
-      const frameBox = await page.getByTestId('cover-frame').boundingBox();
-      expect(frameBox).not.toBeNull();
-      const frame = frameBox!;
-
-      expect(frame.x).toBeGreaterThanOrEqual(4);
-      expect(frame.x).toBeLessThanOrEqual(32);
-      expect(viewport.width - (frame.x + frame.width)).toBeGreaterThanOrEqual(4);
-      expect(viewport.width - (frame.x + frame.width)).toBeLessThanOrEqual(32);
-      expect(frame.y).toBeGreaterThanOrEqual(4);
-      expect(frame.y).toBeLessThanOrEqual(32);
-      expect(frame.y + frame.height).toBeLessThanOrEqual(viewport.height);
-
-      const margin = 8;
-      for (const testId of ['cover-title-lead', 'cover-celebrant-name', 'open-invitation-button']) {
-        const box = await page.getByTestId(testId).boundingBox();
-        expect(box).not.toBeNull();
-        const rect = box!;
-
-        expect(rect.x).toBeGreaterThanOrEqual(frame.x + margin);
-        expect(rect.x + rect.width).toBeLessThanOrEqual(frame.x + frame.width - margin);
-        expect(rect.y).toBeGreaterThanOrEqual(frame.y + margin);
-        expect(rect.y + rect.height).toBeLessThanOrEqual(frame.y + frame.height - margin);
-      }
-    });
-  }
 
   test('the cover has depth and warm ambient light', async ({ page }) => {
     await page.goto('./');
@@ -398,13 +338,33 @@ test.describe('Cover section', () => {
       return {
         pointerEvents: computed.pointerEvents,
         backgroundImage: computed.backgroundImage,
-        clipPath: computed.clipPath,
       };
     });
     expect(lightStyles.pointerEvents).toBe('none');
     const lightGradientCount = (lightStyles.backgroundImage.match(/[a-z-]+-gradient\(/gi) ?? []).length;
     expect(lightGradientCount).toBeGreaterThanOrEqual(2);
-    expect(lightStyles.clipPath).toContain('inset(');
+
+    // With no frame to clip to, the light layer is bounded by the cover itself instead — no
+    // inset rounding, just the cover's own box — and never spills past it horizontally.
+    const coverBox = await page.getByTestId('cover').boundingBox();
+    const lightBox = await light.boundingBox();
+    expect(coverBox).not.toBeNull();
+    expect(lightBox).not.toBeNull();
+    const EDGE_TOLERANCE_PX = 1;
+    expect(lightBox!.x).toBeGreaterThanOrEqual(coverBox!.x - EDGE_TOLERANCE_PX);
+    expect(lightBox!.y).toBeGreaterThanOrEqual(coverBox!.y - EDGE_TOLERANCE_PX);
+    expect(lightBox!.x + lightBox!.width).toBeLessThanOrEqual(
+      coverBox!.x + coverBox!.width + EDGE_TOLERANCE_PX,
+    );
+    expect(lightBox!.y + lightBox!.height).toBeLessThanOrEqual(
+      coverBox!.y + coverBox!.height + EDGE_TOLERANCE_PX,
+    );
+
+    const overflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
 
     // Sits behind the arch: earlier in document order than the balloon-arch container (both are
     // absolutely positioned at the same stacking level, so paint order follows DOM order).

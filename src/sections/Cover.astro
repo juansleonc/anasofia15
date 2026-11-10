@@ -17,9 +17,8 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
   style={archClearanceVars(ARCH_SPECS)}
 >
   <div class="cover__light" data-testid="cover-light" aria-hidden="true"></div>
-  <BalloonArch clipToFrame />
+  <BalloonArch />
   <CoverSparkles />
-  <div class="cover__frame" data-testid="cover-frame" aria-hidden="true"></div>
   <div class="cover__content">
     <div class="cover__glow" data-testid="cover-glow" aria-hidden="true"></div>
     <h1 class="cover__title">
@@ -39,8 +38,8 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
   .cover {
     position: relative;
     /* border-box so `min-height: 100dvh` caps the TOTAL box at one viewport; with the default
-       content-box it only bounded the area inside the padding, leaving the frame's inset and the
-       guest's scroll-locked first screen taller than the viewport. */
+       content-box it only bounded the area inside the padding, leaving the guest's scroll-locked
+       first screen taller than the viewport. */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -54,8 +53,6 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
        cosmetic clamp above. */
     padding-top: max(clamp(3.75rem, 14vh, 6rem), calc(var(--arch-band-portrait) * 100%));
     text-align: center;
-    --cover-frame-inset: clamp(0.5rem, 2.4vw, 1.25rem);
-    --cover-frame-radius: clamp(1rem, 3vw, 1.75rem);
     isolation: isolate;
     /* Depth behind the whole cover: a soft vignette (draws the eye to the centre) over a vertical
        champagne-to-rose wash (reads as light falling from above), both static. */
@@ -74,15 +71,14 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
       );
   }
 
-  /* Warm ambient light behind the arch: a golden haze plus very subtle rays, clipped to the same
-     frame the arch is clipped to (D7) so the light reads as coming from inside the card, not
-     spilling past its edge. Static — no animation, so it needs no reduced-motion handling. */
+  /* Warm ambient light behind the arch: a golden haze plus very subtle rays. No frame to clip to
+     anymore — `inset: 0` already bounds it to the cover's own box, same as before. Static — no
+     animation, so it needs no reduced-motion handling. */
   .cover__light {
     position: absolute;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    clip-path: inset(var(--cover-frame-inset) round var(--cover-frame-radius));
     background-image:
       radial-gradient(
         ellipse 70% 45% at 50% 30%,
@@ -119,20 +115,6 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
       );
     mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, var(--c-white), transparent 75%);
     -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, var(--c-white), transparent 75%);
-  }
-
-  .cover__frame {
-    position: absolute;
-    inset: var(--cover-frame-inset);
-    z-index: 1;
-    border: 1px solid var(--c-champagne-500);
-    border-radius: var(--cover-frame-radius);
-    box-shadow:
-      inset 0 0 0 3px color-mix(in srgb, var(--c-champagne-100) 65%, transparent),
-      inset 0 0 0 4px color-mix(in srgb, var(--c-champagne-300) 55%, transparent),
-      0 0 0 1px color-mix(in srgb, var(--c-champagne-100) 60%, transparent),
-      0 14px 34px -22px color-mix(in srgb, var(--c-rose-700) 35%, transparent);
-    pointer-events: none;
   }
 
   @media (min-aspect-ratio: 1/1) {

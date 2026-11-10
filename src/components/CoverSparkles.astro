@@ -1,6 +1,7 @@
 ---
 // Idle decorative sparkle/bokeh layer scattered across the whole cover (behind the text, including
-// the band behind the title/button — see src/lib/sparkles.ts for why). SSR'd once from the seeded
+// the band behind the title/button — see src/lib/sparkles.ts for why); `inset: 0` bounds it to
+// the cover's own box (no frame to clip to anymore). SSR'd once from the seeded
 // `scatterSparkles` layout so there is no client script: every sparkle is a plain `<span>` with its
 // position/size/timing baked in as `%`/px/ms custom properties, and a CSS keyframe reads them to
 // twinkle `opacity`/`transform` only (compositor-only, no layout/paint cost beyond the first
@@ -72,7 +73,6 @@ const BOKEH_TONES = ['--c-champagne-100', '--c-champagne-200'];
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    clip-path: inset(var(--cover-frame-inset) round var(--cover-frame-radius));
   }
 
   .cover-sparkles__item {
