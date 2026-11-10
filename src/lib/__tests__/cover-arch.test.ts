@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ARCH_SPECS, archClearanceVars, buildArch, type ArchSpec } from '../cover-arch';
+import { ARCH_SPECS, archClearanceVars, archFadeMask, buildArch, type ArchSpec } from '../cover-arch';
 
 const SPECS: ArchSpec[] = [ARCH_SPECS.portrait, ARCH_SPECS.landscape];
 
@@ -162,6 +162,24 @@ describe('archClearanceVars', () => {
     const portraitRatio = ARCH_SPECS.portrait.band / ARCH_SPECS.portrait.width;
     const landscapeRatio = ARCH_SPECS.landscape.band / ARCH_SPECS.landscape.width;
     expect(vars).toBe(`--arch-band-portrait:${portraitRatio};--arch-band-landscape:${landscapeRatio}`);
+  });
+});
+
+describe('archFadeMask', () => {
+  it('keeps fadeStart between the band and the height, for both specs', () => {
+    for (const spec of SPECS) {
+      expect(spec.fadeStart).toBeGreaterThanOrEqual(spec.band);
+      expect(spec.fadeStart).toBeLessThan(spec.height);
+    }
+  });
+
+  it('derives the opaque stop percentage from the spec and fades fully by the bottom', () => {
+    for (const spec of SPECS) {
+      const stopPercent = (spec.fadeStart / spec.height) * 100;
+      const mask = archFadeMask(spec);
+      expect(mask).toContain(`var(--c-white) ${stopPercent}%`);
+      expect(mask.endsWith('transparent 100%)')).toBe(true);
+    }
   });
 });
 

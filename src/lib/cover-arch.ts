@@ -39,6 +39,8 @@ export interface ArchSpec {
   gutter: number;
   /** viewBox y the side columns reach down to (<= height). */
   sideDepth: number;
+  /** viewBox y where the soft fade-out of the side columns starts; it always ends at `height`. */
+  fadeStart: number;
   seed: number;
   counts: { balloons: number; flowers: number; leaves: number };
   /** Balloon diameter range in viewBox units, before taper. */
@@ -58,6 +60,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     band: 150,
     gutter: 34,
     sideDepth: 290,
+    fadeStart: 250,
     seed: 15,
     counts: { balloons: 22, flowers: 10, leaves: 16 },
     sizeRange: [44, 78],
@@ -68,6 +71,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     band: 180,
     gutter: 220,
     sideDepth: 350,
+    fadeStart: 300,
     seed: 1219,
     counts: { balloons: 34, flowers: 14, leaves: 24 },
     sizeRange: [60, 110],
@@ -346,6 +350,16 @@ export function archClearanceVars(specs: typeof ARCH_SPECS): string {
   const portraitRatio = specs.portrait.band / specs.portrait.width;
   const landscapeRatio = specs.landscape.band / specs.landscape.width;
   return `--arch-band-portrait:${portraitRatio};--arch-band-landscape:${landscapeRatio}`;
+}
+
+/**
+ * CSS `mask-image` value that keeps a layout's side columns opaque down to `fadeStart`, then fades
+ * them out so they vanish by `height` (the `overflow:hidden` clip line) instead of ending in a
+ * hard-cut edge.
+ */
+export function archFadeMask(spec: ArchSpec): string {
+  const stopPercent = (spec.fadeStart / spec.height) * 100;
+  return `linear-gradient(to bottom, var(--c-white) ${stopPercent}%, transparent 100%)`;
 }
 
 export function buildArch(spec: ArchSpec): ArchLayout {
