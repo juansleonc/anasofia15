@@ -76,33 +76,33 @@ export interface ArchLayout {
 export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
   portrait: {
     width: 400,
-    height: 470,
+    height: 560,
     band: 190,
-    gutter: 42,
-    sideDepth: 455,
+    gutter: 48,
+    sideDepth: 545,
     cornerRadius: 140,
-    fadeStart: 280,
+    fadeStart: 380,
     inset: 12,
     crownBias: 0.1,
     cornerBias: 1,
     seed: 15,
-    counts: { balloons: 18, fillers: 2, flowers: 7, leaves: 18 },
-    sizeRange: [34, 76],
+    counts: { balloons: 20, fillers: 6, flowers: 9, leaves: 30 },
+    sizeRange: [30, 80],
   },
   landscape: {
     width: 1440,
-    height: 540,
-    band: 190,
-    gutter: 230,
-    sideDepth: 525,
+    height: 620,
+    band: 200,
+    gutter: 300,
+    sideDepth: 600,
     cornerRadius: 300,
-    fadeStart: 300,
+    fadeStart: 430,
     inset: 24,
     crownBias: 0.3,
-    cornerBias: 0.5,
+    cornerBias: 0.3,
     seed: 1219,
-    counts: { balloons: 28, fillers: 4, flowers: 11, leaves: 26 },
-    sizeRange: [50, 106],
+    counts: { balloons: 32, fillers: 6, flowers: 17, leaves: 40 },
+    sizeRange: [40, 116],
   },
 };
 
@@ -733,7 +733,7 @@ function placeFlowers(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem
     const members: ArchItem[] = [];
     for (let m = 0; m < onAxis + pairs; m++) {
       const axial = m < onAxis;
-      const size = spec.sizeRange[1] * (0.65 + 0.06 * rng());
+      const size = spec.sizeRange[1] * (0.6 + 0.06 * rng());
       const spread = (spot: Point): boolean => {
         const group = isCenter && !axial ? [...members, { x: spec.width - spot.x, y: spot.y }] : members;
         return (
