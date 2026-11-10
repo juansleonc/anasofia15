@@ -186,6 +186,15 @@ test.describe('Balloon arch', () => {
       { width: 1280, height: 600 },
       { width: 1366, height: 657 },
       { width: 1536, height: 730 },
+      // Wide-but-short desktop windows, and an ultra-wide one at full height.
+      { width: 1680, height: 761 },
+      { width: 1920, height: 761 },
+      { width: 2000, height: 761 },
+      { width: 1920, height: 800 },
+      { width: 2048, height: 800 },
+      { width: 2560, height: 950 },
+      { width: 2560, height: 740 },
+      { width: 2560, height: 1080 },
     ];
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);

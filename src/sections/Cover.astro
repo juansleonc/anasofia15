@@ -199,9 +199,35 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, var(--c-white), transparent 75%);
   }
 
+  /* One viewport-height unit for the landscape height caps below: the dynamic viewport where
+     supported (so mobile browser chrome is accounted for), plain `vh` elsewhere. */
+  .cover {
+    --cover-vh: 1vh;
+  }
+
+  @supports (height: 1dvh) {
+    .cover {
+      --cover-vh: 1dvh;
+    }
+  }
+
+  /* Landscape sizes are driven by width (the garland and the clear zone scale with it), but the
+     cover is a single scroll-locked screen, so every vertical dimension of the landscape layout
+     is also capped by a share of the viewport height: whichever is smaller wins, which keeps the
+     open button on screen for any window shape (wide-but-short included) with no breakpoint to
+     jump at. Each cap is tuned to sit at or just above that dimension's width-driven size at
+     1366x768 and 1440x800, so those screens, and any no wider relative to their height, keep
+     their width-driven layout; only wider or shorter windows pick up a cap.
+     `--cover-arch-band-cap` limits how far down the garland's clear top may sit; BalloonArch
+     shifts the landscape garland up by the same amount, so the text and the garland stay
+     aligned. */
   @media (min-aspect-ratio: 1/1) {
     .cover {
-      padding-top: max(clamp(3.75rem, 14vh, 6rem), calc(var(--arch-band-landscape) * 100%));
+      --cover-arch-band-cap: calc(41 * var(--cover-vh));
+      padding-top: max(
+        clamp(3.75rem, 14vh, 6rem),
+        min(calc(var(--arch-band-landscape) * 100%), var(--cover-arch-band-cap))
+      );
     }
   }
 
@@ -214,6 +240,12 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     /* A tight gap so the lead/name/flourish/button read as one dense, centred block instead of a
        loose stack. */
     gap: clamp(0.85rem, 2.5vh, 1.5rem);
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover__content {
+      gap: clamp(0.3rem, calc(2.5 * var(--cover-vh)), 1.5rem);
+    }
   }
 
   /* Warm light cast directly behind the lead line, the name and the button — raises (never
@@ -257,6 +289,7 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
   @media (min-aspect-ratio: 1/1) {
     .cover__title {
       max-width: calc(var(--arch-clear-landscape) * 100vw);
+      gap: min(clamp(0.9rem, 0.75rem + 0.5vw, 1.15rem), calc(2.5 * var(--cover-vh)));
     }
   }
 
@@ -271,6 +304,12 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     /* Lets the browser pick a more even line split (never a lone trailing word) instead of the
        greedy default — see the "no orphan last line" e2e test. */
     text-wrap: balance;
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover__title-lead {
+      font-size: min(clamp(1.45rem, 1.05rem + 1.3vw, 2.25rem), max(0.95rem, calc(4.6 * var(--cover-vh))));
+    }
   }
 
   .cover__title-name {
@@ -290,7 +329,10 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
 
   @media (min-aspect-ratio: 1/1) {
     .cover__title-name {
-      font-size: clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 9.2rem);
+      font-size: min(
+        clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 9.2rem),
+        calc(21.8 * var(--cover-vh) - 1.2rem)
+      );
     }
   }
 
@@ -425,6 +467,14 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     animation: cover-pulse 2.6s ease-out infinite;
   }
 
+  @media (min-aspect-ratio: 1/1) {
+    .cover__open-button {
+      min-height: min(56px, max(44px, calc(7.4 * var(--cover-vh))));
+      padding-block: min(clamp(1.1rem, 1vw + 0.85rem, 1.5rem), max(0.5rem, calc(3.2 * var(--cover-vh))));
+      font-size: min(clamp(1.25rem, 4vw, 1.5rem), max(0.9rem, calc(3.2 * var(--cover-vh))));
+    }
+  }
+
   .cover__open-button:hover {
     transform: translateY(-2px);
   }
@@ -463,63 +513,6 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     .cover__open-button {
       animation: none;
       transition: none;
-    }
-  }
-
-  /* Short landscape screens (a phone held sideways, or a browser window resized short) have a
-     width-driven landscape layout above that never accounted for height: the clear-zone padding
-     and the name's own size both scale with viewport WIDTH only, so a wide-but-short viewport got
-     the same tall padding and large name as a wide-but-tall one, pushing "Abrir invitación" below
-     the one locked screen the guest can see — with no way to scroll down to it. Below this
-     height, every vertical dimension in the text block considers the real viewport height too.
-     The clear-zone padding is scaled down from its own (conservative) value rather than replaced —
-     `--arch-band-landscape` marks where the garland's crown sits, but no single item actually
-     reaches that deep directly behind the lead/name/button at these sizes, so a safety factor
-     under 1 still clears every item while leaving enough room for the rest of the stack. The name
-     and lead sizes are capped at the smaller of their usual width-fit formula and a height-based
-     ceiling, so they never grow past what the width already allows. `dvh` degrades gracefully to
-     `vh` on engines that don't support it: the second declaration in each pair simply never
-     parses, leaving the first in effect. */
-  @media (orientation: landscape) and (max-height: 760px) {
-    .cover {
-      padding-top: max(0.5rem, calc(var(--arch-band-landscape) * 100% * 0.92));
-      padding-bottom: clamp(0.5rem, 3vh, 1.25rem);
-      padding-bottom: clamp(0.5rem, 3dvh, 1.25rem);
-    }
-
-    .cover__content {
-      gap: clamp(0.3rem, 1.6vh, 1rem);
-      gap: clamp(0.3rem, 1.6dvh, 1rem);
-    }
-
-    .cover__title {
-      gap: clamp(0.2rem, 0.8vh, 0.6rem);
-      gap: clamp(0.2rem, 0.8dvh, 0.6rem);
-    }
-
-    .cover__title-lead {
-      font-size: min(clamp(1.45rem, 1.05rem + 1.3vw, 2.25rem), clamp(0.95rem, 5.6vh, 1.8rem));
-      font-size: min(clamp(1.45rem, 1.05rem + 1.3vw, 2.25rem), clamp(0.95rem, 5.6dvh, 1.8rem));
-    }
-
-    .cover__title-name {
-      font-size: min(
-        clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 9.2rem),
-        clamp(1.8rem, 15vh, 5rem)
-      );
-      font-size: min(
-        clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 9.2rem),
-        clamp(1.8rem, 15dvh, 5rem)
-      );
-    }
-
-    .cover__open-button {
-      margin-top: 0;
-      min-height: 44px;
-      padding: clamp(0.5rem, 2vh, 1rem) clamp(1.5rem, 5vw, 3rem);
-      padding: clamp(0.5rem, 2dvh, 1rem) clamp(1.5rem, 5vw, 3rem);
-      font-size: clamp(0.9rem, 4.5vh, 1.2rem);
-      font-size: clamp(0.9rem, 4.5dvh, 1.2rem);
     }
   }
 </style>
