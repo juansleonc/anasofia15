@@ -34,6 +34,9 @@
   /* Composite surfaces */
   --gradient-rose: linear-gradient(135deg, #f3c6d0 0%, #e8a3b4 45%, #b5617a 100%);
   --gradient-button: linear-gradient(135deg, #b5617a 0%, #9e4a63 100%);
+  --gradient-button-wine: linear-gradient(180deg, #9a4462 0%, #6e2440 100%);
+  --border-gold: 1.5px solid #cda869;
+  --shadow-button-wine: 0 12px 26px -12px rgba(110, 36, 64, 0.55);
   --card-bg: rgba(255, 255, 255, 0.78);
   --card-border: 1px solid rgba(158, 74, 99, 0.18);
   --card-shadow: 0 18px 40px -24px rgba(158, 74, 99, 0.35);

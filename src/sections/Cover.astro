@@ -65,16 +65,18 @@ import { event } from '../data/event';
   .cover__open-button {
     margin-top: 0.25rem;
     padding: 1rem 2.625rem;
-    border: 1px solid var(--c-rose-300);
+    border: var(--border-gold);
     border-radius: 999px;
-    background: var(--gradient-button);
+    background: var(--gradient-button-wine);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--c-champagne-100) 55%, transparent),
+      var(--shadow-button-wine);
     color: var(--c-white);
     font-size: 1rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     font-family: var(--font-body);
     cursor: pointer;
-    box-shadow: var(--card-shadow);
     transition: transform var(--motion-duration-base) var(--motion-easing);
     animation: cover-pulse 2.6s ease-out infinite;
   }
@@ -83,18 +85,21 @@ import { event } from '../data/event';
     transform: translateY(-2px);
   }
 
-  /* Soft expanding rose ring, layered on top of the resting shadow so the shadow never blinks off. */
+  /* Soft expanding champagne-gold ring, layered on top of the resting shadow so the shadow never
+     blinks off. */
   @keyframes cover-pulse {
     0%,
     100% {
       box-shadow:
-        var(--card-shadow),
-        0 0 0 0 color-mix(in srgb, var(--c-rose-400) 45%, transparent);
+        inset 0 1px 0 color-mix(in srgb, var(--c-champagne-100) 55%, transparent),
+        var(--shadow-button-wine),
+        0 0 0 0 color-mix(in srgb, var(--c-champagne-500) 45%, transparent);
     }
     70% {
       box-shadow:
-        var(--card-shadow),
-        0 0 0 16px color-mix(in srgb, var(--c-rose-400) 0%, transparent);
+        inset 0 1px 0 color-mix(in srgb, var(--c-champagne-100) 55%, transparent),
+        var(--shadow-button-wine),
+        0 0 0 16px color-mix(in srgb, var(--c-champagne-500) 0%, transparent);
     }
   }
 

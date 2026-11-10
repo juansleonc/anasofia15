@@ -184,6 +184,35 @@ test.describe('Cover section', () => {
     await expect(page.getByRole('button', { name: 'Abrir invitación' })).toBeVisible();
   });
 
+  test('the open button is a wine pill with a champagne-gold border', async ({ page }) => {
+    await page.goto('./');
+
+    const button = page.getByRole('button', { name: 'Abrir invitación' });
+    const styles = await button.evaluate((el) => {
+      const computed = getComputedStyle(el);
+      return {
+        backgroundImage: computed.backgroundImage,
+        borderTopColor: computed.borderTopColor,
+        borderRightColor: computed.borderRightColor,
+        borderBottomColor: computed.borderBottomColor,
+        borderLeftColor: computed.borderLeftColor,
+        borderTopWidth: computed.borderTopWidth,
+        color: computed.color,
+        boxShadow: computed.boxShadow,
+      };
+    });
+
+    expect(styles.backgroundImage).toContain('rgb(154, 68, 98)');
+    expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
+    expect(styles.borderTopColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderRightColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderBottomColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderLeftColor).toBe('rgb(205, 168, 105)');
+    expect(parseFloat(styles.borderTopWidth)).toBeGreaterThan(0);
+    expect(styles.color).toBe('rgb(255, 255, 255)');
+    expect(styles.boxShadow).not.toBe('none');
+  });
+
   test('every cover animation freezes under prefers-reduced-motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./');
