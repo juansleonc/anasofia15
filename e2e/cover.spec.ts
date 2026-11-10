@@ -243,6 +243,41 @@ test.describe('Cover section', () => {
     expect(styles.borderTopWidth).toBeGreaterThanOrEqual(2);
   });
 
+  test('the open button label reads as premium serif with a visible keyboard focus', async ({
+    page,
+  }) => {
+    await page.goto('./');
+
+    const button = page.getByRole('button', { name: 'Abrir invitación' });
+    const labelStyles = await button.evaluate((el) => {
+      const computed = getComputedStyle(el);
+      return {
+        fontFamily: computed.fontFamily,
+        fontWeight: Number(computed.fontWeight),
+        letterSpacing: parseFloat(computed.letterSpacing),
+        fontSize: parseFloat(computed.fontSize),
+      };
+    });
+
+    // Different engines quote multi-word font names differently in computed style
+    // (`"Playfair Display"` vs `Playfair Display`) — strip a leading quote before comparing.
+    expect(labelStyles.fontFamily.replace(/^"/, '').startsWith('Playfair Display')).toBe(true);
+    expect(labelStyles.fontWeight).toBeGreaterThanOrEqual(600);
+    expect(labelStyles.letterSpacing).toBeGreaterThanOrEqual(0.05 * labelStyles.fontSize);
+
+    // Tab is the button's natural keyboard path (it's the first focusable element in the DOM) —
+    // real Tab navigation is what makes browsers apply `:focus-visible`, unlike a scripted
+    // `.focus()` call.
+    await page.keyboard.press('Tab');
+    const focusedTestId = await page.evaluate(
+      () => document.activeElement?.getAttribute('data-testid') ?? null,
+    );
+    expect(focusedTestId).toBe('open-invitation-button');
+
+    const outlineStyle = await button.evaluate((el) => getComputedStyle(el).outlineStyle);
+    expect(outlineStyle).not.toBe('none');
+  });
+
   test('every cover animation freezes under prefers-reduced-motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./');

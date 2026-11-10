@@ -26,7 +26,7 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
         {event.celebrantName}
       </span>
     </h1>
-    <button type="button" class="cover__open-button" data-testid="open-invitation-button">
+    <button type="button" tabindex="0" class="cover__open-button" data-testid="open-invitation-button">
       Abrir invitación
     </button>
   </div>
@@ -209,10 +209,12 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
       0 10px 22px -10px color-mix(in srgb, var(--c-wine-700) 45%, transparent), var(--shadow-button-wine);
     box-shadow: var(--cover-button-shadow);
     color: var(--c-white);
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    font-family: var(--font-display);
+    /* Engraved look: only darkens around the glyphs, never lightens them. */
+    text-shadow: 0 1px 1px color-mix(in srgb, var(--c-wine-700) 70%, transparent);
     cursor: pointer;
     transition: transform var(--motion-duration-base) var(--motion-easing);
     animation: cover-pulse 2.6s ease-out infinite;
@@ -220,6 +222,11 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
 
   .cover__open-button:hover {
     transform: translateY(-2px);
+  }
+
+  .cover__open-button:focus-visible {
+    outline: 2px solid var(--c-champagne-500);
+    outline-offset: 3px;
   }
 
   /* The relief responds to touch: the pill presses in and its inner shadow deepens. */
