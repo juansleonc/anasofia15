@@ -34,7 +34,7 @@ export interface ArchItem {
   y: number;
   size: number;
   rotate: number;
-  /** Paint order, back to front: 0 leaves, 1 back balloons, 2 flowers, 3 front accent balloons. */
+  /** Paint order, back to front: 0 leaves, 1 back balloons, 2 front accent and filler balloons, 3 flowers. */
   layer: 0 | 1 | 2 | 3;
 }
 
@@ -78,7 +78,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     crownBias: 8,
     cornerBias: 20,
     seed: 15,
-    counts: { balloons: 30, fillers: 12, flowers: 16, leaves: 24 },
+    counts: { balloons: 30, fillers: 12, flowers: 8, leaves: 24 },
     sizeRange: [38, 84],
   },
   landscape: {
@@ -91,7 +91,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     crownBias: 8,
     cornerBias: 26,
     seed: 1219,
-    counts: { balloons: 46, fillers: 16, flowers: 22, leaves: 34 },
+    counts: { balloons: 46, fillers: 16, flowers: 13, leaves: 34 },
     sizeRange: [54, 124],
   },
 };
@@ -215,20 +215,6 @@ function balloonTaper(t: number, corners: [number, number]): number {
 
 const WARP_STEPS = 64;
 
-/**
- * Warps a uniform slot position `u` ∈ [0,1] through the inverse CDF of the crown-weighting
- * density `1 + crownBias·sin(πt)^0.5`, built as a fixed 64-step numeric table (no closed form
- * needed). `crownBias` 0 leaves `u` unchanged; a higher bias packs more of the evenly spaced
- * slots into the high-density region around the crown (t≈0.5), while the endpoints (t=0, t=1)
- * stay exactly fixed so the sides still reach `sideDepth` and the crown still spans both gutters.
- */
-function warp(u: number, crownBias: number): number {
-  if (crownBias === 0) {
-    return clamp(u, 0, 1);
-  }
-  return warpByDensity(u, (t) => 1 + crownBias * Math.sqrt(Math.sin(Math.PI * t)));
-}
-
 /** Inverse-CDF warp of `u` ∈ [0,1] through an arbitrary positive density over t ∈ [0,1]. */
 function warpByDensity(u: number, density: (t: number) => number): number {
   const target = clamp(u, 0, 1);
@@ -309,7 +295,7 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
 
     const sample = sampleSpine(points, t);
     const isBack = i % 2 === 0;
-    const layer: 1 | 3 = isBack ? 1 : 3;
+    const layer: 1 | 2 = isBack ? 1 : 2;
     const size = (spec.sizeRange[0] + sizeSpan * balloonTaper(t, corners)) * (isBack ? 1 : 0.75);
 
     const side = rng() < 0.5 ? -1 : 1;
@@ -407,7 +393,7 @@ function placeFillers(spec: ArchSpec, points: Point[], solids: ArchItem[], rng: 
       y: clamp(y, -maxSize, spec.height),
       size,
       rotate: (rng() - 0.5) * 20,
-      layer: 3,
+      layer: 2,
     };
     items.push(filler);
     placed.push(filler);
@@ -422,36 +408,84 @@ function taperedBalloonSize(spec: ArchSpec, t: number): number {
 }
 
 /**
- * Scatters flowers along the spine, nestled between the balloons (round-robin over the three
- * flower symbols, so a spec with at least 3 flowers uses all of them), each a fraction of the
- * local balloon size.
+ * How many flowers each cluster gets: an even split, with the remainder going to the two corner
+ * clusters first, then the middle one, so the corners always carry the fullest bunches.
  */
-function placeFlowers(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
+function clusterSizes(count: number, clusters: number): number[] {
+  const sizes = new Array<number>(clusters).fill(Math.floor(count / clusters));
+  const priority = [0, clusters - 1, Math.floor((clusters - 1) / 2)];
+  for (let i = 0; i < clusters; i++) {
+    if (!priority.includes(i)) {
+      priority.push(i);
+    }
+  }
+  for (let i = 0; i < count % clusters; i++) {
+    sizes[priority[i]] += 1;
+  }
+  return sizes;
+}
+
+/** Candidate spots across the garland around spine position `t`, clamped so a flower of `size` stays on canvas above the band. */
+function flowerSpots(spec: ArchSpec, points: Point[], t: number, size: number): Point[] {
+  const r = size / 2;
+  const spots: Point[] = [];
+  for (let step = -4; step <= 4; step++) {
+    const sample = sampleSpine(points, clamp(t + step * 0.012, 0, 1));
+    for (const offset of [-0.4, -0.2, 0, 0.2, 0.4]) {
+      spots.push({
+        x: clamp(sample.x + sample.nx * offset * size, r, spec.width - r),
+        y: clamp(sample.y + sample.ny * offset * size, r, spec.band - r * (1 + 1e-6)),
+      });
+    }
+  }
+  return spots;
+}
+
+/**
+ * Bunches the flowers into clusters of two or three — one at each top corner and the rest spread
+ * evenly across the crown between them — sized close to the local balloons. Each flower goes to
+ * the nearby spot with the most clearance from the balloons and flowers already placed (nestled
+ * into a gap), and every flower after a cluster's first stays within touching distance of it.
+ * Round-robin over the four flower symbols, so a spec with at least 4 flowers uses all of them.
+ */
+function placeFlowers(spec: ArchSpec, points: Point[], balloons: ArchItem[], rng: () => number): ArchItem[] {
   const count = spec.counts.flowers;
-  const maxSize = spec.sizeRange[1];
+  const corners = cornerTs(points);
+  const clusters = Math.max(2, Math.ceil(count / 3));
+  const sizes = clusterSizes(count, clusters);
+  const placed = [...balloons];
   const items: ArchItem[] = [];
 
-  for (let i = 0; i < count; i++) {
-    const base = count <= 1 ? 0.5 : warp(i / (count - 1), spec.crownBias);
-    // Half-step phase shift so flowers land between balloon slots, not on top of them.
-    const phase = 0.5 / Math.max(count, 1);
-    const jitter = (rng() - 0.5) * (0.4 / Math.max(count, 1));
-    const t = clamp(base + phase + jitter, 0, 1);
+  for (let c = 0; c < clusters; c++) {
+    const t = corners[0] + ((corners[1] - corners[0]) * c) / (clusters - 1);
+    const localBalloon = spec.sizeRange[0] + (spec.sizeRange[1] - spec.sizeRange[0]) * balloonTaper(t, corners);
+    const members: ArchItem[] = [];
+    for (let m = 0; m < sizes[c]; m++) {
+      const size = localBalloon * (0.63 + 0.2 * rng());
+      const spots = flowerSpots(spec, points, t, size).filter((spot) =>
+        members.every((other) => Math.hypot(spot.x - other.x, spot.y - other.y) >= 0.6 * size) &&
+        (members.length === 0 ||
+          members.some((other) => Math.hypot(spot.x - other.x, spot.y - other.y) <= 1.1 * size)),
+      );
+      const best = spots.reduce<{ spot: Point; gap: number } | null>((acc, spot) => {
+        const gap = clearance(spot, placed);
+        return acc === null || gap > acc.gap ? { spot, gap } : acc;
+      }, null);
+      const spot = best?.spot ?? flowerSpots(spec, points, t, size)[0];
 
-    const sample = sampleSpine(points, t);
-    const size = taperedBalloonSize(spec, t) * (0.5 + rng() * 0.3);
-    const side = rng() < 0.5 ? -1 : 1;
-    const offset = side * 0.2 * size;
-
-    items.push({
-      symbol: FLOWER_SYMBOLS[i % FLOWER_SYMBOLS.length],
-      kind: 'flower',
-      x: clamp(sample.x + sample.nx * offset, -maxSize, spec.width + maxSize),
-      y: clamp(sample.y + sample.ny * offset, -maxSize, spec.height),
-      size,
-      rotate: (rng() - 0.5) * 20,
-      layer: 2,
-    });
+      const flower: ArchItem = {
+        symbol: FLOWER_SYMBOLS[items.length % FLOWER_SYMBOLS.length],
+        kind: 'flower',
+        x: spot.x,
+        y: spot.y,
+        size,
+        rotate: (rng() - 0.5) * 20,
+        layer: 3,
+      };
+      members.push(flower);
+      items.push(flower);
+      placed.push(flower);
+    }
   }
 
   return items;
@@ -560,9 +594,8 @@ export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
   const points = spinePoints(spec);
   const leaves = placeLeaves(spec, points, rng);
-  const solids = [...placeBalloons(spec, points, rng), ...placeFlowers(spec, points, rng)].map((item) =>
-    clampOutOfClearZone(item, spec),
-  );
+  const balloons = placeBalloons(spec, points, rng).map((item) => clampOutOfClearZone(item, spec));
+  const solids = [...balloons, ...placeFlowers(spec, points, balloons, rng)];
   const fillers = placeFillers(spec, points, solids, rng).map((item) => clampOutOfClearZone(item, spec));
   const items = [...leaves.map((item) => clampOutOfClearZone(item, spec)), ...solids, ...fillers].sort(
     (a, b) => a.layer - b.layer || a.y - b.y,

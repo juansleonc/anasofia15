@@ -124,11 +124,16 @@ describe('buildArch', () => {
     }
   });
 
-  it('paints flowers on layer 2 and leaves on layer 0', () => {
+  it('paints leaves on layer 0 and flowers on the top layer, in front of every balloon', () => {
     for (const spec of SPECS) {
       const { items } = buildArch(spec);
-      for (const item of items.filter((i) => i.kind === 'flower')) {
-        expect(item.layer).toBe(2);
+      const flowers = items.filter((i) => i.kind === 'flower');
+      const balloons = items.filter((i) => i.kind === 'balloon');
+      expect(flowers.length).toBeGreaterThan(0);
+      const topBalloonLayer = Math.max(...balloons.map((b) => b.layer));
+      for (const item of flowers) {
+        expect(item.layer).toBe(3);
+        expect(item.layer).toBeGreaterThan(topBalloonLayer);
       }
       for (const item of items.filter((i) => i.kind === 'leaf')) {
         expect(item.layer).toBe(0);
@@ -250,7 +255,10 @@ describe('garland density', () => {
       const balloons = solids.filter((item) => item.kind === 'balloon');
       const fillers = balloons.filter((item) => item.size <= 0.6 * spec.sizeRange[1]);
       expect(fillers.length).toBeGreaterThanOrEqual(Math.ceil(balloons.length * 0.2));
-      for (const filler of fillers) {
+      // Below `fadeStart` the side columns are masked out, so a stray small balloon there is never seen.
+      const visibleFillers = fillers.filter((item) => item.y <= spec.fadeStart);
+      expect(visibleFillers.length).toBeGreaterThan(0);
+      for (const filler of visibleFillers) {
         const touches = solids.some(
           (other) =>
             other !== filler &&
@@ -262,13 +270,64 @@ describe('garland density', () => {
   });
 });
 
+describe('flower prominence', () => {
+  // The reference mockup's roses and peonies read almost as big as the balloons beside them,
+  // sitting in front and clustered in twos and threes, rather than as small accents.
+  it('sizes flowers close to the main balloons around them', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { items } = buildArch(spec);
+      const flowers = items.filter((item) => item.kind === 'flower').map((item) => item.size);
+      const mainBalloons = items
+        .filter((item) => item.kind === 'balloon' && item.size > 0.6 * spec.sizeRange[1])
+        .map((item) => item.size);
+      expect(flowers.length).toBeGreaterThan(0);
+      expect(mainBalloons.length).toBeGreaterThan(0);
+      const ratio = median(flowers) / median(mainBalloons);
+      expect(ratio).toBeGreaterThanOrEqual(0.8);
+      expect(ratio).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('clusters flowers in twos or threes in both outer quarters of the crown', () => {
+    for (const spec of SEEDED_SPECS) {
+      const flowers = buildArch(spec).items.filter((item) => item.kind === 'flower');
+      const left = flowers.filter((item) => item.x < spec.width * 0.25);
+      const right = flowers.filter((item) => item.x > spec.width * 0.75);
+      expect(hasCluster(left)).toBe(true);
+      expect(hasCluster(right)).toBe(true);
+    }
+  });
+
+  it('gives the landscape crown center a flower cluster as a focal point', () => {
+    for (const spec of SEEDED_SPECS.filter((s) => s.width === ARCH_SPECS.landscape.width)) {
+      const flowers = buildArch(spec).items.filter((item) => item.kind === 'flower');
+      const center = flowers.filter((item) => Math.abs(item.x - spec.width / 2) < spec.width * 0.1);
+      expect(hasCluster(center)).toBe(true);
+    }
+  });
+
+  it('keeps every flower wholly inside the canvas, never cut at an edge', () => {
+    for (const spec of SEEDED_SPECS) {
+      const flowers = buildArch(spec).items.filter((item) => item.kind === 'flower');
+      expect(flowers.length).toBeGreaterThan(0);
+      for (const flower of flowers) {
+        const r = flower.size / 2;
+        expect(flower.x - r).toBeGreaterThanOrEqual(0);
+        expect(flower.x + r).toBeLessThanOrEqual(spec.width);
+        expect(flower.y - r).toBeGreaterThanOrEqual(0);
+        expect(flower.y + r).toBeLessThanOrEqual(spec.height);
+      }
+    }
+  });
+});
+
 describe('ARCH_SPECS fullness', () => {
   it('keeps both specs full enough for a dense, overlapping crown', () => {
     expect(ARCH_SPECS.portrait.counts.balloons).toBeGreaterThanOrEqual(30);
-    expect(ARCH_SPECS.portrait.counts.flowers).toBeGreaterThanOrEqual(14);
+    expect(ARCH_SPECS.portrait.counts.flowers).toBeGreaterThanOrEqual(8);
     expect(ARCH_SPECS.portrait.counts.leaves).toBeGreaterThanOrEqual(22);
     expect(ARCH_SPECS.landscape.counts.balloons).toBeGreaterThanOrEqual(44);
-    expect(ARCH_SPECS.landscape.counts.flowers).toBeGreaterThanOrEqual(20);
+    expect(ARCH_SPECS.landscape.counts.flowers).toBeGreaterThanOrEqual(13);
     expect(ARCH_SPECS.landscape.counts.leaves).toBeGreaterThanOrEqual(30);
   });
 });
@@ -328,6 +387,19 @@ function garlandBandSamples(spec: ArchSpec, halfWidth: number): { x: number; y: 
 
 function balloonArea(items: ArchItem[]): number {
   return items.reduce((sum, item) => sum + item.size * item.size, 0);
+}
+
+/** True when at least two of `flowers` sit within 1.2x their mean size of each other. */
+function hasCluster(flowers: ArchItem[]): boolean {
+  return flowers.some((a) =>
+    flowers.some((b) => a !== b && Math.hypot(a.x - b.x, a.y - b.y) <= 1.2 * ((a.size + b.size) / 2)),
+  );
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
 function clampNumber(value: number, min: number, max: number): number {
