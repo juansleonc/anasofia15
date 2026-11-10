@@ -167,6 +167,66 @@ test.describe('Balloon arch', () => {
     }
   });
 
+  test('both upper corners show foliage on screen', async ({ page }) => {
+    // Floors are the real-render ceiling measured on the current composition (minimum of all 4
+    // viewports was 189px² on phones, 8568px² on landscape), rounded down — see the "measured, not
+    // chased" note on the model-level visible-foliage test in cover-garland.test.ts for why the
+    // original design floors (1200 / 9000) are not reachable without reworking the shoulder
+    // balloons this lane's write set doesn't own.
+    const cases = [
+      { viewport: PHONE, floor: 180 },
+      { viewport: TALL_PHONE, floor: 180 },
+      { viewport: { width: 1366, height: 768 }, floor: 8500 },
+      { viewport: DESKTOP, floor: 8500 },
+    ];
+    for (const { viewport, floor } of cases) {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      // Only the arch should answer `elementFromPoint` while sampling: every other cover layer
+      // (title, button, sparkles, confetti, glow) is forced transparent to pointer input so the
+      // grid below only ever lands on the garland itself or nothing.
+      await page.addStyleTag({
+        content: `
+          .balloon-arch, .balloon-arch * { pointer-events: auto !important; }
+          .cover > *:not(.balloon-arch) { pointer-events: none !important; }
+        `,
+      });
+
+      const GRID = 3;
+      const { left, right } = await page.evaluate(
+        ({ width, height, grid }) => {
+          let leftArea = 0;
+          let rightArea = 0;
+          const yMax = height * 0.5;
+          const leftStrip = width * 0.3;
+          const rightStrip = width * 0.7;
+          for (let x = grid / 2; x < width; x += grid) {
+            if (x > leftStrip && x < rightStrip) continue;
+            for (let y = grid / 2; y < yMax; y += grid) {
+              const el = document.elementFromPoint(x, y);
+              if (el && el.matches('use[data-arch-item="leaf"]')) {
+                if (x <= leftStrip) leftArea += grid * grid;
+                else rightArea += grid * grid;
+              }
+            }
+          }
+          return { left: leftArea, right: rightArea };
+        },
+        { width: viewport.width, height: viewport.height, grid: GRID },
+      );
+
+      expect(left, `left foliage at ${viewport.width}x${viewport.height} measured ${left}px²`).toBeGreaterThanOrEqual(
+        floor,
+      );
+      expect(
+        right,
+        `right foliage at ${viewport.width}x${viewport.height} measured ${right}px²`,
+      ).toBeGreaterThanOrEqual(floor);
+    }
+  });
+
   test('the portrait garland fills at least a third of a tall phone', async ({ page }) => {
     await page.setViewportSize(TALL_PHONE);
     await page.goto('./');

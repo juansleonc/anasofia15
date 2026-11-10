@@ -64,14 +64,18 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
     clear: { x0: 38, x1: 362, top: 264, crown: 208 },
     items: [
       // laurel/eucalyptus clusters rooted inside the corner balloons (behind them, depth 0),
-      // fanning outward; eucalyptus doubled up at each corner because the laurel cluster art
-      // reads thin on its own
-      { symbol: 'leaf-eucalyptus-cluster', x: -1.71, y: 73.48, size: 90, rotate: -125, depth: 0 },
-      { symbol: 'leaf-laurel-cluster', x: -36.83, y: 33.68, size: 130, rotate: -31, depth: 0 },
-      { symbol: 'leaf-eucalyptus-cluster', x: -37.43, y: 163.09, size: 130, rotate: -25, depth: 0 },
-      { symbol: 'leaf-eucalyptus-cluster', x: 410.25, y: 92.51, size: 120, rotate: 125, depth: 0 },
-      { symbol: 'leaf-laurel-cluster', x: 387.72, y: 163.17, size: 90, rotate: 25, depth: 0 },
-      { symbol: 'leaf-eucalyptus-cluster', x: 412.15, y: 289, size: 90, rotate: 91, depth: 0 },
+      // cascading outward and down. Positions are chosen (not just mirrored) around where the
+      // existing balloon/flower mass actually leaves a gap, since a cluster is only on-screen
+      // where nothing painted later covers it — see the visible-foliage measurement in
+      // cover-garland.test.ts.
+      { symbol: 'leaf-laurel-cluster', x: 24, y: 72, size: 120, rotate: -40, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 76, y: 136, size: 80, rotate: -110, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 84, y: 196, size: 56, rotate: -130, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: -40, y: 52, size: 64, rotate: -55, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 340, y: 24, size: 110, rotate: 60, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 316, y: 196, size: 56, rotate: 130, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 344, y: 128, size: 120, rotate: 50, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 316, y: 132, size: 56, rotate: 100, depth: 0 },
       { symbol: 'balloon-pink', x: 70, y: 28, size: 120, rotate: 0, depth: 1 },
       { symbol: 'balloon-champagne', x: 178, y: 6, size: 112, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 292, y: 22, size: 126, rotate: 0, depth: 1 },
@@ -121,11 +125,18 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
     clear: { x0: 360, x1: 1080, top: 324, crown: 230 },
     items: [
       // laurel/eucalyptus clusters rooted inside the corner balloons (behind them, depth 0),
-      // fanning outward
-      { symbol: 'leaf-eucalyptus-cluster', x: -68.47, y: 171.27, size: 260, rotate: -125, depth: 0 },
-      { symbol: 'leaf-laurel-cluster', x: -57.97, y: 174.16, size: 260, rotate: -27, depth: 0 },
-      { symbol: 'leaf-eucalyptus-cluster', x: 1410.67, y: 58.74, size: 180, rotate: 25, depth: 0 },
-      { symbol: 'leaf-laurel-cluster', x: 1378.5, y: 177.84, size: 180, rotate: 27, depth: 0 },
+      // cascading outward and down, placed on-canvas (unlike the old off-canvas corner sprigs) so
+      // they actually paint inside the viewBox
+      { symbol: 'leaf-laurel-cluster', x: 68, y: 96, size: 260, rotate: -60, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 212, y: 60, size: 260, rotate: -60, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 188, y: 348, size: 260, rotate: -130, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 56, y: 480, size: 260, rotate: -140, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 68, y: 264, size: 260, rotate: -140, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 1372, y: 96, size: 260, rotate: 60, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 1228, y: 60, size: 260, rotate: 60, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 1252, y: 348, size: 260, rotate: 130, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 1384, y: 480, size: 260, rotate: 140, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 1372, y: 264, size: 260, rotate: 140, depth: 0 },
       { symbol: 'balloon-pink', x: 402.6, y: 12, size: 187, rotate: 0, depth: 1 },
       { symbol: 'balloon-champagne', x: 596.6, y: 0, size: 165, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 1025.1, y: 48, size: 220, rotate: 0, depth: 1 },
