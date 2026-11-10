@@ -97,9 +97,6 @@ const SATIN_BALLOONS = ['balloon-rosegold-satin', 'balloon-champagne-satin'];
 const ALL_BALLOONS = ['balloon-pink', ...CHROME_BALLOONS, ...SATIN_BALLOONS];
 const PEARL_BALLOONS = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-champagne-satin'];
 
-const BRANCH_IDS = ['leaf-olive', 'leaf-gold'];
-const BRANCH_LEAF_GRADIENT: Record<string, string> = { 'leaf-olive': 'leaf-olive-gradient', 'leaf-gold': 'leaf-gold-metal' };
-const LEAF_IDS = ['leaf-eucalyptus', 'leaf-olive', 'leaf-gold'];
 const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom', 'rosebud'];
 const CLUSTER_IDS = ['leaf-laurel-cluster', 'leaf-eucalyptus-cluster'];
 
@@ -427,17 +424,6 @@ describe('ArchSprite gloss', () => {
 // The garland's text clearance (cover-garland) sizes every item from these symbol extents, so the
 // art may change freely only while each symbol stays inside the footprint it promised.
 describe('footprint contract', () => {
-  it.each(LEAF_IDS)('%s is a slender sprig with its stem base at the bottom centre', (id) => {
-    const el = symbol(id);
-    const [, , width, height] = viewBoxOf(el);
-    expect(width / height).toBeLessThanOrEqual(0.45);
-    const stem = Array.from(el.querySelectorAll('path[fill="none"]')).find((path) => (path.getAttribute('d')?.match(/M/g) ?? []).length === 1);
-    expect(stem).not.toBeUndefined();
-    const base = stemEnds(stem!.getAttribute('d') ?? '').reduce((lower, end) => (end[1] > lower[1] ? end : lower));
-    expect(Math.abs(base[0] - width / 2)).toBeLessThanOrEqual(0.04 * height);
-    expect(Math.abs(base[1] - height)).toBeLessThanOrEqual(0.04 * height);
-  });
-
   it.each(['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory'])('%s keeps every petal inside the inscribed circle', (id) => {
     const el = symbol(id);
     const [, , width] = viewBoxOf(el);
@@ -971,109 +957,6 @@ describe('ArchSprite blossom', () => {
     // positioning `<g>` (unlike the roses/peony, which paint their petals flat), so a direct
     // `children.length` would only ever see that single wrapper.
     expect(symbol('blossom').querySelectorAll('path, circle, ellipse').length).toBeLessThanOrEqual(12);
-  });
-});
-
-describe('ArchSprite foliage', () => {
-  it('leaf-eucalyptus has at least 7 round leaves lit by a lightened radial gradient', () => {
-    const el = symbol('leaf-eucalyptus');
-    const leafGradient = gradient('leaf-eucalyptus-gradient');
-    expect(leafGradient.tagName.toLowerCase()).toBe('radialgradient');
-    const stops = stopColors(leafGradient);
-    expect(stops.length).toBeGreaterThanOrEqual(3);
-    for (const style of stops) expect(style).toMatch(/stop-color:\s*var\(--c-/);
-    const leaves = el.querySelectorAll('[fill="url(#leaf-eucalyptus-gradient)"]');
-    expect(leaves.length).toBeGreaterThanOrEqual(7);
-  });
-
-  it('leaf-eucalyptus carries 1-2 gilt leaf edges', () => {
-    const leaves = symbol('leaf-eucalyptus').querySelectorAll('[fill="url(#leaf-eucalyptus-gradient)"]');
-    const gilt = Array.from(leaves).filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
-    expect(leaves.length).toBeGreaterThanOrEqual(7);
-    expect(gilt.length).toBeGreaterThanOrEqual(1);
-    expect(gilt.length).toBeLessThanOrEqual(2);
-  });
-
-  it('leaf-eucalyptus has one multi-subpath midrib vein path, one per leaf', () => {
-    const vein = veinPath(symbol('leaf-eucalyptus'), 7);
-    expect(vein).not.toBeUndefined();
-    expect(vein!.getAttribute('stroke') ?? '').toMatch(/var\(--c-leaf/);
-  });
-
-  it('leaf-eucalyptus stays within its element budget (<= 12 elements)', () => {
-    expect(symbol('leaf-eucalyptus').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(12);
-  });
-
-  it.each(BRANCH_IDS)('%s is a gently curved branch of >= 9 alternating leaves, each with a midrib', (id) => {
-    const el = symbol(id);
-    const leafFill = `url(#${BRANCH_LEAF_GRADIENT[id]})`;
-    const leaves = Array.from(el.querySelectorAll(`[fill="${leafFill}"]`));
-    expect(leaves.length).toBeGreaterThanOrEqual(9);
-    expect(leaves.length).toBeLessThanOrEqual(11);
-    // Alternating: consecutive side leaves lean to opposite sides of the stem.
-    const leans = leaves.map((leaf) => Number((leaf.getAttribute('transform') ?? '').match(/rotate\((-?[\d.]+)/)?.[1] ?? 0));
-    const sideLeans = leans.filter((lean) => Math.abs(lean) > 10);
-    expect(sideLeans.length).toBeGreaterThanOrEqual(8);
-    for (let k = 1; k < sideLeans.length; k++) expect(Math.sign(sideLeans[k])).not.toBe(Math.sign(sideLeans[k - 1]));
-
-    const stem = Array.from(el.querySelectorAll('path[fill="none"]')).find((path) => (path.getAttribute('d')?.match(/M/g) ?? []).length === 1);
-    expect(stem).not.toBeUndefined();
-    const [{ segments }] = cubicSubpaths(stem!.getAttribute('d') ?? '');
-    const bend = Math.max(
-      ...segments.flatMap(({ from, c1, c2, to }) => {
-        const length = Math.hypot(to[0] - from[0], to[1] - from[1]) || 1;
-        return [c1, c2].map(([x, y]) => Math.abs((x - from[0]) * (to[1] - from[1]) - (y - from[1]) * (to[0] - from[0])) / length);
-      }),
-    );
-    expect(bend).toBeGreaterThan(1.5);
-
-    expect(veinPath(el, leaves.length)).not.toBeUndefined();
-  });
-
-  it('leaf-olive leaves are two-tone sage, from leaf-deep at the base to leaf at the tip', () => {
-    const stops = stopColors(gradient('leaf-olive-gradient'));
-    expect(stops[0]).toMatch(/var\(--c-leaf-deep\)/);
-    expect(stops[stops.length - 1]).toMatch(/var\(--c-leaf\)/);
-  });
-
-  it('leaf-olive carries >= 2 gilt leaf edges', () => {
-    const gilt = symbol('leaf-olive').querySelectorAll('[fill="url(#leaf-olive-gradient)"][stroke="var(--c-champagne-500)"]');
-    expect(gilt.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('leaf-olive has one multi-subpath midrib vein path, one per leaf', () => {
-    const vein = veinPath(symbol('leaf-olive'), 9);
-    expect(vein).not.toBeUndefined();
-    expect(vein!.getAttribute('stroke') ?? '').toMatch(/var\(--c-leaf/);
-  });
-
-  it('leaf-olive stays within its element budget (<= 14 elements)', () => {
-    expect(symbol('leaf-olive').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(14);
-  });
-
-  it('leaf-gold is made of filled foil leaves, no lone outline', () => {
-    const el = symbol('leaf-gold');
-    const metalGradient = gradient('leaf-gold-metal');
-    const stops = stopColors(metalGradient);
-    expect(stops.length).toBeGreaterThanOrEqual(4);
-    for (const style of stops) expect(style).toMatch(/stop-color:\s*var\(--c-/);
-    const leaves = Array.from(el.querySelectorAll('[fill="url(#leaf-gold-metal)"]'));
-    expect(leaves.length).toBeGreaterThanOrEqual(7);
-    for (const leaf of leaves) {
-      expect(leaf.getAttribute('fill')).not.toBe('none');
-      const fillOpacity = leaf.getAttribute('fill-opacity');
-      if (fillOpacity !== null) expect(Number(fillOpacity)).toBeGreaterThanOrEqual(0.6);
-    }
-  });
-
-  it('leaf-gold has one multi-subpath vein path', () => {
-    const vein = veinPath(symbol('leaf-gold'), 7);
-    expect(vein).not.toBeUndefined();
-    expect(vein!.getAttribute('stroke') ?? '').toMatch(/var\(--c-champagne-700\)/);
-  });
-
-  it('leaf-gold stays within its element budget (<= 12 elements)', () => {
-    expect(symbol('leaf-gold').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(12);
   });
 });
 

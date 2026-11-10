@@ -20,11 +20,11 @@
   style="position:absolute;width:0;height:0;overflow:hidden"
 >
   <defs>
-    <!-- Balloon body gradients: every tone is >= 6 stops — hot core, light, mid body, body,
+    {/* Balloon body gradients: every tone is >= 6 stops — hot core, light, mid body, body,
          terminator (darkest, ~85-90%) then a lighter rim stop at 100% — the terminator/rim pair
          is what reads as a lit sphere instead of a flat shaded disc. Chrome tones (rose-gold,
          champagne) keep a sharp, late terminator; their satin siblings widen the stop spacing and
-         soften the terminator (no hard rose-600/champagne-700 edge) for a duller, non-mirror finish. -->
+         soften the terminator (no hard rose-600/champagne-700 edge) for a duller, non-mirror finish. */}
     <radialGradient id="balloon-pink-gradient" cx="30%" cy="26%" r="80%">
       <stop offset="0%" style="stop-color: var(--c-rose-100)" />
       <stop offset="18%" style="stop-color: var(--c-rose-100)" />
@@ -49,9 +49,9 @@
       <stop offset="90%" style="stop-color: var(--c-rose-400)" />
       <stop offset="100%" style="stop-color: var(--c-rosegold-400)" />
     </radialGradient>
-    <!-- Metallic gold: a hot champagne-100 core, a fast fall through the champagne scale and a
+    {/* Metallic gold: a hot champagne-100 core, a fast fall through the champagne scale and a
          deep champagne-800 terminator just inside the edge, then a lighter rim. The steep, late
-         dark band is what reads as polished foil rather than matte beige. -->
+         dark band is what reads as polished foil rather than matte beige. */}
     <radialGradient id="balloon-champagne-gradient" cx="32%" cy="26%" r="78%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
       <stop offset="12%" style="stop-color: var(--c-champagne-100)" />
@@ -62,15 +62,15 @@
       <stop offset="89%" style="stop-color: var(--c-champagne-800)" />
       <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
     </radialGradient>
-    <!-- Gold only: a wide, soft "horizon" band of reflected light across the lower body,
-         feathered to nothing on every side. -->
+    {/* Gold only: a wide, soft "horizon" band of reflected light across the lower body,
+         feathered to nothing on every side. */}
     <radialGradient id="balloon-champagne-horizon" cx="50%" cy="50%" r="50%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.45" />
       <stop offset="50%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.22" />
       <stop offset="100%" style="stop-color: var(--c-champagne-200)" stop-opacity="0" />
     </radialGradient>
-    <!-- Pearl blush: a low-contrast champagne-to-rose-gold ramp (no gold terminator), so it
-         sits with the rose-gold pearls rather than reading as a second gold. -->
+    {/* Pearl blush: a low-contrast champagne-to-rose-gold ramp (no gold terminator), so it
+         sits with the rose-gold pearls rather than reading as a second gold. */}
     <radialGradient id="balloon-champagne-satin-gradient" cx="30%" cy="26%" r="80%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
       <stop offset="25%" style="stop-color: var(--c-rosegold-200)" />
@@ -80,10 +80,10 @@
       <stop offset="100%" style="stop-color: var(--c-rosegold-200)" />
     </radialGradient>
 
-    <!-- Shared across every tone: a soft contact shadow dropped below-right of the body (depth
+    {/* Shared across every tone: a soft contact shadow dropped below-right of the body (depth
          where balloons overlap each other) and a warm bottom-up environment tint (floor light
          bouncing into the lower half). One def each keeps the gradient budget low; neither reads
-         as tone-specific. -->
+         as tone-specific. */}
     <radialGradient id="balloon-contact-shadow" cx="50%" cy="50%" r="50%">
       <stop offset="0%" style="stop-color: var(--c-rose-700)" stop-opacity="0.28" />
       <stop offset="100%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
@@ -93,8 +93,8 @@
       <stop offset="45%" style="stop-color: var(--c-champagne-200)" stop-opacity="0" />
     </linearGradient>
 
-    <!-- Knots are tone-matched (a darker shade of the balloon's own body colour) instead of every
-         tone sharing one wine-coloured triangle; chrome and satin siblings of a tone share a def. -->
+    {/* Knots are tone-matched (a darker shade of the balloon's own body colour) instead of every
+         tone sharing one wine-coloured triangle; chrome and satin siblings of a tone share a def. */}
     <linearGradient id="balloon-pink-knot" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" style="stop-color: var(--c-rose-600)" />
       <stop offset="100%" style="stop-color: var(--c-rose-700)" />
@@ -108,18 +108,18 @@
       <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
     </linearGradient>
 
-    <!-- Pearl finish (rose-gold and pearl-blush balloons): a nacre sheen laid over the body,
-         champagne at the upper left melting into rose and then into nothing. -->
+    {/* Pearl finish (rose-gold and pearl-blush balloons): a nacre sheen laid over the body,
+         champagne at the upper left melting into rose and then into nothing. */}
     <linearGradient id="balloon-nacre" x1="10%" y1="0%" x2="80%" y2="100%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.45" />
       <stop offset="45%" style="stop-color: var(--c-rose-200)" stop-opacity="0.25" />
       <stop offset="100%" style="stop-color: var(--c-rose-200)" stop-opacity="0" />
     </linearGradient>
 
-    <!-- Shared lighting for every balloon (the `balloon-gloss` symbol below): a softbox
+    {/* Shared lighting for every balloon (the `balloon-gloss` symbol below): a softbox
          "window" reflection fading from 70% white, a tight specular hot spot, a champagne
          rim-light crescent (light bounced in from the neighbouring balloons) and an
-         ambient-occlusion crescent along the bottom that gives the body weight. -->
+         ambient-occlusion crescent along the bottom that gives the body weight. */}
     <linearGradient id="balloon-gloss-window" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="0.7" />
       <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0" />
@@ -139,23 +139,23 @@
       <stop offset="70%" style="stop-color: var(--c-ink)" stop-opacity="0" />
       <stop offset="100%" style="stop-color: var(--c-ink)" stop-opacity="0.3" />
     </linearGradient>
-    <!-- Shared by every flower: a soft rose shadow offset down-right under the bloom, so it sits
+    {/* Shared by every flower: a soft rose shadow offset down-right under the bloom, so it sits
          pressed into the balloons around it instead of floating on top. It fades to nothing well
          before the bloom's own edge, so there is no ring to see — depth comes from this plus real
-         balloon overlap, never from paint beyond the petals. -->
+         balloon overlap, never from paint beyond the petals. */}
     <radialGradient id="flower-seat-shadow" cx="50%" cy="50%" r="50%">
       <stop offset="0%" style="stop-color: var(--c-rose-700)" stop-opacity="0.26" />
       <stop offset="55%" style="stop-color: var(--c-rose-700)" stop-opacity="0.12" />
       <stop offset="88%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
       <stop offset="100%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
     </radialGradient>
-    <!-- Flower rings: one gradient per ring, `objectBoundingBox` units (the default — no
+    {/* Flower rings: one gradient per ring, `objectBoundingBox` units (the default — no
          `gradientUnits` attr) so each petal is shaded within its own bounding box, computed before
          its `transform="rotate(… c c)"`. Outer/mid petals point tip-up, so a high `cy` puts the
          lightest stop on the rolled lip and the darkest at the base. The rose `-inner` gradients
          paint the cup crescents instead: centered in the crescent's box, dark at the middle and
          light at the rim, so every nested petal shows a lit lip falling into shadow toward the
-         next one — the depth between layers that makes the cup read. -->
+         next one — the depth between layers that makes the cup read. */}
     <radialGradient id="rose-pink-outer" cx="34%" cy="8%" r="105%">
       <stop offset="0%" style="stop-color: var(--c-rose-100)" />
       <stop offset="30%" style="stop-color: var(--c-rose-200)" />
@@ -236,9 +236,9 @@
       <stop offset="55%" style="stop-color: var(--c-rosegold-200)" />
       <stop offset="100%" style="stop-color: var(--c-champagne-300)" />
     </radialGradient>
-    <!-- `blossom-petal`: radial from the petal's base (near the flower centre) outward to its
+    {/* `blossom-petal`: radial from the petal's base (near the flower centre) outward to its
          tip — darker rose-300 base, rose-100 mid, a white-alpha rim at the tip — shared by all 5
-         petals via `objectBoundingBox` units (each rotated copy has the same local bounding box). -->
+         petals via `objectBoundingBox` units (each rotated copy has the same local bounding box). */}
     <radialGradient id="blossom-petal" cx="50%" cy="92%" r="95%">
       <stop offset="0%" style="stop-color: var(--c-rose-400)" />
       <stop offset="55%" style="stop-color: var(--c-rose-200)" />
@@ -248,9 +248,9 @@
       <stop offset="0%" style="stop-color: var(--c-champagne-200)" />
       <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
     </radialGradient>
-    <!-- Natural foliage: eucalyptus and olive leaves read as lit round/lanceolate foliage (a radial
+    {/* Natural foliage: eucalyptus and olive leaves read as lit round/lanceolate foliage (a radial
          or linear tint from a lightened champagne core out to the deep leaf tone) rather than one
-         flat silhouette colour. Gold leaves get their own diagonal foil-sheen gradient (D3). -->
+         flat silhouette colour. Gold leaves get their own diagonal foil-sheen gradient. */}
     <radialGradient id="leaf-eucalyptus-gradient" cx="35%" cy="28%" r="78%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
       <stop offset="45%" style="stop-color: var(--c-leaf)" />
@@ -341,12 +341,12 @@
     <use href="#balloon-gloss" style="--balloon-spec: 0.5" />
   </symbol>
 
-  <!-- Roses: open garden roses. Three cupped rings of shell petals (6 outer, 5 mid, 4 inner)
+  {/* Roses: open garden roses. Three cupped rings of shell petals (6 outer, 5 mid, 4 inner)
        share a base at the centre, so each ring's lips frame the next; a spiral of nested
        crescents and a small furled bud make the heart. There are no outline strokes: every
        ring's gradient runs from a light lip to a darker base, focused off-centre so overlapping
        petals separate by light and shade. Every outline is a smooth closed cubic spline
-       (absolute M/C/Z only). -->
+       (absolute M/C/Z only). */}
   <symbol id="rose-pink" viewBox="0 0 64 64">
     <ellipse cx="33.5" cy="34.2" rx="25" ry="24" fill="url(#flower-seat-shadow)" />
     <path d="M32 31C24.94 30 18.39 26 17.89 19C17.48 13 20.41 8 24.44 6.5C26.96 5.6 29.48 6.2 32 6C34.52 6.2 37.04 5.6 39.56 6.5C43.59 8 46.52 13 46.11 19C45.61 26 39.06 30 32 31Z" fill="url(#rose-pink-outer)" transform="rotate(0 32 32)" />
@@ -397,9 +397,9 @@
     <path d="M32 30.4C33.4 30.4 34 31.6 33.5 32.6C33 33.6 31.5 33.7 30.9 32.8C30.5 32.1 31 31.4 31.8 31.6C32.4 31.8 32.5 32.4 32.1 32.6Z" fill="var(--c-champagne-700)" fill-opacity="0.6" />
   </symbol>
 
-  <!-- Peonies: lush open blooms. Three rings of ruffled petals (8 outer, 6 mid, 5 inner), each
+  {/* Peonies: lush open blooms. Three rings of ruffled petals (8 outer, 6 mid, 5 inner), each
        lip a smooth wave rather than a dome, with gold stamens peeking from the heart.
-       `peony-ivory` repaints the very same petal outlines from ivory gradients. -->
+       `peony-ivory` repaints the very same petal outlines from ivory gradients. */}
   <symbol id="peony-blush" viewBox="0 0 72 72">
     <ellipse cx="37.8" cy="38.6" rx="29" ry="27.5" fill="url(#flower-seat-shadow)" />
     <path d="M36 33.86C34.22 33.86 32.44 32.97 30.66 31.72C28.88 30.47 26.75 28.33 25.33 26.37C23.9 24.41 22.75 22.09 22.12 19.95C21.5 17.81 21.32 15.49 21.59 13.53C21.86 11.57 22.75 9.62 23.73 8.18C24.7 6.74 26.13 5.16 27.46 4.92C28.8 4.68 30.31 6.84 31.73 6.74C33.15 6.63 34.58 4.27 36 4.27C37.42 4.27 38.85 6.63 40.27 6.74C41.69 6.84 43.2 4.68 44.54 4.92C45.87 5.16 47.3 6.74 48.27 8.18C49.25 9.62 50.14 11.57 50.41 13.53C50.68 15.49 50.5 17.81 49.88 19.95C49.25 22.09 48.1 24.41 46.67 26.37C45.25 28.33 43.12 30.47 41.34 31.72C39.56 32.97 37.78 33.86 36 33.86Z" fill="url(#peony-blush-outer)" transform="rotate(0 36 36)" />
@@ -464,9 +464,9 @@
     <circle cx="36.3" cy="36.1" r="1.8" fill="var(--c-champagne-300)" />
   </symbol>
 
-  <!-- `rosebud`: a small furled bud — upright teardrop petals wrapped around a darker furled tip,
+  {/* `rosebud`: a small furled bud — upright teardrop petals wrapped around a darker furled tip,
        with a couple of sepals curling out at the base. Reuses the rose-pink petal/heart gradients
-       and the olive sepal gradient — no new gradient defs. -->
+       and the olive sepal gradient — no new gradient defs. */}
   <symbol id="rosebud" viewBox="0 0 48 48">
     <ellipse cx="25.3" cy="25.8" rx="8.4" ry="7.8" fill="url(#flower-seat-shadow)" />
     <path d="M20 23C21.8 23 23.1 25.2 22.7 28C22.3 30.6 20.9 32.6 20 35C19.1 32.6 17.7 30.6 17.3 28C16.9 25.2 18.2 23 20 23Z" fill="url(#rose-pink-outer)" />
@@ -477,11 +477,11 @@
     <path d="M0 0C2.1 -2.1 2.1 -4.5 0 -6C-2.1 -4.5 -2.1 -2.1 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(28 29) rotate(130)" />
   </symbol>
 
-  <!-- `blossom`: 5 petals from a single radial gradient (darker base, pale rose rim), one
+  {/* `blossom`: 5 petals from a single radial gradient (darker base, pale rose rim), one
        multi-subpath vein path (a crease per petal) and one multi-subpath highlight (a glint per
        petal, inside the petal only), a champagne centre disk with its own gradient and a stamen
        cluster of 10 filaments + 10 anthers — both multi-subpath paths rather than 20 separate
-       elements, to stay inside the symbol's element budget. -->
+       elements, to stay inside the symbol's element budget. */}
   <symbol id="blossom" viewBox="0 0 48 48">
     <ellipse cx="25.5" cy="26" rx="20" ry="19" fill="url(#flower-seat-shadow)" />
     <g transform="translate(24 24)">
@@ -521,92 +521,12 @@
     </g>
   </symbol>
 
-  <!-- `leaf-eucalyptus`: a silver-dollar sprig — a curved stem carrying 7 round, fully-opaque
-       leaves (radial-lit so each reads as a lit sphere segment, not a flat cutout) plus one
-       multi-subpath midrib vein, one short crease per leaf, each pre-rotated to match its own
-       leaf's tilt. Two leaves carry a thin champagne edge, the garland's gold touch. -->
-  <symbol id="leaf-eucalyptus" viewBox="0 0 40 96">
-    <path
-      d="M20 4c2 22 2 46 0 91"
-      fill="none"
-      stroke="var(--c-leaf-deep)"
-      stroke-width="1.4"
-      stroke-opacity="0.6"
-    />
-    <ellipse cx="9" cy="16" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-18 9 16)" />
-    <ellipse cx="31" cy="30" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="rotate(18 31 30)" />
-    <ellipse cx="9" cy="44" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-18 9 44)" />
-    <ellipse cx="31" cy="58" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(18 31 58)" />
-    <ellipse cx="9" cy="72" rx="7" ry="9" fill="url(#leaf-eucalyptus-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="rotate(-18 9 72)" />
-    <ellipse cx="29" cy="84" rx="6" ry="8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(18 29 84)" />
-    <ellipse cx="18" cy="92" rx="5" ry="7" fill="url(#leaf-eucalyptus-gradient)" />
-    <path
-      d="M6.68 8.87L11.32 23.13 M33.32 22.87L28.68 37.13 M6.68 36.87L11.32 51.13 M33.32 50.87L28.68 65.13 M6.91 65.58L11.09 78.42 M30.85 78.29L27.15 89.71 M18 86.75L18 97.25"
-      fill="none"
-      stroke="var(--c-leaf-deep)"
-      stroke-width="0.5"
-      stroke-opacity="0.45"
-      stroke-linecap="round"
-    />
-  </symbol>
-
-  <!-- `leaf-olive`: a sage branch. A gently bowed stem carries 9 alternating lanceolate leaves
-       plus a terminal leaf, shrinking toward the tip; each leaf is two-tone (leaf-deep at the
-       base to leaf at the tip), shares one multi-subpath midrib path, and two carry a thin
-       champagne edge, the garland's gold touch. The stem base sits at the bottom centre. -->
-  <symbol id="leaf-olive" viewBox="0 0 36 110">
-    <path d="M18 109C14 74.8 21 33 19 15" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.1" stroke-opacity="0.7" stroke-linecap="round" />
-    <path d="M0 0C3.44 -4.2 4.3 -9.45 3.66 -13.65C3.01 -16.8 1.51 -19.32 0 -21C-1.5 -19.32 -3.01 -16.8 -3.65 -13.65C-4.3 -9.45 -3.44 -4.2 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(17.11 98.54) rotate(-49.23)" />
-    <path d="M0 0C3.31 -3.98 4.14 -8.95 3.52 -12.93C2.9 -15.92 1.45 -18.31 0 -19.9C-1.45 -18.31 -2.9 -15.92 -3.52 -12.93C-4.14 -8.95 -3.31 -3.98 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(16.76 88.09) rotate(43.31)" />
-    <path d="M0 0C3.18 -3.76 3.98 -8.46 3.38 -12.22C2.79 -15.04 1.39 -17.3 0 -18.8C-1.39 -17.3 -2.79 -15.04 -3.38 -12.22C-3.98 -8.46 -3.18 -3.76 0 0Z" fill="url(#leaf-olive-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="translate(16.82 77.55) rotate(-40.81)" />
-    <path d="M0 0C3.06 -3.54 3.82 -7.96 3.25 -11.5C2.67 -14.16 1.34 -16.28 0 -17.7C-1.34 -16.28 -2.67 -14.16 -3.25 -11.5C-3.82 -7.96 -3.06 -3.54 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(17.16 67.12) rotate(42.52)" />
-    <path d="M0 0C2.93 -3.32 3.66 -7.47 3.11 -10.79C2.56 -13.28 1.28 -15.27 0 -16.6C-1.28 -15.27 -2.56 -13.28 -3.11 -10.79C-3.66 -7.47 -2.93 -3.32 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(17.69 56.95) rotate(-34.68)" />
-    <path d="M0 0C2.8 -3.1 3.5 -6.97 2.98 -10.08C2.45 -12.4 1.22 -14.26 0 -15.5C-1.22 -14.26 -2.45 -12.4 -2.97 -10.08C-3.5 -6.97 -2.8 -3.1 0 0Z" fill="url(#leaf-olive-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="translate(18.28 47.22) rotate(39.58)" />
-    <path d="M0 0C2.67 -2.88 3.34 -6.48 2.84 -9.36C2.34 -11.52 1.17 -13.25 0 -14.4C-1.17 -13.25 -2.34 -11.52 -2.84 -9.36C-3.34 -6.48 -2.67 -2.88 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18.84 38.11) rotate(-30.77)" />
-    <path d="M0 0C2.54 -2.66 3.18 -5.98 2.7 -8.64C2.23 -10.64 1.11 -12.24 0 -13.3C-1.11 -12.24 -2.23 -10.64 -2.7 -8.64C-3.18 -5.98 -2.54 -2.66 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(19.23 29.8) rotate(34.07)" />
-    <path d="M0 0C2.42 -2.44 3.02 -5.49 2.57 -7.93C2.11 -9.76 1.06 -11.22 0 -12.2C-1.06 -11.22 -2.11 -9.76 -2.57 -7.93C-3.02 -5.49 -2.42 -2.44 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(19.37 22.45) rotate(-30.32)" />
-    <path d="M0 0C2.08 -2.6 2.6 -5.85 2.21 -8.45C1.82 -10.4 0.91 -11.96 0 -13C-0.91 -11.96 -1.82 -10.4 -2.21 -8.45C-2.6 -5.85 -2.08 -2.6 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(19 17) rotate(-6.34)" />
-    <path
-      d="M15.97 97.56L4.39 87.57 M17.79 87L27.68 76.5 M15.84 76.42L6.99 66.17 M18.18 66.01L26.73 56.68 M16.84 55.71L10.13 46.03 M19.24 46.06L26.19 37.66 M18.07 36.82L12.94 28.22 M20.07 28.56L25.19 20.99 M18.61 21.16L14.44 14.03 M18.89 16.01L17.85 6.66"
-      fill="none"
-      stroke="var(--c-leaf-deep)"
-      stroke-width="0.4"
-      stroke-opacity="0.5"
-      stroke-linecap="round"
-    />
-  </symbol>
-
-  <!-- `leaf-gold`: a gold-foil branch with the sage branch's structure (9 alternating leaves
-       plus a terminal leaf on a bowed stem, base at the bottom centre), painted with a diagonal
-       metallic foil gradient and a fine deep-gold edge on every side leaf. -->
-  <symbol id="leaf-gold" viewBox="0 0 40 110">
-    <path d="M20 109C16 74.8 23 33 21 15" fill="none" stroke="var(--c-champagne-500)" stroke-width="1.1" stroke-opacity="0.7" stroke-linecap="round" />
-    <path d="M0 0C3.44 -4.2 4.3 -9.45 3.66 -13.65C3.01 -16.8 1.51 -19.32 0 -21C-1.5 -19.32 -3.01 -16.8 -3.65 -13.65C-4.3 -9.45 -3.44 -4.2 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(19.11 98.54) rotate(-49.23)" />
-    <path d="M0 0C3.31 -3.98 4.14 -8.95 3.52 -12.93C2.9 -15.92 1.45 -18.31 0 -19.9C-1.45 -18.31 -2.9 -15.92 -3.52 -12.93C-4.14 -8.95 -3.31 -3.98 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(18.76 88.09) rotate(43.31)" />
-    <path d="M0 0C3.18 -3.76 3.98 -8.46 3.38 -12.22C2.79 -15.04 1.39 -17.3 0 -18.8C-1.39 -17.3 -2.79 -15.04 -3.38 -12.22C-3.98 -8.46 -3.18 -3.76 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(18.82 77.55) rotate(-40.81)" />
-    <path d="M0 0C3.06 -3.54 3.82 -7.96 3.25 -11.5C2.67 -14.16 1.34 -16.28 0 -17.7C-1.34 -16.28 -2.67 -14.16 -3.25 -11.5C-3.82 -7.96 -3.06 -3.54 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(19.16 67.12) rotate(42.52)" />
-    <path d="M0 0C2.93 -3.32 3.66 -7.47 3.11 -10.79C2.56 -13.28 1.28 -15.27 0 -16.6C-1.28 -15.27 -2.56 -13.28 -3.11 -10.79C-3.66 -7.47 -2.93 -3.32 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(19.69 56.95) rotate(-34.68)" />
-    <path d="M0 0C2.8 -3.1 3.5 -6.97 2.98 -10.08C2.45 -12.4 1.22 -14.26 0 -15.5C-1.22 -14.26 -2.45 -12.4 -2.97 -10.08C-3.5 -6.97 -2.8 -3.1 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(20.28 47.22) rotate(39.58)" />
-    <path d="M0 0C2.67 -2.88 3.34 -6.48 2.84 -9.36C2.34 -11.52 1.17 -13.25 0 -14.4C-1.17 -13.25 -2.34 -11.52 -2.84 -9.36C-3.34 -6.48 -2.67 -2.88 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(20.84 38.11) rotate(-30.77)" />
-    <path d="M0 0C2.54 -2.66 3.18 -5.98 2.7 -8.64C2.23 -10.64 1.11 -12.24 0 -13.3C-1.11 -12.24 -2.23 -10.64 -2.7 -8.64C-3.18 -5.98 -2.54 -2.66 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(21.23 29.8) rotate(34.07)" />
-    <path d="M0 0C2.42 -2.44 3.02 -5.49 2.57 -7.93C2.11 -9.76 1.06 -11.22 0 -12.2C-1.06 -11.22 -2.11 -9.76 -2.57 -7.93C-3.02 -5.49 -2.42 -2.44 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(21.37 22.45) rotate(-30.32)" />
-    <path d="M0 0C2.08 -2.6 2.6 -5.85 2.21 -8.45C1.82 -10.4 0.91 -11.96 0 -13C-0.91 -11.96 -1.82 -10.4 -2.21 -8.45C-2.6 -5.85 -2.08 -2.6 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(21 17) rotate(-6.34)" />
-    <path
-      d="M17.97 97.56L6.39 87.57 M19.79 87L29.68 76.5 M17.84 76.42L8.99 66.17 M20.18 66.01L28.73 56.68 M18.84 55.71L12.13 46.03 M21.24 46.06L28.19 37.66 M20.07 36.82L14.94 28.22 M22.07 28.56L27.19 20.99 M20.61 21.16L16.44 14.03 M20.89 16.01L19.85 6.66"
-      fill="none"
-      stroke="var(--c-champagne-700)"
-      stroke-width="0.4"
-      stroke-opacity="0.5"
-      stroke-linecap="round"
-    />
-  </symbol>
-
-  <!-- `leaf-laurel-cluster`: 5 bowed stems fan from one hidden root at (60, 114) — far left, near
+  {/* `leaf-laurel-cluster`: 5 bowed stems fan from one hidden root at (60, 114) — far left, near
        left-of-centre, straight up, near right-of-centre, far right — each carrying broad elliptic
        laurel leaves that overlap along the stem for a lush mass rather than a thin spine. Roughly
        a third of the leaves are gold foil, several of the sage ones carry a gilt edge, and one
        multi-subpath path traces every leaf's midrib. No new gradient defs: it reuses
-       `leaf-olive-gradient` and `leaf-gold-metal` from the branches above. -->
+       `leaf-olive-gradient` and `leaf-gold-metal` from the shared gradient defs above. */}
   <symbol id="leaf-laurel-cluster" viewBox="0 0 120 120">
     <path d="M60 114C39.23 95.85 28.63 71.34 17.61 46.16" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
     <path d="M60 114C54 100 46 86 36 60" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.6" />
@@ -653,9 +573,10 @@
     />
   </symbol>
 
-  <!-- `leaf-eucalyptus-cluster`: 3 bowed stems fan from one hidden root at (60, 114); round
-       silver-dollar leaves overlap in pairs along each stem (radial-lit, same gradient as the
-       sprig above), with short creases and gilt touches. No new gradient defs. -->
+  {/* `leaf-eucalyptus-cluster`: 4 bowed stems fan from one hidden root at (60, 114); round
+       silver-dollar leaves overlap in pairs along each stem (radial-lit, `leaf-eucalyptus-gradient`
+       from the shared gradient defs above), with short creases and gilt touches. No new gradient
+       defs. */}
   <symbol id="leaf-eucalyptus-cluster" viewBox="0 0 120 120">
     <path d="M60 114C37.24 97.77 22.91 74.47 7.29 51.18" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
     <path d="M60 114C54 98 48 80 40 58" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.6" />

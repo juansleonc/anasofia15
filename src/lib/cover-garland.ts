@@ -16,9 +16,6 @@ export type ArchSymbol =
   | 'peony-ivory'
   | 'rosebud'
   | 'blossom'
-  | 'leaf-eucalyptus'
-  | 'leaf-olive'
-  | 'leaf-gold'
   | 'leaf-laurel-cluster'
   | 'leaf-eucalyptus-cluster';
 
