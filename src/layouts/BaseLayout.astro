@@ -1,7 +1,7 @@
 ---
 // Shared <head>/<body> shell: design tokens, self-hosted fonts, Open Graph/meta tags, the
-// CSS-only blush wash background (see tokens.css's `body::before`), and the single hidden
-// <RoseSprite/> sheet — all mounted once behind/above every page.
+// CSS-only blush wash background (see tokens.css's `body::before`), and the hidden
+// <RoseSprite/>/<ArchSprite/> sheets — all mounted once behind/above every page.
 import '@fontsource/great-vibes/latin.css';
 import '@fontsource/inter/latin-400.css';
 import '@fontsource/inter/latin-700.css';
@@ -14,6 +14,7 @@ import { withBase } from '../lib/base';
 import { siteConfig } from '../data/site.config';
 import { publicAssetExists } from '../lib/assets';
 import RoseSprite from '../components/RoseSprite.astro';
+import ArchSprite from '../components/ArchSprite.astro';
 
 interface Props {
   title?: string;
@@ -50,6 +51,7 @@ const ogImageUrl = new URL(withBase(siteConfig.og.imagePath), siteOrigin).toStri
 	</head>
 	<body>
 		<RoseSprite />
+		<ArchSprite />
 		<slot />
 		<script>
 			// Scroll-reveal: progressive enhancement only — see tokens.css for why the

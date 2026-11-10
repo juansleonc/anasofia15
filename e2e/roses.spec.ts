@@ -30,3 +30,49 @@ test.describe('Rose sprite', () => {
     expect(box?.height ?? -1).toBe(0);
   });
 });
+
+test.describe('Arch sprite', () => {
+  test('defines each arch symbol id exactly once', async ({ page }) => {
+    await page.goto('./');
+
+    const idCounts = await page.evaluate(() => {
+      const ids = [
+        'balloon-pink',
+        'balloon-rosegold',
+        'balloon-champagne',
+        'balloon-gloss',
+        'rose-cream',
+        'blossom',
+        'leaf-eucalyptus',
+        'leaf-gold',
+        'sparkle-star',
+      ];
+      return Object.fromEntries(
+        ids.map((id) => [id, document.querySelectorAll(`#${id}`).length]),
+      );
+    });
+
+    expect(idCounts).toEqual({
+      'balloon-pink': 1,
+      'balloon-rosegold': 1,
+      'balloon-champagne': 1,
+      'balloon-gloss': 1,
+      'rose-cream': 1,
+      blossom: 1,
+      'leaf-eucalyptus': 1,
+      'leaf-gold': 1,
+      'sparkle-star': 1,
+    });
+  });
+
+  test('is hidden from layout and from assistive tech', async ({ page }) => {
+    await page.goto('./');
+
+    const sprite = page.getByTestId('arch-sprite');
+    await expect(sprite).toHaveAttribute('aria-hidden', 'true');
+
+    const box = await sprite.boundingBox();
+    expect(box?.width ?? -1).toBe(0);
+    expect(box?.height ?? -1).toBe(0);
+  });
+});

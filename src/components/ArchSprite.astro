@@ -1,0 +1,182 @@
+---
+// Single hidden sprite sheet for every balloon/flower/leaf/sparkle shape the cover's arch draws:
+// one <svg> holding the shared gradient <defs> plus the reusable <symbol> shapes that
+// `BalloonArch.astro` references by id via <use>. Defining each shape exactly once here — the
+// same pattern as `RoseSprite.astro` — is what keeps "no duplicate element ids" true no matter
+// how many balloons/flowers/leaves a layout places.
+//
+// Gradient stop-colors read from theme tokens (`style="stop-color: var(--c-…)"`) rather than raw
+// hex, so the whole sprite re-themes from the palette alone. No SVG filters
+// (feGaussianBlur/feTurbulence): those rasterize per visible instance on iPhone WebKit during
+// scroll/animation — the glossy-balloon read comes entirely from layered radial gradients plus a
+// shared highlight shape instead.
+---
+
+<svg
+  class="arch-sprite"
+  data-testid="arch-sprite"
+  aria-hidden="true"
+  focusable="false"
+  style="position:absolute;width:0;height:0;overflow:hidden"
+>
+  <defs>
+    <radialGradient id="balloon-pink-gradient" cx="32%" cy="28%" r="78%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="45%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="78%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+    </radialGradient>
+    <radialGradient id="balloon-rosegold-gradient" cx="32%" cy="28%" r="78%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="45%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="78%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+    </radialGradient>
+    <radialGradient id="balloon-champagne-gradient" cx="32%" cy="28%" r="78%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="45%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="78%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
+    </radialGradient>
+    <radialGradient id="balloon-gloss-highlight" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="0.85" />
+      <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="rose-cream-gradient" cx="40%" cy="35%" r="75%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="50%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
+    </radialGradient>
+    <radialGradient id="blossom-gradient" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-300)" />
+    </radialGradient>
+    <linearGradient id="leaf-eucalyptus-gradient" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-leaf)" />
+      <stop offset="100%" style="stop-color: var(--c-leaf-deep)" />
+    </linearGradient>
+  </defs>
+
+  <!-- Shared gloss overlay for every balloon tone: a soft elliptical highlight, a small sharp
+       specular dot and a faint lower rim-light — drawn once, referenced by each balloon symbol. -->
+  <symbol id="balloon-gloss" viewBox="0 0 100 110">
+    <ellipse cx="34" cy="30" rx="18" ry="13" fill="url(#balloon-gloss-highlight)" transform="rotate(-18 34 30)" />
+    <circle cx="30" cy="24" r="4.5" fill="var(--c-white)" fill-opacity="0.9" />
+    <path
+      d="M70 68a24 24 0 0 1 -10 16"
+      fill="none"
+      stroke="var(--c-white)"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-opacity="0.35"
+    />
+  </symbol>
+
+  <symbol id="balloon-pink" viewBox="0 0 100 110">
+    <ellipse cx="54" cy="86" rx="14" ry="5" fill="var(--c-rose-400)" fill-opacity="0.22" />
+    <circle cx="50" cy="48" r="44" fill="url(#balloon-pink-gradient)" />
+    <path d="M50 92l-6 10h12l-6-10Z" fill="var(--c-rose-400)" />
+    <use href="#balloon-gloss" />
+  </symbol>
+
+  <symbol id="balloon-rosegold" viewBox="0 0 100 110">
+    <ellipse cx="54" cy="86" rx="14" ry="5" fill="var(--c-rosegold-400)" fill-opacity="0.22" />
+    <circle cx="50" cy="48" r="44" fill="url(#balloon-rosegold-gradient)" />
+    <path d="M50 92l-6 10h12l-6-10Z" fill="var(--c-rosegold-400)" />
+    <use href="#balloon-gloss" />
+  </symbol>
+
+  <symbol id="balloon-champagne" viewBox="0 0 100 110">
+    <ellipse cx="54" cy="86" rx="14" ry="5" fill="var(--c-champagne-700)" fill-opacity="0.22" />
+    <circle cx="50" cy="48" r="44" fill="url(#balloon-champagne-gradient)" />
+    <path d="M50 92l-6 10h12l-6-10Z" fill="var(--c-champagne-700)" />
+    <use href="#balloon-gloss" />
+  </symbol>
+
+  <symbol id="rose-cream" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="22" fill="url(#rose-cream-gradient)" fill-opacity="0.78" />
+    <path
+      d="M32 12c8 2 14 9 14 17s-6 14-14 16c-8-2-14-8-14-16s6-15 14-17Z"
+      fill="url(#rose-cream-gradient)"
+      fill-opacity="0.8"
+    />
+    <path
+      d="M18 25c3-7 9-11 14-11s11 4 14 11c-3 6-8 10-14 10s-11-4-14-10Z"
+      fill="url(#rose-cream-gradient)"
+      fill-opacity="0.76"
+    />
+    <path
+      d="M20 35c2-7 7-11 12-11s10 4 12 11-5 12-12 14c-7-2-12-7-12-14Z"
+      fill="url(#rose-cream-gradient)"
+      fill-opacity="0.82"
+    />
+    <path
+      d="M25 39c1-5 4-9 7-9s6 4 7 9-3 10-7 11-8-6-7-11Z"
+      fill="url(#rose-cream-gradient)"
+      fill-opacity="0.88"
+    />
+    <path d="M32 44c-2 3-2 6-2 8h4c0-2 0-5-2-8Z" fill="url(#rose-cream-gradient)" fill-opacity="0.9" />
+    <path
+      d="M32 18c-6 1-10 6-11 11 3-3 7-6 11-6s8 3 11 6c-1-5-5-10-11-11Z"
+      fill="url(#rose-cream-gradient)"
+      fill-opacity="0.75"
+    />
+  </symbol>
+
+  <symbol id="blossom" viewBox="0 0 48 48">
+    <g transform="translate(24 24)">
+      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" />
+      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" transform="rotate(72)" />
+      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" transform="rotate(144)" />
+      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" transform="rotate(216)" />
+      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" transform="rotate(288)" />
+      <circle r="6" fill="var(--c-champagne-300)" />
+      <circle cx="-2.2" cy="-2.2" r="1.1" fill="var(--c-champagne-500)" />
+      <circle cx="2.2" cy="-2.2" r="1.1" fill="var(--c-champagne-500)" />
+      <circle cx="-2.2" cy="2.2" r="1.1" fill="var(--c-champagne-500)" />
+      <circle cx="2.2" cy="2.2" r="1.1" fill="var(--c-champagne-500)" />
+      <circle cx="0" cy="3" r="1.1" fill="var(--c-champagne-500)" />
+    </g>
+  </symbol>
+
+  <symbol id="leaf-eucalyptus" viewBox="0 0 40 96">
+    <path
+      d="M20 4c2 22 2 44 0 88"
+      fill="none"
+      stroke="var(--c-leaf-deep)"
+      stroke-width="1.4"
+      stroke-opacity="0.6"
+    />
+    <ellipse cx="9" cy="16" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(-18 9 16)" />
+    <ellipse cx="31" cy="30" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(18 31 30)" />
+    <ellipse cx="9" cy="44" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(-18 9 44)" />
+    <ellipse cx="31" cy="58" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(18 31 58)" />
+    <ellipse cx="9" cy="72" rx="7" ry="9" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(-18 9 72)" />
+    <ellipse cx="29" cy="84" rx="6" ry="8" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(18 29 84)" />
+    <ellipse cx="18" cy="92" rx="5" ry="7" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" />
+  </symbol>
+
+  <symbol id="leaf-gold" viewBox="0 0 40 64">
+    <path d="M20 4c2 16 2 32 0 56" fill="none" stroke="var(--c-champagne-500)" stroke-width="1.1" stroke-opacity="0.7" />
+    <path
+      d="M20 10c9 4 14 12 14 20s-5 16-14 20c-9-4-14-12-14-20s5-16 14-20Z"
+      fill="var(--c-champagne-100)"
+      fill-opacity="0.35"
+      stroke="var(--c-champagne-500)"
+      stroke-width="1.2"
+    />
+    <path d="M20 16v28" fill="none" stroke="var(--c-champagne-500)" stroke-width="0.8" stroke-opacity="0.6" />
+  </symbol>
+
+  <symbol id="sparkle-star" viewBox="0 0 24 24">
+    <path
+      d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+      fill="var(--c-champagne-300)"
+    />
+    <path
+      d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+      fill="var(--c-champagne-100)"
+      transform="translate(12 12) scale(0.55) translate(-12 -12)"
+    />
+  </symbol>
+</svg>
