@@ -140,17 +140,34 @@ describe('ArchSprite balloons', () => {
     expect(el.querySelector('use[href="#balloon-gloss"]')).not.toBeNull();
   });
 
-  it.each(CHROME_BALLOONS)('%s (chrome) carries a reflection band', (id) => {
+  it.each(ALL_BALLOONS)('%s draws its body as one teardrop path, not an ellipse', (id) => {
     const el = symbol(id);
-    expect(el.querySelector(`[fill="url(#${id}-chrome-band)"]`)).not.toBeNull();
+    expect(el.querySelector(`ellipse[fill="url(#${id}-gradient)"]`)).toBeNull();
+    const body = el.querySelector(`path[fill="url(#${id}-gradient)"]`);
+    expect(body).not.toBeNull();
+    // Narrower toward the knot: the widest row sits above the body's vertical middle.
+    const points = pathPoints(body!);
+    const box = boxOf(points);
+    const widest = points.reduce((best, point) => (point[0] > best[0] ? point : best));
+    expect(widest[1]).toBeLessThan((box.minY + box.maxY) / 2);
   });
 
-  it.each(SATIN_BALLOONS)('%s (satin) has no reflection band', (id) => {
-    const el = symbol(id);
-    const bandFill = Array.from(el.querySelectorAll('[fill]')).find((node) =>
-      (node.getAttribute('fill') ?? '').includes('chrome-band'),
+  it('every balloon tone shares the same teardrop outline', () => {
+    const outlines = new Set(
+      ALL_BALLOONS.map((id) => symbol(id).querySelector(`path[fill="url(#${id}-gradient)"]`)?.getAttribute('d')),
     );
-    expect(bandFill).toBeUndefined();
+    expect(outlines.size).toBe(1);
+    expect([...outlines][0]).toBeTruthy();
+  });
+
+  it('no balloon carries the old arc reflection band', () => {
+    const balloonPaths = ALL_BALLOONS.flatMap((id) => Array.from(symbol(id).querySelectorAll('path')));
+    expect(balloonPaths.length).toBeGreaterThanOrEqual(ALL_BALLOONS.length * 2);
+    for (const path of balloonPaths) {
+      expect(path.getAttribute('d') ?? '').not.toMatch(/A40 46/);
+      expect(path.getAttribute('fill') ?? '').not.toContain('chrome-band');
+    }
+    expect(root.querySelectorAll('[id$="chrome-band"]').length).toBe(0);
   });
 
   it('balloon bodies stay within their element budget (8 own shapes + the shared gloss use)', () => {
@@ -187,49 +204,74 @@ describe('ArchSprite balloons', () => {
   });
 });
 
-describe('ArchSprite chrome reflection band', () => {
-  it.each(CHROME_BALLOONS)('%s band follows the sphere curvature with an elliptical arc', (id) => {
-    const el = symbol(id);
-    const band = el.querySelector(`[fill="url(#${id}-chrome-band)"]`);
-    expect(band).not.toBeNull();
-    expect(band!.getAttribute('d')).toMatch(/[Aa]/);
-  });
-
-  it.each(CHROME_BALLOONS)('%s band gradient feathers to 0 opacity at both ends', (id) => {
-    const bandGradient = gradient(`${id}-chrome-band`);
-    const stops = Array.from(bandGradient.querySelectorAll('stop'));
-    expect(stops.length).toBeGreaterThanOrEqual(3);
-    expect(stops[0].getAttribute('stop-opacity')).toBe('0');
-    expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
-  });
-
-  it.each(CHROME_BALLOONS)('%s band is lower-contrast than a hard liquid-line stripe', (id) => {
-    const bandGradient = gradient(`${id}-chrome-band`);
-    const stops = Array.from(bandGradient.querySelectorAll('stop'));
-    const innerOpacities = stops.slice(1, -1).map((stop) => Number(stop.getAttribute('stop-opacity')));
-    for (const opacity of innerOpacities) {
-      expect(opacity).toBeLessThanOrEqual(0.35);
-    }
-  });
-});
+/** Highest `stop-opacity` in a gradient (a missing attribute counts as fully opaque). */
+function peakOpacity(gradientEl: Element): number {
+  return Math.max(...Array.from(gradientEl.querySelectorAll('stop')).map((stop) => Number(stop.getAttribute('stop-opacity') ?? '1')));
+}
 
 describe('ArchSprite gloss', () => {
-  it('has a soft highlight, a specular hot spot, a secondary reflection and a stroked rim', () => {
-    const gloss = symbol('balloon-gloss');
-    expect(gloss.querySelector('[fill="url(#balloon-gloss-soft)"]')).not.toBeNull();
-    expect(gloss.querySelector('[fill="url(#balloon-gloss-spec)"]')).not.toBeNull();
-    expect(gloss.querySelector('[fill="url(#balloon-gloss-secondary)"]')).not.toBeNull();
-    const rim = Array.from(gloss.querySelectorAll('path')).find(
-      (path) => path.getAttribute('stroke') && path.getAttribute('stroke') !== 'none',
-    );
-    expect(rim).not.toBeUndefined();
-    expect(rim!.getAttribute('fill')).toBe('none');
+  it('has a softbox window highlight: a curved quad under a white 70% to 0 linear gradient', () => {
+    const windowGradient = gradient('balloon-gloss-window');
+    expect(windowGradient.tagName.toLowerCase()).toBe('lineargradient');
+    const stops = Array.from(windowGradient.querySelectorAll('stop'));
+    expect(stops[0].getAttribute('style')).toMatch(/var\(--c-white\)/);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.7);
+    expect(Number(stops[stops.length - 1].getAttribute('stop-opacity'))).toBe(0);
+    const shape = symbol('balloon-gloss').querySelector('path[fill="url(#balloon-gloss-window)"]');
+    expect(shape).not.toBeNull();
+    const [outline] = cubicSubpaths(shape!.getAttribute('d') ?? '');
+    expect(outline.closed).toBe(true);
+    expect(outline.segments.length).toBe(4);
+  });
+
+  it('keeps a small specular hot spot', () => {
+    const spot = symbol('balloon-gloss').querySelector('[fill="url(#balloon-gloss-spec)"]');
+    expect(spot).not.toBeNull();
+    expect(Number(spot!.getAttribute('rx'))).toBeLessThanOrEqual(8);
+  });
+
+  it('has a champagne rim-light crescent on the lower right at 35-50%', () => {
+    const rimGradient = gradient('balloon-gloss-rim');
+    for (const style of stopColors(rimGradient)) expect(style).toMatch(/var\(--c-champagne-100\)/);
+    expect(peakOpacity(rimGradient)).toBeGreaterThanOrEqual(0.35);
+    expect(peakOpacity(rimGradient)).toBeLessThanOrEqual(0.5);
+    const rim = symbol('balloon-gloss').querySelector('path[fill="url(#balloon-gloss-rim)"]');
+    expect(rim).not.toBeNull();
+    const box = boxOf(pathPoints(rim!));
+    expect(box.minX).toBeGreaterThan(50);
+    expect(box.minY).toBeGreaterThan(30);
+  });
+
+  it('has an ambient-occlusion crescent inside the bottom edge at 25-35%', () => {
+    const aoGradient = gradient('balloon-gloss-ao');
+    expect(peakOpacity(aoGradient)).toBeGreaterThanOrEqual(0.25);
+    expect(peakOpacity(aoGradient)).toBeLessThanOrEqual(0.35);
+    const ao = symbol('balloon-gloss').querySelector('path[fill="url(#balloon-gloss-ao)"]');
+    expect(ao).not.toBeNull();
+    const box = boxOf(pathPoints(ao!));
+    expect(box.minY).toBeGreaterThan(55);
   });
 
   it('stays within its element budget (4 shapes, up to 5)', () => {
     const children = symbol('balloon-gloss').children.length;
     expect(children).toBeGreaterThanOrEqual(4);
     expect(children).toBeLessThanOrEqual(5);
+  });
+});
+
+// The garland's text clearance (cover-garland) sizes every item from these symbol extents, so the
+// art may change freely only while each symbol stays inside the footprint it promised.
+describe('footprint contract', () => {
+  it.each(ALL_BALLOONS)('%s keeps its visible body within the old 88 x 92 body box, give or take 2 units', (id) => {
+    const el = symbol(id);
+    expect(el.getAttribute('viewBox')).toBe('0 0 100 110');
+    const body = el.querySelector(`path[fill="url(#${id}-gradient)"]`);
+    expect(body).not.toBeNull();
+    const box = boxOf(pathPoints(body!));
+    expect(Math.abs(box.minX - 6)).toBeLessThanOrEqual(2);
+    expect(Math.abs(box.maxX - 94)).toBeLessThanOrEqual(2);
+    expect(Math.abs(box.minY - 2)).toBeLessThanOrEqual(2);
+    expect(Math.abs(box.maxY - 94)).toBeLessThanOrEqual(2);
   });
 });
 

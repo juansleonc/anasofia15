@@ -94,42 +94,29 @@
       <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
     </linearGradient>
 
-    <!-- Chrome-only reflection band: a soft horizon-shaped highlight that hugs the body's own
-         curvature (an elliptical arc, not an arbitrary blob) and fades to 0 opacity at both ends
-         and low peak opacity throughout — a gentle sheen, not a hard "liquid line" stripe. Mirror
-         finishes reflect a horizon; satin balloons skip this entirely. -->
-    <linearGradient id="balloon-rosegold-chrome-band" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color: var(--c-rosegold-200)" stop-opacity="0" />
-      <stop offset="24%" style="stop-color: var(--c-rosegold-200)" stop-opacity="0.3" />
-      <stop offset="50%" style="stop-color: var(--c-rose-400)" stop-opacity="0.22" />
-      <stop offset="76%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.3" />
-      <stop offset="100%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
-    </linearGradient>
-    <linearGradient id="balloon-champagne-chrome-band" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
-      <stop offset="24%" style="stop-color: var(--c-champagne-200)" stop-opacity="0.3" />
-      <stop offset="50%" style="stop-color: var(--c-champagne-500)" stop-opacity="0.22" />
-      <stop offset="76%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.3" />
-      <stop offset="100%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
-    </linearGradient>
-
-    <!-- Shared gloss (see the `balloon-gloss` symbol below): a soft broad highlight, a tight
-         specular hot spot and a faint secondary "window" reflection, each its own gradient so the
-         falloff for each can differ (the specular spot is small and sharp, the other two wide and
-         soft). -->
-    <radialGradient id="balloon-gloss-soft" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="0.85" />
+    <!-- Shared lighting for every balloon (the `balloon-gloss` symbol below): a softbox
+         "window" reflection fading from 70% white, a tight specular hot spot, a champagne
+         rim-light crescent (light bounced in from the neighbouring balloons) and an
+         ambient-occlusion crescent along the bottom that gives the body weight. -->
+    <linearGradient id="balloon-gloss-window" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="0.7" />
       <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0" />
-    </radialGradient>
+    </linearGradient>
     <radialGradient id="balloon-gloss-spec" cx="50%" cy="50%" r="50%">
       <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="1" />
       <stop offset="45%" style="stop-color: var(--c-white)" stop-opacity="0.5" />
       <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="balloon-gloss-secondary" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="0.35" />
-      <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0" />
-    </radialGradient>
+    <linearGradient id="balloon-gloss-rim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
+      <stop offset="45%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.45" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="balloon-gloss-ao" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-ink)" stop-opacity="0" />
+      <stop offset="70%" style="stop-color: var(--c-ink)" stop-opacity="0" />
+      <stop offset="100%" style="stop-color: var(--c-ink)" stop-opacity="0.3" />
+    </linearGradient>
     <!-- Flower rings: one gradient per ring, `objectBoundingBox` units (the default — no
          `gradientUnits` attr) so each petal is shaded within its own bounding box, computed before
          its `transform="rotate(… c c)"`. Outer/mid petals point tip-up, so a high `cy` puts the
@@ -218,27 +205,17 @@
     </linearGradient>
   </defs>
 
-  <!-- Shared gloss overlay for every balloon tone: a soft broad highlight, a tight specular hot
-       spot, a faint lower-right "window" reflection and a thin rim-light arc — drawn once,
-       referenced by each balloon symbol. -->
   <symbol id="balloon-gloss" viewBox="0 0 100 110">
-    <ellipse cx="34" cy="30" rx="18" ry="13" fill="url(#balloon-gloss-soft)" transform="rotate(-18 34 30)" />
-    <ellipse cx="29" cy="23" rx="6" ry="5" fill="url(#balloon-gloss-spec)" />
-    <path d="M69 60c9 6 11 18 4 28c5-11 3-21-4-28Z" fill="url(#balloon-gloss-secondary)" />
-    <path
-      d="M70 68a24 24 0 0 1 -10 16"
-      fill="none"
-      stroke="var(--c-white)"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-opacity="0.3"
-    />
+    <path d="M18 36C17 30 17 26 20 22C26 12 37 7 49 7C45 11 41 17 39 25C32 26 25 30 18 36Z" fill="url(#balloon-gloss-window)" />
+    <ellipse cx="29" cy="19" rx="5" ry="3.6" fill="url(#balloon-gloss-spec)" transform="rotate(-30 29 19)" />
+    <path d="M91 40C92 60 83 78 64 89C77 77 85 60 86 42C87.5 41 89.5 40.5 91 40Z" fill="url(#balloon-gloss-rim)" />
+    <path d="M14 62C22 80 36 90 50 91.5C64 90 78 80 86 62C78 78 64 87 50 87.5C36 87 22 78 14 62Z" fill="url(#balloon-gloss-ao)" />
   </symbol>
 
   <symbol id="balloon-pink" viewBox="0 0 100 110">
     <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-pink-gradient)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-pink-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
     <path
       d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
       fill="url(#balloon-pink-knot)"
@@ -249,12 +226,8 @@
 
   <symbol id="balloon-rosegold" viewBox="0 0 100 110">
     <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-rosegold-gradient)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
-    <path
-      d="M18 75.6A40 46 0 0 1 82 75.6L82 68.5A38 38 0 0 0 18 68.5Z"
-      fill="url(#balloon-rosegold-chrome-band)"
-    />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-rosegold-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
     <path
       d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
       fill="url(#balloon-rosegold-knot)"
@@ -265,8 +238,8 @@
 
   <symbol id="balloon-rosegold-satin" viewBox="0 0 100 110">
     <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-rosegold-satin-gradient)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-rosegold-satin-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
     <path
       d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
       fill="url(#balloon-rosegold-knot)"
@@ -277,12 +250,8 @@
 
   <symbol id="balloon-champagne" viewBox="0 0 100 110">
     <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-champagne-gradient)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
-    <path
-      d="M18 75.6A40 46 0 0 1 82 75.6L82 68.5A38 38 0 0 0 18 68.5Z"
-      fill="url(#balloon-champagne-chrome-band)"
-    />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-champagne-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
     <path
       d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
       fill="url(#balloon-champagne-knot)"
@@ -293,8 +262,8 @@
 
   <symbol id="balloon-champagne-satin" viewBox="0 0 100 110">
     <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-champagne-satin-gradient)" />
-    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-champagne-satin-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
     <path
       d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
       fill="url(#balloon-champagne-knot)"
