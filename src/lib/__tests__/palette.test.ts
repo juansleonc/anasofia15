@@ -135,4 +135,13 @@ describe('palette discipline', () => {
     expect(contrastRatio('#ffffff', tokens['--c-wine-500'])).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio('#ffffff', tokens['--c-wine-700'])).toBeGreaterThanOrEqual(4.5);
   });
+
+  it('the name stays readable on the warm glow', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    expect(
+      contrastRatio(tokens['--c-rose-700'], tokens['--c-champagne-100']),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
 });

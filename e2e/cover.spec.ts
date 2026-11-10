@@ -338,4 +338,57 @@ test.describe('Cover section', () => {
     });
     expect(lightPrecedesArch).toBe(true);
   });
+
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`a warm glow sits behind the name at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const glow = page.getByTestId('cover-glow');
+      await expect(glow).toHaveAttribute('aria-hidden', 'true');
+
+      const glowStyles = await glow.evaluate((el) => {
+        const computed = getComputedStyle(el);
+        return { pointerEvents: computed.pointerEvents };
+      });
+      expect(glowStyles.pointerEvents).toBe('none');
+
+      const glowBox = await glow.boundingBox();
+      expect(glowBox).not.toBeNull();
+      const glowRect = glowBox!;
+
+      for (const testId of ['cover-title-lead', 'cover-celebrant-name', 'open-invitation-button']) {
+        const box = await page.getByTestId(testId).boundingBox();
+        expect(box).not.toBeNull();
+        const rect = box!;
+        const centreX = rect.x + rect.width / 2;
+        const centreY = rect.y + rect.height / 2;
+
+        expect(centreX).toBeGreaterThanOrEqual(glowRect.x);
+        expect(centreX).toBeLessThanOrEqual(glowRect.x + glowRect.width);
+        expect(centreY).toBeGreaterThanOrEqual(glowRect.y);
+        expect(centreY).toBeLessThanOrEqual(glowRect.y + glowRect.height);
+      }
+
+      const nameBox = await page.getByTestId('cover-celebrant-name').boundingBox();
+      const nameCentre = {
+        x: nameBox!.x + nameBox!.width / 2,
+        y: nameBox!.y + nameBox!.height / 2,
+      };
+      const hitsName = await page.evaluate(
+        ({ x, y }) => {
+          const el = document.elementFromPoint(x, y);
+          const name = document.querySelector('[data-testid="cover-celebrant-name"]');
+          return !!name && (el === name || name.contains(el));
+        },
+        nameCentre,
+      );
+      expect(hitsName).toBe(true);
+    });
+  }
 });

@@ -19,6 +19,7 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
   <BalloonArch clipToFrame />
   <div class="cover__frame" data-testid="cover-frame" aria-hidden="true"></div>
   <div class="cover__content">
+    <div class="cover__glow" data-testid="cover-glow" aria-hidden="true"></div>
     <h1 class="cover__title">
       <span class="cover__title-lead" data-testid="cover-title-lead">Invitación para los quince años de</span>{' '}
       <span class="cover__title-name font-cursive" data-testid="cover-celebrant-name">
@@ -145,6 +146,22 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
     flex-direction: column;
     align-items: center;
     gap: clamp(1.25rem, 4vh, 2.25rem);
+  }
+
+  /* Warm light cast directly behind the lead line, the name and the button — raises (never
+     lowers) text contrast rather than competing with it (D5). Sits in the content's own stacking
+     context so it never leaks in front of or behind the arch/frame. */
+  .cover__glow {
+    position: absolute;
+    inset: -8% -5%;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(
+      ellipse at 50% 48%,
+      color-mix(in srgb, var(--c-champagne-100) 92%, transparent) 0%,
+      color-mix(in srgb, var(--c-champagne-200) 40%, transparent) 45%,
+      transparent 72%
+    );
   }
 
   .cover__title {
