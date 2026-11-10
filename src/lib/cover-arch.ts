@@ -52,8 +52,11 @@ export interface ArchSpec {
   fadeStart: number;
   /** 0 = uniform along the spine; >0 concentrates items on the crown (t≈0.15-0.85). */
   crownBias: number;
+  /** 0 = no extra weight; >0 packs balloons, and bigger ones, into the two top corners. */
+  cornerBias: number;
   seed: number;
-  counts: { balloons: number; flowers: number; leaves: number };
+  /** `fillers` are extra small balloons tucked into the gaps the main balloons leave. */
+  counts: { balloons: number; fillers: number; flowers: number; leaves: number };
   /** Balloon diameter range in viewBox units, before taper. */
   sizeRange: [number, number];
 }
@@ -68,13 +71,14 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
   portrait: {
     width: 400,
     height: 470,
-    band: 160,
-    gutter: 34,
+    band: 190,
+    gutter: 42,
     sideDepth: 455,
     fadeStart: 250,
     crownBias: 8,
+    cornerBias: 20,
     seed: 15,
-    counts: { balloons: 32, flowers: 16, leaves: 24 },
+    counts: { balloons: 30, fillers: 12, flowers: 16, leaves: 24 },
     sizeRange: [38, 84],
   },
   landscape: {
@@ -85,8 +89,9 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     sideDepth: 525,
     fadeStart: 300,
     crownBias: 8,
+    cornerBias: 26,
     seed: 1219,
-    counts: { balloons: 48, flowers: 22, leaves: 34 },
+    counts: { balloons: 46, fillers: 16, flowers: 22, leaves: 34 },
     sizeRange: [54, 124],
   },
 };
@@ -128,9 +133,9 @@ function spinePoints(spec: ArchSpec): Point[] {
   return [
     { x: gutter / 2, y: sideDepth },
     { x: gutter / 2, y: band * 0.6 },
-    { x: width * 0.18, y: band * 0.35 },
-    { x: width / 2, y: band * 0.3 },
-    { x: width * 0.82, y: band * 0.35 },
+    { x: width * 0.18, y: band * 0.4 },
+    { x: width / 2, y: band * 0.4 },
+    { x: width * 0.82, y: band * 0.4 },
     { x: width - gutter / 2, y: band * 0.6 },
     { x: width - gutter / 2, y: sideDepth },
   ];
@@ -174,9 +179,38 @@ function sampleSpine(points: Point[], t: number): SpineSample {
   return { x: last.x, y: last.y, nx: 0, ny: 1 };
 }
 
+/** A point on the spec's ∩ spine at arc-length fraction t ∈ [0,1] (0 = bottom-left, 1 = bottom-right). */
+export function archSpinePoint(spec: ArchSpec, t: number): { x: number; y: number } {
+  const { x, y } = sampleSpine(spinePoints(spec), t);
+  return { x, y };
+}
+
 /** Big across the crown (t≈0.5), shrinking down the sides (t≈0 / t≈1). */
 function taper(t: number): number {
   return 0.45 + 0.55 * Math.sin(Math.PI * clamp(t, 0, 1));
+}
+
+/** Spine fraction where each side column turns into the crown — the arch's two top corners. */
+function cornerTs(points: Point[]): [number, number] {
+  let total = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    total += Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+  }
+  const knee = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) / total;
+  return [knee, 1 - knee];
+}
+
+/** 1 at either top corner, falling off smoothly along the spine. */
+function cornerBump(t: number, corners: [number, number]): number {
+  const width = 0.12;
+  const left = (t - corners[0]) / width;
+  const right = (t - corners[1]) / width;
+  return Math.max(Math.exp(-left * left), Math.exp(-right * right));
+}
+
+/** Balloon size profile: biggest at the corners, still generous mid-crown, smallest down the sides. */
+function balloonTaper(t: number, corners: [number, number]): number {
+  return 0.45 + 0.55 * Math.max(0.7 * Math.sin(Math.PI * clamp(t, 0, 1)), cornerBump(t, corners));
 }
 
 const WARP_STEPS = 64;
@@ -189,12 +223,15 @@ const WARP_STEPS = 64;
  * stay exactly fixed so the sides still reach `sideDepth` and the crown still spans both gutters.
  */
 function warp(u: number, crownBias: number): number {
-  const target = clamp(u, 0, 1);
   if (crownBias === 0) {
-    return target;
+    return clamp(u, 0, 1);
   }
+  return warpByDensity(u, (t) => 1 + crownBias * Math.sqrt(Math.sin(Math.PI * t)));
+}
 
-  const density = (t: number): number => 1 + crownBias * Math.sqrt(Math.sin(Math.PI * t));
+/** Inverse-CDF warp of `u` ∈ [0,1] through an arbitrary positive density over t ∈ [0,1]. */
+function warpByDensity(u: number, density: (t: number) => number): number {
+  const target = clamp(u, 0, 1);
   const cdf = new Array<number>(WARP_STEPS + 1).fill(0);
   for (let i = 1; i <= WARP_STEPS; i++) {
     const t0 = (i - 1) / WARP_STEPS;
@@ -261,19 +298,22 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
   const tones = shuffledTones(count, rng);
   const toneOccurrences: Record<ArchTone, number> = { pink: 0, rosegold: 0, champagne: 0 };
   const items: ArchItem[] = [];
+  const corners = cornerTs(points);
+  const density = (t: number): number =>
+    1 + spec.crownBias * Math.sqrt(Math.sin(Math.PI * t)) + spec.cornerBias * cornerBump(t, corners);
 
   for (let i = 0; i < count; i++) {
-    const base = count <= 1 ? 0.5 : warp(i / (count - 1), spec.crownBias);
+    const base = count <= 1 ? 0.5 : warpByDensity(i / (count - 1), density);
     const jitter = (rng() - 0.5) * (0.6 / Math.max(count, 1));
     const t = clamp(base + jitter, 0, 1);
 
     const sample = sampleSpine(points, t);
     const isBack = i % 2 === 0;
     const layer: 1 | 3 = isBack ? 1 : 3;
-    const size = (spec.sizeRange[0] + sizeSpan * taper(t)) * (isBack ? 1 : 0.75);
+    const size = (spec.sizeRange[0] + sizeSpan * balloonTaper(t, corners)) * (isBack ? 1 : 0.75);
 
     const side = rng() < 0.5 ? -1 : 1;
-    const offset = side * (0.15 + 0.45 * rng()) * size;
+    const offset = side * (0.15 + 0.45 * rng()) * (1 + 0.6 * cornerBump(t, corners)) * size;
     const rawX = sample.x + sample.nx * offset;
     const rawY = sample.y + sample.ny * offset;
 
@@ -290,6 +330,87 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
       rotate: (rng() - 0.5) * 20,
       layer,
     });
+  }
+
+  return items;
+}
+
+const FILLER_SPINE_STEPS = 120;
+
+/** How far `point` sits from the edge of the nearest solid: negative inside one, positive in a gap. */
+function clearance(point: Point, solids: ArchItem[]): number {
+  let gap = Infinity;
+  for (const solid of solids) {
+    gap = Math.min(gap, Math.hypot(point.x - solid.x, point.y - solid.y) - solid.size / 2);
+  }
+  return gap;
+}
+
+function inClearZone(point: Point, spec: ArchSpec): boolean {
+  return point.y > spec.band && point.x > spec.gutter && point.x < spec.width - spec.gutter;
+}
+
+/**
+ * Spots across the visible garland band where a filler may go: along the spine and on lines a
+ * third of the biggest balloon to either side, skipping the masked-out bottom, the text clear
+ * zone and anything off-canvas.
+ */
+function fillerSpots(spec: ArchSpec, points: Point[]): Point[] {
+  const halfWidth = spec.sizeRange[1] / 3;
+  const spots: Point[] = [];
+  for (let i = 0; i <= FILLER_SPINE_STEPS; i++) {
+    const sample = sampleSpine(points, i / FILLER_SPINE_STEPS);
+    for (const offset of [0, -halfWidth, halfWidth]) {
+      spots.push({ x: sample.x + sample.nx * offset, y: sample.y + sample.ny * offset });
+    }
+  }
+  return spots.filter(
+    (spot) =>
+      spot.x >= 0 && spot.x <= spec.width && spot.y >= 0 && spot.y <= spec.fadeStart && !inClearZone(spot, spec),
+  );
+}
+
+/**
+ * Second pass of small balloons tucked into the garland's gaps, greedily: each filler goes to the
+ * band spot furthest from any balloon or flower edge (the biggest visible hole), sized to just
+ * overlap that edge so it plugs the hole while touching the garland rather than floating free.
+ */
+function placeFillers(spec: ArchSpec, points: Point[], solids: ArchItem[], rng: () => number): ArchItem[] {
+  const count = spec.counts.fillers;
+  const maxSize = spec.sizeRange[1];
+  const minSize = 0.3 * maxSize;
+  const fillerMax = 0.6 * maxSize;
+  const tones = shuffledTones(count, rng);
+  const toneOccurrences: Record<ArchTone, number> = { pink: 0, rosegold: 0, champagne: 0 };
+  const spots = fillerSpots(spec, points);
+  const placed = [...solids];
+  const items: ArchItem[] = [];
+
+  for (let i = 0; i < count && spots.length > 0; i++) {
+    let best = { spot: spots[0], gap: clearance(spots[0], placed) };
+    for (const spot of spots.slice(1)) {
+      const gap = clearance(spot, placed);
+      if (gap > best.gap) {
+        best = { spot, gap };
+      }
+    }
+
+    const size = clamp(2.2 * best.gap, minSize, fillerMax);
+    const { x, y } = best.spot;
+
+    const tone = tones[i];
+    const filler: ArchItem = {
+      symbol: toneSymbol(tone, toneOccurrences[tone]++),
+      kind: 'balloon',
+      tone,
+      x: clamp(x, -maxSize, spec.width + maxSize),
+      y: clamp(y, -maxSize, spec.height),
+      size,
+      rotate: (rng() - 0.5) * 20,
+      layer: 3,
+    };
+    items.push(filler);
+    placed.push(filler);
   }
 
   return items;
@@ -438,13 +559,14 @@ export function archFadeMask(spec: ArchSpec): string {
 export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
   const points = spinePoints(spec);
-  const items = [
-    ...placeLeaves(spec, points, rng),
-    ...placeBalloons(spec, points, rng),
-    ...placeFlowers(spec, points, rng),
-  ]
-    .map((item) => clampOutOfClearZone(item, spec))
-    .sort((a, b) => a.layer - b.layer || a.y - b.y);
+  const leaves = placeLeaves(spec, points, rng);
+  const solids = [...placeBalloons(spec, points, rng), ...placeFlowers(spec, points, rng)].map((item) =>
+    clampOutOfClearZone(item, spec),
+  );
+  const fillers = placeFillers(spec, points, solids, rng).map((item) => clampOutOfClearZone(item, spec));
+  const items = [...leaves.map((item) => clampOutOfClearZone(item, spec)), ...solids, ...fillers].sort(
+    (a, b) => a.layer - b.layer || a.y - b.y,
+  );
 
   return { width: spec.width, height: spec.height, items };
 }
