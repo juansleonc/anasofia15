@@ -409,7 +409,7 @@ describe('ArchSprite perf guard', () => {
 // "petal path" is any path filled from one of those ring gradients — as opposed to the center bud
 // or the lip-highlight stroke, which are not counted as petals.
 const ROSE_IDS = ['rose-pink', 'rose-cream'];
-const GARDEN_ROSE_IDS = ['rose-pink'];
+const GARDEN_ROSE_IDS = ['rose-pink', 'rose-cream'];
 const roseRingGradientIds = (id: string): string[] => [`${id}-outer`, `${id}-mid`, `${id}-inner`];
 const PEONY_RING_IDS = ['peony-blush-outer', 'peony-blush-mid', 'peony-blush-inner'];
 
@@ -616,6 +616,16 @@ describe('ArchSprite roses', () => {
     for (const shape of shapes) {
       expect(shape.getAttribute('stroke') ?? 'none').toBe('none');
     }
+  });
+
+  it('rose-cream is ivory: champagne lips shaded with rose-gold, and no glassy white in its heart', () => {
+    const ringStops = roseRingGradientIds('rose-cream').flatMap((ringId) => stopColors(gradient(ringId)));
+    const heartStops = stopColors(gradient('rose-cream-heart'));
+    expect(ringStops.length).toBeGreaterThanOrEqual(9);
+    expect(stopColors(gradient('rose-cream-outer'))[0]).toMatch(/--c-champagne-(100|200)/);
+    expect(ringStops.some((style) => style.includes('--c-rosegold-200'))).toBe(true);
+    expect(heartStops.length).toBeGreaterThanOrEqual(3);
+    for (const style of [...ringStops, ...heartStops]) expect(style).not.toContain('--c-white');
   });
 
   it.each(ROSE_IDS)('%s shows a darker spiral bud furled at its center', (id) => {
