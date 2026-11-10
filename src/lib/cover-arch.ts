@@ -99,7 +99,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     fadeStart: 430,
     inset: 24,
     crownBias: 0.3,
-    cornerBias: 0.3,
+    cornerBias: 3,
     seed: 1219,
     counts: { balloons: 32, fillers: 6, flowers: 17, leaves: 40 },
     sizeRange: [40, 116],
@@ -340,9 +340,12 @@ function fitInside(item: ArchItem, spec: ArchSpec): ArchItem {
 const BURY_LIMIT = 0.36;
 const BURY_SAMPLES = 10;
 
-/** Final paint order is by layer, then by y — so this is known as soon as both are placed. */
+/**
+ * Final paint order is by layer, then by y — so this is known as soon as both are placed. Items
+ * level in both (a mirrored pair) keep placement order, so each counts as possibly above the other.
+ */
 function paintsAbove(a: ArchItem, b: ArchItem): boolean {
-  return a.layer > b.layer || (a.layer === b.layer && a.y > b.y);
+  return a.layer > b.layer || (a.layer === b.layer && a.y >= b.y);
 }
 
 function overlaps(a: ArchItem, b: ArchItem): boolean {
@@ -411,8 +414,8 @@ function pickFitting(
   return [];
 }
 
-/** Share of the crown's balloon area the two outer quarters aim for: a gentle corner emphasis. */
-const CORNER_SHARE = 0.58;
+/** Share of the crown's balloon area the two outer quarters aim for: heavy shoulders. */
+const CORNER_SHARE = 0.8;
 
 function inCrownCorner(item: ArchItem, spec: ArchSpec): boolean {
   return item.x < spec.width * 0.25 || item.x > spec.width * 0.75;
@@ -442,8 +445,8 @@ const AXIS_OFFSETS = [...SPINE_OFFSETS, -0.9, -1.2];
 
 /**
  * Spreads balloons along the left half of the spine one at a time, each into the open spot with
- * the most room around it (nudged toward the crown and the corners by the spec's biases), sized by
- * the taper: biggest at the corners, smaller down the sides. Every balloon must sit clear of being
+ * the most room around it (crown spots nudged toward the middle and the corners by the spec's
+ * biases), sized by the taper: biggest at the corners, smaller down the sides. Every balloon must sit clear of being
  * buried by — or burying — what is already placed, flowers included. Alternate balloons go behind
  * (big) and in front (smaller accents); each is mirrored to the right, and an odd one out goes on
  * the axis. The side columns only reach a quarter of the way into the masked-out fade.
@@ -457,8 +460,11 @@ function placeBalloons(spec: ArchSpec, spine: Spine, flowers: ArchItem[], rng: (
   const rightTones = shuffledTones(half, rng, half);
   const corners = spine.corners;
   const lowest = spec.fadeStart + 0.25 * (spec.sideDepth - spec.fadeStart);
-  const preference = (t: number): number =>
-    maxSize * (spec.crownBias * Math.sqrt(Math.sin(Math.PI * t)) + spec.cornerBias * cornerBump(t, corners));
+  // Only crown spots get the nudge: on the sides it would bunch balloons just under the corners.
+  const crownPreference = (t: number): number =>
+    sampleSpine(spine, t).y >= spec.band
+      ? 0
+      : maxSize * (spec.crownBias * Math.sqrt(Math.sin(Math.PI * t)) + spec.cornerBias * cornerBump(t, corners));
 
   const balloonAt = (
     t: number,
@@ -487,7 +493,7 @@ function placeBalloons(spec: ArchSpec, spine: Spine, flowers: ArchItem[], rng: (
   };
 
   /**
-   * Every open spot for the next balloon, roomiest (plus preference) first — then the same again at
+   * Every open spot for the next balloon, roomiest (plus crown preference) first — then the same again at
    * smaller sizes, so a balloon that no longer fits anywhere at full size still finds a gap.
    */
   const rankedCandidates = (isBack: boolean, tone: ArchTone, ts: number[], placed: ArchItem[]): ArchItem[] => {
@@ -501,7 +507,7 @@ function placeBalloons(spec: ArchSpec, spine: Spine, flowers: ArchItem[], rng: (
         for (const offset of t === 0.5 ? AXIS_OFFSETS : SPINE_OFFSETS) {
           const item = balloonAt(t, isBack, tone, offset, rotate, scale);
           const room = clearance(item, placed) - item.size / 2;
-          scored.push({ item, score: room + preference(t) + rng() * 0.05 * item.size });
+          scored.push({ item, score: room + crownPreference(t) + rng() * 0.05 * item.size });
         }
       }
       return scored.sort((a, b) => b.score - a.score).map(({ item }) => item);

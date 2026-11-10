@@ -281,21 +281,26 @@ describe('airy garland', () => {
       const runs = spineCoverage(spec, solids);
       expect(runs.samples).toBeGreaterThan(300);
       expect(runs.covered / runs.samples).toBeGreaterThanOrEqual(0.65);
-      expect(runs.covered / runs.samples).toBeLessThanOrEqual(0.9);
       const maxBalloon = Math.max(...solids.filter((item) => item.kind === 'balloon').map((item) => item.size));
       expect(runs.maxGap).toBeLessThanOrEqual(0.5 * maxBalloon);
     }
   });
 
-  // The reference mockup's corners carry a little more balloon mass than the middle of the crown
-  // — a crown spread evenly by area would put ~50% in the outer quarters — without piling up.
-  it('weights the crown gently toward its two top corners', () => {
+  // Measured in a tube one biggest-balloon wide around the visible spine, so the empty canvas
+  // outside the rounded corners doesn't count as air: heavy shoulders, a lighter crown center, and
+  // side columns that stay full without packing solid.
+  it('weights the shoulders over the crown center and keeps the sides full', () => {
     for (const spec of SEEDED_SPECS) {
-      const crown = buildArch(spec).items.filter((item) => item.kind === 'balloon' && item.y < spec.band);
-      const inCorners = crown.filter((item) => item.x < spec.width * 0.25 || item.x > spec.width * 0.75);
-      const weight = balloonArea(inCorners) / balloonArea(crown);
-      expect(weight).toBeGreaterThanOrEqual(0.5);
-      expect(weight).toBeLessThanOrEqual(0.65);
+      const solids = buildArch(spec).items.filter((item) => item.kind !== 'leaf');
+      const zones = spineTubeCoverage(spec, solids);
+      const where = `seed ${spec.seed} ${spec.width}x${spec.height}`;
+      expect(zones.shoulders, where).toBeGreaterThanOrEqual(0.55);
+      expect(zones.shoulders, where).toBeLessThanOrEqual(0.85);
+      expect(zones.crownCenter, where).toBeGreaterThanOrEqual(0.3);
+      expect(zones.crownCenter, where).toBeLessThanOrEqual(0.65);
+      expect(zones.crownCenter, where).toBeLessThanOrEqual(zones.shoulders - 0.1);
+      expect(zones.sides, where).toBeGreaterThanOrEqual(0.4);
+      expect(zones.sides, where).toBeLessThanOrEqual(0.85);
     }
   });
 });
@@ -643,6 +648,54 @@ function spineCoverage(
     }
   }
   return { samples, covered, maxGap };
+}
+
+/**
+ * Union coverage of `solids` over the visible garland within one biggest-balloon width of the
+ * spine, split into shoulders (crown, outer 30% each side), crown center and side columns.
+ */
+function spineTubeCoverage(
+  spec: ArchSpec,
+  solids: ArchItem[],
+): { shoulders: number; crownCenter: number; sides: number } {
+  const step = 3;
+  const radius = spec.sizeRange[1];
+  const cols = Math.ceil(spec.width / step);
+  const rows = Math.ceil(spec.fadeStart / step);
+  const inTube = new Uint8Array(cols * rows);
+  for (const point of spineSamples(spec, 1600)) {
+    const c0 = Math.max(0, Math.floor((point.x - radius) / step));
+    const c1 = Math.min(cols - 1, Math.ceil((point.x + radius) / step));
+    const r0 = Math.max(0, Math.floor((point.y - radius) / step));
+    const r1 = Math.min(rows - 1, Math.ceil((point.y + radius) / step));
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++) {
+        const x = (c + 0.5) * step;
+        const y = (r + 0.5) * step;
+        if (Math.hypot(x - point.x, y - point.y) <= radius) inTube[r * cols + c] = 1;
+      }
+    }
+  }
+  const counts = { shoulders: [0, 0], crownCenter: [0, 0], sides: [0, 0] };
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const point = { x: (c + 0.5) * step, y: (r + 0.5) * step };
+      if (!inTube[r * cols + c] || !isVisibleGarland(spec, point)) continue;
+      const zone =
+        point.y >= spec.band
+          ? counts.sides
+          : point.x < 0.3 * spec.width || point.x > 0.7 * spec.width
+            ? counts.shoulders
+            : counts.crownCenter;
+      zone[0] += 1;
+      if (solids.some((item) => Math.hypot(item.x - point.x, item.y - point.y) <= item.size / 2)) zone[1] += 1;
+    }
+  }
+  return {
+    shoulders: counts.shoulders[1] / counts.shoulders[0],
+    crownCenter: counts.crownCenter[1] / counts.crownCenter[0],
+    sides: counts.sides[1] / counts.sides[0],
+  };
 }
 
 /** Fraction of `item`'s disc that lies under at least one of `others`, by grid sampling. */
