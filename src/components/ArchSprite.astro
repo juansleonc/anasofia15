@@ -190,17 +190,31 @@
          tip — darker rose-300 base, rose-100 mid, a white-alpha rim at the tip — shared by all 5
          petals via `objectBoundingBox` units (each rotated copy has the same local bounding box). -->
     <radialGradient id="blossom-petal" cx="50%" cy="92%" r="95%">
-      <stop offset="0%" style="stop-color: var(--c-rose-300)" />
-      <stop offset="55%" style="stop-color: var(--c-rose-100)" />
-      <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0.9" />
+      <stop offset="0%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="55%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-100)" />
     </radialGradient>
     <radialGradient id="blossom-center" cx="50%" cy="35%" r="65%">
       <stop offset="0%" style="stop-color: var(--c-champagne-200)" />
       <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
     </radialGradient>
-    <linearGradient id="leaf-eucalyptus-gradient" x1="20%" y1="0%" x2="80%" y2="100%">
+    <!-- Natural foliage: eucalyptus and olive leaves read as lit round/lanceolate foliage (a radial
+         or linear tint from a lightened champagne core out to the deep leaf tone) rather than one
+         flat silhouette colour. Gold leaves get their own diagonal foil-sheen gradient (D3). -->
+    <radialGradient id="leaf-eucalyptus-gradient" cx="35%" cy="28%" r="78%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="45%" style="stop-color: var(--c-leaf)" />
+      <stop offset="100%" style="stop-color: var(--c-leaf-deep)" />
+    </radialGradient>
+    <linearGradient id="leaf-olive-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color: var(--c-leaf)" />
       <stop offset="100%" style="stop-color: var(--c-leaf-deep)" />
+    </linearGradient>
+    <linearGradient id="leaf-gold-metal" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="35%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="70%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
     </linearGradient>
   </defs>
 
@@ -389,11 +403,11 @@
       <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(216)" />
       <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(288)" />
       <path
-        d="M0 -4C0 -9 0 -15 0 -20 M3.8 -1.2C8.6 -2.8 14.3 -4.6 19 -6.2 M2.4 3.2C5.3 7.3 8.8 12.1 11.8 16.2 M-2.4 3.2C-5.3 7.3 -8.8 12.1 -11.8 16.2 M-3.8 -1.2C-8.6 -2.8 -14.3 -4.6 -19 -6.2"
+        d="M0 -2C0.6 -4.33 0.6 -6.67 0 -9 M1.9 -0.62C4.3 -0.77 6.53 -1.49 8.56 -2.78 M1.18 1.62C2.06 3.86 3.44 5.75 5.29 7.28 M-1.18 1.62C-3.03 3.15 -4.41 5.04 -5.29 7.28 M-1.9 -0.62C-3.93 -1.91 -6.16 -2.63 -8.56 -2.78"
         fill="none"
         stroke="var(--c-rose-400)"
-        stroke-width="0.6"
-        stroke-opacity="0.4"
+        stroke-width="0.4"
+        stroke-opacity="0.28"
         stroke-linecap="round"
       />
       <path
@@ -419,6 +433,10 @@
     </g>
   </symbol>
 
+  <!-- `leaf-eucalyptus`: a silver-dollar sprig — a curved stem carrying 7 round, fully-opaque
+       leaves (radial-lit so each reads as a lit sphere segment, not a flat cutout) plus one
+       multi-subpath midrib vein, one short crease per leaf, each pre-rotated to match its own
+       leaf's tilt. -->
   <symbol id="leaf-eucalyptus" viewBox="0 0 40 96">
     <path
       d="M20 4c2 22 2 44 0 88"
@@ -427,25 +445,71 @@
       stroke-width="1.4"
       stroke-opacity="0.6"
     />
-    <ellipse cx="9" cy="16" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(-18 9 16)" />
-    <ellipse cx="31" cy="30" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(18 31 30)" />
-    <ellipse cx="9" cy="44" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(-18 9 44)" />
-    <ellipse cx="31" cy="58" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(18 31 58)" />
-    <ellipse cx="9" cy="72" rx="7" ry="9" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(-18 9 72)" />
-    <ellipse cx="29" cy="84" rx="6" ry="8" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" transform="rotate(18 29 84)" />
-    <ellipse cx="18" cy="92" rx="5" ry="7" fill="url(#leaf-eucalyptus-gradient)" fill-opacity="0.88" />
+    <ellipse cx="9" cy="16" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-18 9 16)" />
+    <ellipse cx="31" cy="30" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(18 31 30)" />
+    <ellipse cx="9" cy="44" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-18 9 44)" />
+    <ellipse cx="31" cy="58" rx="8" ry="10" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(18 31 58)" />
+    <ellipse cx="9" cy="72" rx="7" ry="9" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-18 9 72)" />
+    <ellipse cx="29" cy="84" rx="6" ry="8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(18 29 84)" />
+    <ellipse cx="18" cy="92" rx="5" ry="7" fill="url(#leaf-eucalyptus-gradient)" />
+    <path
+      d="M6.68 8.87L11.32 23.13 M33.32 22.87L28.68 37.13 M6.68 36.87L11.32 51.13 M33.32 50.87L28.68 65.13 M6.91 65.58L11.09 78.42 M30.85 78.29L27.15 89.71 M18 86.75L18 97.25"
+      fill="none"
+      stroke="var(--c-leaf-deep)"
+      stroke-width="0.5"
+      stroke-opacity="0.45"
+      stroke-linecap="round"
+    />
   </symbol>
 
-  <symbol id="leaf-gold" viewBox="0 0 40 64">
-    <path d="M20 4c2 16 2 32 0 56" fill="none" stroke="var(--c-champagne-500)" stroke-width="1.1" stroke-opacity="0.7" />
+  <!-- `leaf-olive`: a slender sprig of 9 lanceolate (pointed) leaves in 4 opposite pairs plus a
+       single terminal leaf — each leaf path is anchored at its own base (the node where it meets
+       the stem, local origin) and tapers to a point outward, so a pair's two leaves splay apart
+       in a "V" from a shared node instead of crossing through it. The same base leaf path is
+       reused per instance (the rose petals' accepted-duplication pattern) via `translate(…)
+       rotate(…)`, shaded by one linear gradient, plus a multi-subpath midrib — one short crease
+       per leaf, placed with the same transform math. -->
+  <symbol id="leaf-olive" viewBox="0 0 36 110">
+    <path d="M18 8c-1 32-1 64 0 96" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.1" stroke-opacity="0.55" />
+    <path d="M0 0C1.6 -5 2.4 -10 2.4 -14C2.4 -18 1.6 -23 0 -28C-1.6 -23 -2.4 -18 -2.4 -14C-2.4 -10 -1.6 -5 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18 92) rotate(-34)" />
+    <path d="M0 0C1.6 -5 2.4 -10 2.4 -14C2.4 -18 1.6 -23 0 -28C-1.6 -23 -2.4 -18 -2.4 -14C-2.4 -10 -1.6 -5 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18 92) rotate(34)" />
+    <path d="M0 0C1.6 -5 2.4 -10 2.4 -14C2.4 -18 1.6 -23 0 -28C-1.6 -23 -2.4 -18 -2.4 -14C-2.4 -10 -1.6 -5 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18 70) rotate(-31)" />
+    <path d="M0 0C1.6 -5 2.4 -10 2.4 -14C2.4 -18 1.6 -23 0 -28C-1.6 -23 -2.4 -18 -2.4 -14C-2.4 -10 -1.6 -5 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18 70) rotate(31)" />
+    <path d="M0 0C1.6 -5 2.4 -10 2.4 -14C2.4 -18 1.6 -23 0 -28C-1.6 -23 -2.4 -18 -2.4 -14C-2.4 -10 -1.6 -5 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18 48) rotate(-28)" />
+    <path d="M0 0C1.6 -5 2.4 -10 2.4 -14C2.4 -18 1.6 -23 0 -28C-1.6 -23 -2.4 -18 -2.4 -14C-2.4 -10 -1.6 -5 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18 48) rotate(28)" />
+    <path d="M0 0C1.6 -5 2.4 -10 2.4 -14C2.4 -18 1.6 -23 0 -28C-1.6 -23 -2.4 -18 -2.4 -14C-2.4 -10 -1.6 -5 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18 28) rotate(-25)" />
+    <path d="M0 0C1.6 -5 2.4 -10 2.4 -14C2.4 -18 1.6 -23 0 -28C-1.6 -23 -2.4 -18 -2.4 -14C-2.4 -10 -1.6 -5 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18 28) rotate(25)" />
+    <path d="M0 0C0.57 -1.79 0.86 -3.57 0.86 -5C0.86 -6.43 0.57 -8.21 0 -10C-0.57 -8.21 -0.86 -6.43 -0.86 -5C-0.86 -3.57 -0.57 -1.79 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(18 12)" />
     <path
-      d="M20 10c9 4 14 12 14 20s-5 16-14 20c-9-4-14-12-14-20s5-16 14-20Z"
-      fill="var(--c-champagne-100)"
-      fill-opacity="0.35"
-      stroke="var(--c-champagne-500)"
-      stroke-width="1.2"
+      d="M16.88 90.34L7 75.68 M19.12 90.34L29 75.68 M16.97 68.29L7.86 53.13 M19.03 68.29L28.14 53.13 M17.06 46.23L8.76 30.62 M18.94 46.23L27.24 30.62 M17.15 26.19L9.68 10.16 M18.85 26.19L26.32 10.16 M18 10L18 3.8"
+      fill="none"
+      stroke="var(--c-leaf-deep)"
+      stroke-width="0.4"
+      stroke-opacity="0.4"
+      stroke-linecap="round"
     />
-    <path d="M20 16v28" fill="none" stroke="var(--c-champagne-500)" stroke-width="0.8" stroke-opacity="0.6" />
+  </symbol>
+
+  <!-- `leaf-gold`: a champagne-gold foil-leaf CLUSTER — a short stem bearing 7 small filled
+       almond leaves fanning out (no lone outline leaf remains, every leaf is fully opaque), plus a
+       multi-subpath vein, one crease per leaf. -->
+  <symbol id="leaf-gold" viewBox="0 0 72 72">
+    <path d="M36 64c0 -6 0 -10 0 -16" fill="none" stroke="var(--c-champagne-500)" stroke-width="1.1" stroke-opacity="0.7" />
+    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(20 44) rotate(-55)" />
+    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(14 28) rotate(-35)" />
+    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(20 14) rotate(-15)" />
+    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(36 16)" />
+    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(52 14) rotate(15)" />
+    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(58 28) rotate(35)" />
+    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(52 44) rotate(55)" />
+    <path
+      d="M9.35 36.54L30.65 51.46 M6.54 17.35L21.46 38.65 M16.63 1.44L23.37 26.56 M36 3L36 29 M55.37 1.44L48.63 26.56 M65.46 17.35L50.54 38.65 M62.65 36.54L41.35 51.46"
+      fill="none"
+      stroke="var(--c-champagne-700)"
+      stroke-width="0.5"
+      stroke-opacity="0.55"
+      stroke-linecap="round"
+    />
   </symbol>
 
   <symbol id="sparkle-star" viewBox="0 0 24 24">

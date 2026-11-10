@@ -48,6 +48,7 @@ test.describe('Arch sprite', () => {
         'peony-blush',
         'blossom',
         'leaf-eucalyptus',
+        'leaf-olive',
         'leaf-gold',
         'sparkle-star',
       ];
@@ -68,6 +69,7 @@ test.describe('Arch sprite', () => {
       'peony-blush': 1,
       blossom: 1,
       'leaf-eucalyptus': 1,
+      'leaf-olive': 1,
       'leaf-gold': 1,
       'sparkle-star': 1,
     });

@@ -364,6 +364,15 @@ function highlightPath(el: Element): Element | undefined {
   );
 }
 
+/** The first unstroked `fill="none"` path in `el` whose `d` has at least `minSubpaths` `M`
+ *  commands — picks out a multi-leaf/multi-crease vein path without depending on which token
+ *  colours its stroke, and without confusing it with a single-subpath stem outline. */
+function veinPath(el: Element, minSubpaths: number): Element | undefined {
+  return Array.from(el.querySelectorAll('path[fill="none"]')).find(
+    (path) => (path.getAttribute('d')?.match(/M/g) ?? []).length >= minSubpaths,
+  );
+}
+
 describe('ArchSprite roses', () => {
   it.each(ROSE_IDS)('%s has at least 12 petal paths drawn from 3 distinct ring gradients', (id) => {
     const el = symbol(id);
@@ -515,6 +524,54 @@ describe('ArchSprite blossom', () => {
     expect(root.querySelector(`#${centreGradientId}`)).not.toBeNull();
   });
 
+  it('petals are a clear, saturated pink — the rim is a light rose token at full opacity, not a washed-out white', () => {
+    const petalGradient = gradient('blossom-petal');
+    const stops = Array.from(petalGradient.querySelectorAll('stop'));
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    expect(last.getAttribute('style')).toMatch(/stop-color:\s*var\(--c-rose-/);
+    expect(last.getAttribute('stop-opacity')).toBeNull();
+    // Lightness rank of the rose scale, lightest first: the rim (last stop) must be a lighter
+    // token than the base (first stop), so the petal still reads light-at-the-tip without the
+    // old alpha-based wash.
+    const ROSE_LIGHTNESS = ['100', '200', '300', '400', '600', '700'];
+    const tokenNumber = (stop: Element): string | undefined =>
+      (stop.getAttribute('style') ?? '').match(/--c-rose-(\d+)/)?.[1];
+    const firstRank = ROSE_LIGHTNESS.indexOf(tokenNumber(first) ?? '');
+    const lastRank = ROSE_LIGHTNESS.indexOf(tokenNumber(last) ?? '');
+    expect(firstRank).toBeGreaterThanOrEqual(0);
+    expect(lastRank).toBeGreaterThanOrEqual(0);
+    expect(lastRank).toBeLessThan(firstRank);
+  });
+
+  it('veins are short (<= 45% of the petal reach from the centre), slightly curved, thin and low-opacity', () => {
+    const el = symbol('blossom');
+    const petal = Array.from(el.querySelectorAll('path[fill="url(#blossom-petal)"]')).find(
+      (path) => !path.getAttribute('transform'),
+    )!;
+    const petalReach = Math.max(...pathPoints(petal).map(([x, y]) => Math.hypot(x, y)));
+    const vein = veinPath(el, 5)!;
+    expect(vein).not.toBeUndefined();
+    expect(Number(vein.getAttribute('stroke-width'))).toBeLessThanOrEqual(0.45);
+    expect(Number(vein.getAttribute('stroke-opacity'))).toBeLessThanOrEqual(0.3);
+    for (const { segments } of cubicSubpaths(vein.getAttribute('d') ?? '')) {
+      for (const segment of segments) {
+        for (const point of [segment.from, segment.c1, segment.c2, segment.to]) {
+          expect(Math.hypot(point[0], point[1])).toBeLessThanOrEqual(petalReach * 0.45);
+        }
+        // Slightly curved: the control points must not sit on the straight line between the
+        // segment's own endpoints (the old veins were plain straight lines).
+        const [x1, y1] = segment.from;
+        const [x2, y2] = segment.to;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const length = Math.hypot(dx, dy) || 1;
+        const deviation = (point: Point): number => Math.abs((point[0] - x1) * dy - (point[1] - y1) * dx) / length;
+        expect(Math.max(deviation(segment.c1), deviation(segment.c2))).toBeGreaterThan(0.1);
+      }
+    }
+  });
+
   it('has a filament path and an anther path, each with at least 8 stamen subpaths, token colours', () => {
     const el = symbol('blossom');
     const filament = Array.from(el.querySelectorAll('path')).find(
@@ -534,6 +591,75 @@ describe('ArchSprite blossom', () => {
     // positioning `<g>` (unlike the roses/peony, which paint their petals flat), so a direct
     // `children.length` would only ever see that single wrapper.
     expect(symbol('blossom').querySelectorAll('path, circle, ellipse').length).toBeLessThanOrEqual(12);
+  });
+});
+
+describe('ArchSprite foliage', () => {
+  it('leaf-eucalyptus has at least 7 round leaves lit by a lightened radial gradient', () => {
+    const el = symbol('leaf-eucalyptus');
+    const leafGradient = gradient('leaf-eucalyptus-gradient');
+    expect(leafGradient.tagName.toLowerCase()).toBe('radialgradient');
+    const stops = stopColors(leafGradient);
+    expect(stops.length).toBeGreaterThanOrEqual(3);
+    for (const style of stops) expect(style).toMatch(/stop-color:\s*var\(--c-/);
+    const leaves = el.querySelectorAll('[fill="url(#leaf-eucalyptus-gradient)"]');
+    expect(leaves.length).toBeGreaterThanOrEqual(7);
+  });
+
+  it('leaf-eucalyptus has one multi-subpath midrib vein path, one per leaf', () => {
+    const vein = veinPath(symbol('leaf-eucalyptus'), 7);
+    expect(vein).not.toBeUndefined();
+    expect(vein!.getAttribute('stroke') ?? '').toMatch(/var\(--c-leaf/);
+  });
+
+  it('leaf-eucalyptus stays within its element budget (<= 12 elements)', () => {
+    expect(symbol('leaf-eucalyptus').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(12);
+  });
+
+  it('leaf-olive has at least 9 lanceolate leaves in opposite pairs, lit by a linear gradient', () => {
+    const el = symbol('leaf-olive');
+    const leafGradient = gradient('leaf-olive-gradient');
+    expect(leafGradient.tagName.toLowerCase()).toBe('lineargradient');
+    const stops = stopColors(leafGradient);
+    expect(stops.length).toBeGreaterThanOrEqual(2);
+    for (const style of stops) expect(style).toMatch(/stop-color:\s*var\(--c-/);
+    const leaves = el.querySelectorAll('[fill="url(#leaf-olive-gradient)"]');
+    expect(leaves.length).toBeGreaterThanOrEqual(9);
+  });
+
+  it('leaf-olive has one multi-subpath midrib vein path, one per leaf', () => {
+    const vein = veinPath(symbol('leaf-olive'), 9);
+    expect(vein).not.toBeUndefined();
+    expect(vein!.getAttribute('stroke') ?? '').toMatch(/var\(--c-leaf/);
+  });
+
+  it('leaf-olive stays within its element budget (<= 14 elements)', () => {
+    expect(symbol('leaf-olive').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(14);
+  });
+
+  it('leaf-gold is a cluster of at least 7 filled almond leaves, no lone outline', () => {
+    const el = symbol('leaf-gold');
+    const metalGradient = gradient('leaf-gold-metal');
+    const stops = stopColors(metalGradient);
+    expect(stops.length).toBeGreaterThanOrEqual(4);
+    for (const style of stops) expect(style).toMatch(/stop-color:\s*var\(--c-/);
+    const leaves = Array.from(el.querySelectorAll('[fill="url(#leaf-gold-metal)"]'));
+    expect(leaves.length).toBeGreaterThanOrEqual(7);
+    for (const leaf of leaves) {
+      expect(leaf.getAttribute('fill')).not.toBe('none');
+      const fillOpacity = leaf.getAttribute('fill-opacity');
+      if (fillOpacity !== null) expect(Number(fillOpacity)).toBeGreaterThanOrEqual(0.6);
+    }
+  });
+
+  it('leaf-gold has one multi-subpath vein path', () => {
+    const vein = veinPath(symbol('leaf-gold'), 7);
+    expect(vein).not.toBeUndefined();
+    expect(vein!.getAttribute('stroke') ?? '').toMatch(/var\(--c-champagne-700\)/);
+  });
+
+  it('leaf-gold stays within its element budget (<= 12 elements)', () => {
+    expect(symbol('leaf-gold').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(12);
   });
 });
 
