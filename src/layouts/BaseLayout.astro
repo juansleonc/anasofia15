@@ -1,7 +1,7 @@
 ---
 // Shared <head>/<body> shell: design tokens, self-hosted fonts, Open Graph/meta tags, the
-// animated <Starfield/> background, and the single hidden <RoseSprite/> sheet — all mounted
-// once behind/above every page.
+// CSS-only blush wash background (see tokens.css's `body::before`), and the single hidden
+// <RoseSprite/> sheet — all mounted once behind/above every page.
 import '@fontsource/great-vibes/latin.css';
 import '@fontsource/inter/latin-400.css';
 import '@fontsource/inter/latin-700.css';
@@ -13,7 +13,6 @@ import '../styles/tokens.css';
 import { withBase } from '../lib/base';
 import { siteConfig } from '../data/site.config';
 import { publicAssetExists } from '../lib/assets';
-import Starfield from '../components/Starfield.astro';
 import RoseSprite from '../components/RoseSprite.astro';
 
 interface Props {
@@ -50,7 +49,6 @@ const ogImageUrl = new URL(withBase(siteConfig.og.imagePath), siteOrigin).toStri
 		{hasOgImage && <meta property="og:image" content={ogImageUrl} />}
 	</head>
 	<body>
-		<Starfield />
 		<RoseSprite />
 		<slot />
 		<script>

@@ -50,9 +50,25 @@
 }
 
 body {
+  position: relative;
   background-color: var(--c-bg);
   color: var(--c-ink);
   font-family: var(--font-body);
+}
+
+/* Blush wash backdrop — replaces the old animated starfield. CSS-only (no canvas/JS), fixed in
+   the viewport (not `background-attachment: fixed`, which janks on iOS), and layered behind every
+   section via a negative z-index, same as the starfield it replaces. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 15% 20%, var(--c-rose-100) 0%, transparent 45%),
+    radial-gradient(circle at 85% 10%, var(--c-bg-deep) 0%, transparent 50%),
+    radial-gradient(circle at 50% 95%, var(--c-rose-200) 0%, transparent 55%);
 }
 
 .font-cursive {

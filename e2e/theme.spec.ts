@@ -76,6 +76,19 @@ test.describe('design tokens + fonts', () => {
     expect(fontFamily).toContain('Great Vibes');
   });
 
+  test('the animated starfield background is gone, replaced by a CSS blush wash', async ({
+    page,
+  }) => {
+    await page.goto('./');
+
+    await expect(page.getByTestId('starfield')).toHaveCount(0);
+
+    const bodyBeforeBackgroundImage = await page.evaluate(
+      () => getComputedStyle(document.body, '::before').backgroundImage,
+    );
+    expect(bodyBeforeBackgroundImage).toContain('radial-gradient');
+  });
+
   test('no requested font URL references the removed Syne typeface', async ({ page }) => {
     const fontRequests: string[] = [];
     page.on('request', (request) => {
