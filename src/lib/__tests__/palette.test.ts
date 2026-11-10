@@ -129,6 +129,17 @@ describe('palette discipline', () => {
     expect(stillPresent).toEqual([]);
   });
 
+  it('declares the deep champagne terminator token', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    expect(tokens['--c-champagne-800']).toBe('#7a5c2e');
+    // The terminator must sit below champagne-700 so metallic gold gets a real dark edge.
+    expect(relativeLuminance(hexToRgb(tokens['--c-champagne-800']))).toBeLessThan(
+      relativeLuminance(hexToRgb(tokens['--c-champagne-700'])),
+    );
+  });
+
   it('declares the champagne gold scale with exact values', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
