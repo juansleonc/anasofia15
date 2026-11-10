@@ -21,6 +21,15 @@
   --c-white: #ffffff;
   --c-error: #a3324a;
   --c-success: #3f6b47;
+  --c-champagne-100: #fbf3e4;
+  --c-champagne-200: #f2e0c2;
+  --c-champagne-300: #e6c99a;
+  --c-champagne-500: #cda869;
+  --c-champagne-700: #a07e46;
+  --c-rosegold-200: #f3d3c8;
+  --c-rosegold-400: #dba592;
+  --c-wine-500: #9a4462;
+  --c-wine-700: #6e2440;
 
   /* Composite surfaces */
   --gradient-rose: linear-gradient(135deg, #f3c6d0 0%, #e8a3b4 45%, #b5617a 100%);

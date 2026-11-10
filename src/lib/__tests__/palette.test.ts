@@ -22,6 +22,44 @@ const ALLOWED_DIR = join(SRC_DIR, 'lib', '__tests__') + sep;
 
 const RETIRED_THEME_HEXES = ['#0a0a0f', '#c9ccd1', '#d4af37', '#eef0f3', '#f0d987', '#fbf0c4'];
 
+// Matches a single `--token-name: #hex;` custom-property declaration anywhere in the stylesheet.
+const CUSTOM_PROPERTY_HEX = /--([\w-]+):\s*(#[0-9a-fA-F]{3,8})\s*;/g;
+
+function parseCustomPropertyHexes(cssContent: string): Record<string, string> {
+  const tokens: Record<string, string> = {};
+  for (const match of cssContent.matchAll(CUSTOM_PROPERTY_HEX)) {
+    tokens[`--${match[1]}`] = match[2].toLowerCase();
+  }
+  return tokens;
+}
+
+// WCAG 2.x relative luminance + contrast ratio, used to prove the new wine tokens keep white text
+// readable rather than just eyeballing the hex values.
+function hexToRgb(hex: string): [number, number, number] {
+  const normalized = hex.replace('#', '');
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return [r, g, b];
+}
+
+function relativeLuminance([r, g, b]: [number, number, number]): number {
+  const channel = (value: number) => {
+    const srgb = value / 255;
+    return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  };
+  const [rl, gl, bl] = [r, g, b].map(channel);
+  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+}
+
+function contrastRatio(hexA: string, hexB: string): number {
+  const luminanceA = relativeLuminance(hexToRgb(hexA));
+  const luminanceB = relativeLuminance(hexToRgb(hexB));
+  const lighter = Math.max(luminanceA, luminanceB);
+  const darker = Math.min(luminanceA, luminanceB);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 function listSourceFiles(dir: string): string[] {
   const files: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -71,5 +109,30 @@ describe('palette discipline', () => {
     const stillPresent = RETIRED_THEME_HEXES.filter((hex) => tokensCss.includes(hex));
 
     expect(stillPresent).toEqual([]);
+  });
+
+  it('declares the champagne gold scale with exact values', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    expect(tokens).toMatchObject({
+      '--c-champagne-100': '#fbf3e4',
+      '--c-champagne-200': '#f2e0c2',
+      '--c-champagne-300': '#e6c99a',
+      '--c-champagne-500': '#cda869',
+      '--c-champagne-700': '#a07e46',
+      '--c-rosegold-200': '#f3d3c8',
+      '--c-rosegold-400': '#dba592',
+      '--c-wine-500': '#9a4462',
+      '--c-wine-700': '#6e2440',
+    });
+  });
+
+  it('white text keeps at least 4.5:1 contrast on both wine stops', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    expect(contrastRatio('#ffffff', tokens['--c-wine-500'])).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio('#ffffff', tokens['--c-wine-700'])).toBeGreaterThanOrEqual(4.5);
   });
 });
