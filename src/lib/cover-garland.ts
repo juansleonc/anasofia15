@@ -24,7 +24,7 @@ export type ArchSymbol =
 
 export type GarlandKind = 'balloon' | 'flower' | 'leaf';
 
-/** 0 back foliage · 1 back balloons · 2 main balloons · 3 flowers · 4 front accents. */
+/** 0 back foliage · 1 back balloons · 2 main balloons · 3 flowers · 4 front accents (balloons and rosebuds). */
 export type GarlandDepth = 0 | 1 | 2 | 3 | 4;
 
 export interface GarlandItem {
@@ -113,17 +113,19 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'rose-cream', x: 378, y: 214, size: 70, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 22, y: 214, size: 70, rotate: 0, depth: 3 },
       { symbol: 'blossom', x: 390, y: 258, size: 40, rotate: 0, depth: 3 },
-      { symbol: 'rosebud', x: 90, y: 170, size: 28, rotate: -20, depth: 3 },
       { symbol: 'rosebud', x: 50, y: 216, size: 24, rotate: -40, depth: 3 },
-      { symbol: 'rosebud', x: 310, y: 170, size: 29, rotate: 20, depth: 3 },
       { symbol: 'rosebud', x: 350, y: 216, size: 24, rotate: 40, depth: 3 },
-      // front accents re-seated to press against the enlarged roses, veiling part of each bloom
+      // front accents re-seated to press against the enlarged roses, veiling part of each bloom;
+      // each main rose's veiling balloon sits just past its heart so it never covers the centre,
+      // and two of the corner rosebuds move to the front, pressed against a back balloon
       { symbol: 'balloon-rosegold-satin', x: 124, y: 112, size: 50, rotate: 0, depth: 4 },
-      { symbol: 'balloon-rosegold-satin', x: 200, y: 112, size: 54, rotate: 0, depth: 4 },
-      { symbol: 'balloon-champagne', x: 340, y: 114, size: 50, rotate: 0, depth: 4 },
+      { symbol: 'balloon-rosegold-satin', x: 198, y: 117, size: 54, rotate: 0, depth: 4 },
+      { symbol: 'balloon-champagne', x: 344, y: 117, size: 50, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 258, y: 186, size: 52, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 60, y: 216, size: 46, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 340, y: 216, size: 46, rotate: 0, depth: 4 },
+      { symbol: 'rosebud', x: 90, y: 170, size: 28, rotate: -20, depth: 4 },
+      { symbol: 'rosebud', x: 310, y: 170, size: 29, rotate: 20, depth: 4 },
     ],
   },
   landscape: {
@@ -182,18 +184,20 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'blossom', x: 1281.3, y: 264, size: 135, rotate: 20, depth: 3 },
       { symbol: 'rose-cream', x: 1385.1, y: 360, size: 135, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 311.3, y: 75, size: 135, rotate: 0, depth: 3 },
-      { symbol: 'rosebud', x: 100, y: 110, size: 55, rotate: -20, depth: 3 },
       { symbol: 'rosebud', x: 70, y: 350, size: 50, rotate: -140, depth: 3 },
-      { symbol: 'rosebud', x: 1300, y: 120, size: 55, rotate: 20, depth: 3 },
       { symbol: 'rosebud', x: 1340, y: 135, size: 50, rotate: 140, depth: 3 },
       { symbol: 'balloon-rosegold-satin', x: 223.1, y: 209.6, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 658.8, y: 172, size: 121, rotate: 0, depth: 4 },
-      // re-seated closer to the walls so the lower envelope keeps dropping toward them (R5-2)
-      { symbol: 'balloon-champagne', x: 950, y: 198, size: 120, rotate: 0, depth: 4 },
+      // re-seated closer to the walls so the lower envelope keeps dropping toward them (R5-2);
+      // moved a touch further from the second peony's heart so it veils rather than covers it
+      { symbol: 'balloon-champagne', x: 957, y: 194, size: 120, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 1208.7, y: 324, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne-satin', x: 1348.8, y: 432, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 150.4, y: 486.4, size: 68.2, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 1302.1, y: 172, size: 115.5, rotate: 0, depth: 4 },
+      // two corner rosebuds move to the front, pressed against a back balloon
+      { symbol: 'rosebud', x: 100, y: 110, size: 55, rotate: -20, depth: 4 },
+      { symbol: 'rosebud', x: 1300, y: 120, size: 55, rotate: 20, depth: 4 },
     ],
   },
 };

@@ -187,6 +187,24 @@ function stemBase(leaf: GarlandItem): { x: number; y: number } {
   return { x: leaf.x - Math.sin(a) * 0.45 * leaf.size, y: leaf.y + Math.cos(a) * 0.45 * leaf.size };
 }
 
+/** Exact lens (circular-segment) area shared by two circles of radius r1/r2, centres d apart. */
+function lensArea(r1: number, r2: number, d: number): number {
+  if (d >= r1 + r2) return 0;
+  if (d <= Math.abs(r1 - r2)) return Math.PI * Math.min(r1, r2) ** 2;
+  const a1 = Math.acos((d * d + r1 * r1 - r2 * r2) / (2 * d * r1));
+  const a2 = Math.acos((d * d + r2 * r2 - r1 * r1) / (2 * d * r2));
+  const tri = 0.5 * Math.sqrt((-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2));
+  return r1 * r1 * a1 + r2 * r2 * a2 - tri;
+}
+
+/** Share of a flower's bloom disc covered by a balloon's body disc (bloom r 0.45·size, balloon r 0.40·size). */
+function veil(flower: Solid, balloon: Solid): number {
+  const rF = bodyRadius(flower);
+  const rB = bodyRadius(balloon);
+  const d = Math.hypot(flower.x - balloon.x, flower.y - balloon.y);
+  return lensArea(rF, rB, d) / (Math.PI * rF * rF);
+}
+
 function partsOf(layout: GarlandLayout) {
   const balloons = layout.items.filter((item) => kindOf(item.symbol) === 'balloon');
   const flowers = layout.items.filter((item) => kindOf(item.symbol) === 'flower');
@@ -392,6 +410,54 @@ describe('north-star composition', () => {
     const roseFamily = flowers.filter((f) => ROSE_AND_PEONY.includes(f.symbol));
     const familySizes = roseFamily.map((f) => f.size);
     expect(Math.max(...familySizes) / Math.min(...familySizes)).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(LAYOUTS)('%s: front balloons veil the main roses and peonies, and rosebuds sit in front', (_name, layout) => {
+    const { balloons, flowers } = partsOf(layout);
+    const M = Math.max(...balloons.map((b) => b.size));
+    const mainRoses = flowers.filter(
+      (f) => f.size >= 0.64 * M && (f.symbol === 'rose-pink' || f.symbol === 'rose-cream'),
+    );
+    expect(mainRoses.length).toBe(2);
+    const frontBalloons = balloons.filter((b) => b.depth === 4);
+    const backBalloons = balloons.filter((b) => b.depth <= 2);
+
+    for (const rose of mainRoses) {
+      const rF = bodyRadius(rose);
+      const qualifying = frontBalloons.filter((b) => {
+        const v = veil(rose, b);
+        const dist = Math.hypot(rose.x - b.x, rose.y - b.y);
+        return v >= 0.08 && v <= 0.3 && dist > bodyRadius(b) + 0.25 * rF;
+      });
+      expect(qualifying.length, `${label(rose)} has no qualifying front veil`).toBeGreaterThanOrEqual(1);
+
+      const pressedBack = backBalloons.filter((b) => pressedTogether(rose, b));
+      expect(
+        pressedBack.length,
+        `${label(rose)} is not pressed against >= 2 back balloons`,
+      ).toBeGreaterThanOrEqual(2);
+
+      const overVeiled = frontBalloons.filter((b) => veil(rose, b) > 0.45);
+      expect(overVeiled.map(label), `${label(rose)} is over-veiled`).toEqual([]);
+    }
+
+    const peonies = flowers.filter((f) => f.symbol === 'peony-blush' || f.symbol === 'peony-ivory');
+    const veiledPeony = peonies.some((peony) =>
+      frontBalloons.some((b) => {
+        const v = veil(peony, b);
+        const dist = Math.hypot(peony.x - b.x, peony.y - b.y);
+        return v >= 0.08 && v <= 0.35 && dist > bodyRadius(b) + 0.25 * bodyRadius(peony);
+      }),
+    );
+    expect(veiledPeony, 'no peony has a qualifying front veil').toBe(true);
+
+    const rosebuds = flowers.filter((f) => f.symbol === 'rosebud');
+    const frontRosebuds = rosebuds.filter(
+      (bud) => bud.depth === 4 && backBalloons.some((b) => pressedTogether(bud, b)),
+    );
+    expect(frontRosebuds.length, 'fewer than 2 rosebuds sit in front, pressed to a back balloon').toBeGreaterThanOrEqual(
+      2,
+    );
   });
 
   it.each(LAYOUTS)('%s: every sprig grows out of the mass, with no floating leaf', (_name, layout) => {
