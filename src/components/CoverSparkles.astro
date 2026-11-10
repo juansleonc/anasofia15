@@ -1,0 +1,147 @@
+---
+// Idle decorative sparkle/bokeh layer scattered across the whole cover (behind the text, including
+// the band behind the title/button — see src/lib/sparkles.ts for why). SSR'd once from the seeded
+// `scatterSparkles` layout so there is no client script: every sparkle is a plain `<span>` with its
+// position/size/timing baked in as `%`/px/ms custom properties, and a CSS keyframe reads them to
+// twinkle `opacity`/`transform` only (compositor-only, no layout/paint cost beyond the first
+// frame). `animation: none` under reduced motion freezes every sparkle in place.
+import { scatterSparkles } from '../lib/sparkles';
+
+const SPARKLE_COUNT = 40;
+const SPARKLE_SEED = 2026;
+
+const sparkles = scatterSparkles({ count: SPARKLE_COUNT, seed: SPARKLE_SEED });
+
+// Cycles each kind across a few champagne tones so the scatter reads as varied gold light rather
+// than one flat color repeated 40 times.
+const FLECK_TONES = ['--c-champagne-300', '--c-champagne-500', '--c-champagne-700'];
+const BOKEH_TONES = ['--c-champagne-100', '--c-champagne-200'];
+---
+
+<div class="cover-sparkles" data-testid="cover-sparkles" aria-hidden="true">
+  {
+    sparkles.map((sparkle, index) => {
+      const vars =
+        `--sparkle-x:${sparkle.xPct}%;` +
+        `--sparkle-y:${sparkle.yPct}%;` +
+        `--sparkle-size:${sparkle.sizePx}px;` +
+        `--sparkle-rotate:${sparkle.rotateDeg}deg;` +
+        `--sparkle-delay:${sparkle.delayMs}ms;` +
+        `--sparkle-duration:${sparkle.durationMs}ms;`;
+
+      if (sparkle.kind === 'star') {
+        return (
+          <span
+            class="cover-sparkles__item cover-sparkles__star"
+            data-sparkle="star"
+            style={vars}
+          >
+            <svg viewBox="0 0 24 24" width="100%" height="100%">
+              <use href="#sparkle-star" />
+            </svg>
+          </span>
+        );
+      }
+
+      if (sparkle.kind === 'bokeh') {
+        const tone = BOKEH_TONES[index % BOKEH_TONES.length];
+        return (
+          <span
+            class="cover-sparkles__item cover-sparkles__bokeh"
+            data-sparkle="bokeh"
+            style={`${vars}--sparkle-tone:var(${tone});`}
+          />
+        );
+      }
+
+      const tone = FLECK_TONES[index % FLECK_TONES.length];
+      return (
+        <span
+          class="cover-sparkles__item cover-sparkles__fleck"
+          data-sparkle="fleck"
+          style={`${vars}--sparkle-tone:var(${tone});`}
+        />
+      );
+    })
+  }
+</div>
+
+<style>
+  .cover-sparkles {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    clip-path: inset(var(--cover-frame-inset) round var(--cover-frame-radius));
+  }
+
+  .cover-sparkles__item {
+    position: absolute;
+    left: var(--sparkle-x);
+    top: var(--sparkle-y);
+    width: var(--sparkle-size);
+    height: var(--sparkle-size);
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-delay: var(--sparkle-delay);
+    animation-duration: var(--sparkle-duration);
+  }
+
+  .cover-sparkles__fleck {
+    background: var(--sparkle-tone);
+    border-radius: 1px;
+    transform: rotate(var(--sparkle-rotate));
+    animation-name: cover-sparkle-twinkle;
+  }
+
+  .cover-sparkles__star {
+    animation-name: cover-sparkle-twinkle;
+  }
+
+  .cover-sparkles__star svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Out-of-focus light rather than a hard shape: a soft radial disc, no stroke/edge. Twinkles
+     slower and on opacity only (no scale) so it reads as drifting light, not a blinking dot. */
+  .cover-sparkles__bokeh {
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--sparkle-tone) 55%, transparent) 0%,
+      transparent 72%
+    );
+    animation-name: cover-sparkle-bokeh;
+    animation-duration: calc(var(--sparkle-duration) * 1.6);
+  }
+
+  @keyframes cover-sparkle-twinkle {
+    0%,
+    100% {
+      opacity: 0.2;
+      transform: rotate(var(--sparkle-rotate)) scale(0.85);
+    }
+    50% {
+      opacity: 0.9;
+      transform: rotate(var(--sparkle-rotate)) scale(1.1);
+    }
+  }
+
+  @keyframes cover-sparkle-bokeh {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover-sparkles__item {
+      animation: none;
+    }
+  }
+</style>

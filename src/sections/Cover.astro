@@ -4,6 +4,7 @@
 // on `window`, which `islands/MusicToggle.astro` listens for to start playback — a loose
 // window-event handshake so neither file needs to import or duplicate the other's audio element.
 import BalloonArch from '../components/BalloonArch.astro';
+import CoverSparkles from '../components/CoverSparkles.astro';
 import PetalFall from '../islands/PetalFall.astro';
 import { event } from '../data/event';
 import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
@@ -17,6 +18,7 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
 >
   <div class="cover__light" data-testid="cover-light" aria-hidden="true"></div>
   <BalloonArch clipToFrame />
+  <CoverSparkles />
   <div class="cover__frame" data-testid="cover-frame" aria-hidden="true"></div>
   <div class="cover__content">
     <div class="cover__glow" data-testid="cover-glow" aria-hidden="true"></div>
