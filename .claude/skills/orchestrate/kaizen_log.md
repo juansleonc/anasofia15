@@ -31,3 +31,5 @@ lessons here.
 - Why: design is architect work (pinned reasoning tier, written ADR, file:line evidence); a coordinator-authored analysis bypasses that bar and asks the user premature questions.
 - How to apply: on any "how does X fit / how should the steps be" request during a run → architect dispatch (read-only on in-flight files) → relay its user-flagged decisions.
 - Source: User correction on 2026-10-19. See auto-memory `feedback_coordinator-delegation.md`.
+
+<!-- Kaizen: 2026-11-09 --> Phase 4 Publish: before the user y/n for a first push that contains `.github/workflows/*`, the coordinator should have a read-only check of `gh auth status` for the `workflow` scope and, if missing, ask the user to run `! gh auth refresh -h github.com -s workflow` together with the y/n, instead of discovering the OAuth rejection mid-push (cost one blocked worker round-trip on ANASOFIA15). Also: a personal-email literal inside a secrets e2e guard leaks the very data it protects once the repo goes public — guards should forbid the pattern (any email) with an empty allowlist, never embed the value.
