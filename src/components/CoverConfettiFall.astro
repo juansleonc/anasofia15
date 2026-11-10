@@ -283,5 +283,14 @@ function round(value: number): string {
       opacity: 0.7;
       transform: translateY(var(--confetti-rest)) rotate(var(--confetti-spin));
     }
+
+    /* Freezes each drift particle 35% of the way along its path, still visible, instead of mid-
+       flight animation. */
+    .cover-confetti__drift {
+      animation: none;
+      transform: translate(-50%, -50%)
+        translate(calc(var(--drift-dx) * 0.35), calc(var(--drift-dy) * 0.35)) scale(0.74);
+      opacity: calc(var(--drift-peak) * 0.8);
+    }
   }
 </style>

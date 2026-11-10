@@ -340,6 +340,31 @@ test.describe('Cover drifting light', () => {
     }));
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
   });
+
+  test('freezes mid-path but stays visible under prefers-reduced-motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('./');
+
+    const particles = await page.locator('[data-drift]').evaluateAll((elements) =>
+      elements.map((el) => {
+        const style = getComputedStyle(el);
+        const box = el.getBoundingClientRect();
+        return {
+          animationName: style.animationName,
+          opacity: parseFloat(style.opacity),
+          width: box.width,
+          height: box.height,
+        };
+      }),
+    );
+    expect(particles).toHaveLength(12);
+    for (const particle of particles) {
+      expect(particle.animationName).toBe('none');
+      expect(particle.opacity).toBeGreaterThan(0);
+      expect(particle.width).toBeGreaterThan(0);
+      expect(particle.height).toBeGreaterThan(0);
+    }
+  });
 });
 
 test.describe('Cover page edge', () => {
