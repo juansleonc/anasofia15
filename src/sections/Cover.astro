@@ -1,65 +1,25 @@
 ---
-// The landing/intro screen the guest sees first, stacked top to bottom: a cluster of three
-// mirror balls (large low-left, medium high-right, small low-right — the classic poster
-// triangle) ringed by tiny four-point stars, the handwritten "Let's disco party" script line,
-// the "MIS 15 AÑOS" monogram, and the "Abrir invitación" button — the ONLY way past the cover,
-// since page scroll is locked until it's clicked (see the script below). Clicking the button is
-// also the site's autoplay-unlocking user gesture: it dispatches `lu15:open-invitation` on
-// `window`, which `islands/MusicToggle.astro` listens for to start the background track — kept
-// as a loose window-event handshake (rather than this section reaching into MusicToggle's DOM)
-// so neither file needs to import or duplicate the other's audio element.
-import DiscoBall from '../components/DiscoBall.astro';
-import Spotlights from '../components/Spotlights.astro';
+// Landing screen; the "Abrir invitación" button is the only way past the cover (scroll is locked
+// until it's clicked — see the script below). The click also dispatches `OPEN_INVITATION_EVENT`
+// on `window`, which `islands/MusicToggle.astro` listens for to start playback — a loose
+// window-event handshake so neither file needs to import or duplicate the other's audio element.
+import RoseGarland from '../components/RoseGarland.astro';
 import ConfettiBurst from '../islands/ConfettiBurst.astro';
-
-// Tiny four-point stars scattered around the ball cluster, kept clear of the balls themselves.
-// Percentages are relative to the cluster box; negative delays stagger the twinkles so they
-// never pulse in unison.
-const clusterStars = [
-  { top: '-4%', left: '22%', size: '9px', delay: '-0.6s' },
-  { top: '10%', left: '-1%', size: '7px', delay: '-1.9s' },
-  { top: '-7%', left: '74%', size: '8px', delay: '-3.1s' },
-  { top: '38%', left: '97%', size: '7px', delay: '-2.5s' },
-  { top: '86%', left: '62%', size: '6px', delay: '-4.2s' },
-  { top: '58%', left: '-5%', size: '8px', delay: '-1.2s' },
-];
+import { event } from '../data/event';
 ---
 
 <section class="cover" data-testid="cover" aria-label="Portada de la invitación">
-  <Spotlights />
-  <div class="cover__balls">
-    <div class="cover__ball cover__ball--large">
-      <DiscoBall seed={2026} />
-    </div>
-    <div class="cover__ball cover__ball--medium">
-      <DiscoBall seed={731} tileArc={18} sparkleCount={16} />
-    </div>
-    <div class="cover__ball cover__ball--small">
-      <DiscoBall seed={409} tileArc={21} sparkleCount={10} />
-    </div>
-    {
-      clusterStars.map((star) => (
-        <span
-          class="cover__star"
-          data-testid="cover-star"
-          aria-hidden="true"
-          style={`top:${star.top};left:${star.left};width:${star.size};height:${star.size};animation-delay:${star.delay}`}
-        />
-      ))
-    }
-  </div>
-  <p class="cover__script font-cursive" data-testid="disco-script">
-    <span class="cover__script-line">Let's disco</span>{' '}
-    <span class="cover__script-line">party</span>
-  </p>
+  <RoseGarland placement="top" />
   <h1 class="cover__title">
-    <span class="cover__title-word">MIS</span>{' '}
-    <span class="cover__title-xv">15</span>{' '}
-    <span class="cover__title-word">AÑOS</span>
+    <span class="cover__title-lead">Invitación para los quince años de</span>{' '}
+    <span class="cover__title-name font-cursive" data-testid="cover-celebrant-name">
+      {event.celebrantName}
+    </span>
   </h1>
   <button type="button" class="cover__open-button" data-testid="open-invitation-button">
     Abrir invitación
   </button>
+  <RoseGarland placement="bottom" />
   <ConfettiBurst />
 </section>
 
@@ -70,222 +30,51 @@ const clusterStars = [
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: clamp(0.9rem, 2.2vh, 1.5rem);
+    gap: clamp(1.25rem, 4vh, 2.25rem);
     min-height: 100dvh;
-    padding: 1.25rem 1rem 2rem;
+    padding: clamp(3.75rem, 14vh, 6rem) 1.25rem;
     text-align: center;
   }
 
-  /* The three-ball cluster: a relative box the balls hang inside at fixed percentage anchors,
-     so the triangle keeps its shape at every viewport width. The aspect ratio matches the
-     anchors below (large ball bottom edge + medium ball top edge define the extremes). */
-  .cover__balls {
-    position: relative;
-    width: clamp(190px, 52vw, 280px);
-    aspect-ratio: 1 / 0.84;
-  }
-
-  /* Each ball drifts vertically a few pixels on its own phase — floating, not hanging. */
-  .cover__ball {
-    position: absolute;
-    animation: cover-ball-float 6.5s ease-in-out infinite;
-  }
-
-  .cover__ball :global(.disco-ball) {
-    --disco-ball-size: 100%;
-  }
-
-  .cover__ball--large {
-    left: 0;
-    bottom: 0;
-    width: 56%;
-  }
-
-  .cover__ball--medium {
-    left: 52%;
-    top: 0;
-    width: 40%;
-    animation-delay: -2.2s;
-  }
-
-  .cover__ball--small {
-    left: 66%;
-    top: 47%;
-    width: 29%;
-    animation-delay: -4.3s;
-  }
-
-  @keyframes cover-ball-float {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-6px);
-    }
-  }
-
-  /* Four-point star twinkles around the cluster (position/size/delay set inline per star). */
-  .cover__star {
-    position: absolute;
-    clip-path: polygon(
-      50% 0%,
-      57% 43%,
-      100% 50%,
-      57% 57%,
-      50% 100%,
-      43% 57%,
-      0% 50%,
-      43% 43%
-    );
-    background: radial-gradient(
-      circle,
-      #ffffff 0%,
-      rgba(238, 240, 243, 0.9) 55%,
-      rgba(238, 240, 243, 0.4) 100%
-    );
-    animation: cover-star-twinkle 3.8s ease-in-out infinite;
-  }
-
-  @keyframes cover-star-twinkle {
-    0%,
-    100% {
-      opacity: 0.35;
-      transform: scale(0.8);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.05);
-    }
-  }
-
-  /* Handwritten party line: two stacked script lines, tilted like a quick signature, with a few
-     white specks floating around (the pseudo-element dot plus its box-shadow copies). */
-  .cover__script {
-    position: relative;
-    margin: 0;
-    font-size: clamp(3.4rem, 15vw, 5.25rem);
-    line-height: 1.1;
-    color: #ffffff;
-    transform: rotate(-3.5deg);
-    text-shadow: 0 0 24px rgba(255, 255, 255, 0.3);
-  }
-
-  .cover__script-line {
-    display: block;
-    padding-inline: 0.15em;
-  }
-
-  /* Tuck "party" up under the first line's descenders, the way a hand-lettered sign sits. */
-  .cover__script-line + .cover__script-line {
-    margin-top: -0.28em;
-  }
-
-  .cover__script::before,
-  .cover__script::after {
-    content: '';
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.85);
-  }
-
-  .cover__script::before {
-    top: 12%;
-    left: -6%;
-    box-shadow:
-      -14px 26px 0 -1px rgba(255, 255, 255, 0.5),
-      8px -18px 0 -1.5px rgba(255, 255, 255, 0.65);
-  }
-
-  .cover__script::after {
-    bottom: 6%;
-    right: -7%;
-    box-shadow:
-      16px -22px 0 -1px rgba(255, 255, 255, 0.55),
-      -6px 14px 0 -1.5px rgba(255, 255, 255, 0.45);
-  }
-
-  /* Monogram: quiet metallic-silver "MIS"/"AÑOS" caps stacked around the oversized gold "15" —
-     three rows inside one h1 so the accessible text still reads "MIS 15 AÑOS" as one heading.
-     The words share the site's silver-gradient treatment (see Hero) instead of flanking rules. */
   .cover__title {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     margin: 0;
+    max-width: 26rem;
+  }
+
+  .cover__title-lead {
     font-family: var(--font-display);
-    line-height: 1;
-  }
-
-  .cover__title-word {
-    font-size: clamp(0.9rem, 3.2vw, 1.15rem);
-    font-weight: 500;
-    letter-spacing: 0.3em;
-    /* Trailing tracking adds phantom width after the last glyph — pull it back so the word sits
-       optically centered under the "15". */
-    margin-right: -0.3em;
-    background: var(--gradient-silver);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  /* The "15": huge, metallic gold, with the same slow shimmer sweep the hero name uses. Set in
-     Playfair Display (self-hosted, weight 800 only) instead of the display sans, so the numeral
-     reads as an engraved serif centerpiece rather than matching MIS/AÑOS's geometric caps. */
-  .cover__title-xv {
-    font-family: var(--font-serif-display);
-    font-size: clamp(3.9rem, 17vw, 6rem);
-    font-weight: 800;
-    line-height: 1;
-    /* Playfair's high-contrast serif digits sit taller in their line box than Syne's did — a much
-       smaller pull-up keeps MIS/AÑOS at matching optical distances without clipping the serifs. */
-    margin-top: -0.02em;
+    font-size: clamp(1.05rem, 4vw, 1.4rem);
+    font-weight: 600;
+    font-style: italic;
+    color: var(--c-ink);
     letter-spacing: 0.01em;
-    background: linear-gradient(
-      110deg,
-      #fbf0c4 0%,
-      var(--c-gold-bright) 20%,
-      var(--c-gold) 42%,
-      #9a7b24 55%,
-      #f6e7a8 70%,
-      var(--c-gold) 88%,
-      #fbf0c4 100%
-    );
-    background-size: 220% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    /* Warm halo that survives background-clip:text (box/text-shadow would not). */
-    filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.38));
-    animation: cover-xv-shimmer 7s linear infinite;
   }
 
-  @keyframes cover-xv-shimmer {
-    0% {
-      background-position: 0% 50%;
-    }
-    100% {
-      background-position: 200% 50%;
-    }
+  .cover__title-name {
+    display: inline-block;
+    font-size: clamp(3.2rem, 15vw, 5.25rem);
+    line-height: 1.3;
+    padding: 0.1em 0.2em;
+    color: var(--c-rose-700);
   }
 
   .cover__open-button {
     margin-top: 0.25rem;
     padding: 1rem 2.625rem;
-    border: 1px solid rgba(251, 240, 196, 0.5);
+    border: 1px solid var(--c-rose-300);
     border-radius: 999px;
-    background: var(--gradient-gold);
-    color: var(--c-black);
+    background: var(--gradient-button);
+    color: var(--c-white);
     font-size: 1rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     font-family: var(--font-body);
     cursor: pointer;
-    box-shadow: 0 10px 34px -10px rgba(212, 175, 55, 0.55);
+    box-shadow: var(--card-shadow);
     transition: transform var(--motion-duration-base) var(--motion-easing);
     animation: cover-pulse 2.6s ease-out infinite;
   }
@@ -294,26 +83,23 @@ const clusterStars = [
     transform: translateY(-2px);
   }
 
-  /* Soft expanding gold ring, layered on top of the resting glow so the glow never blinks off. */
+  /* Soft expanding rose ring, layered on top of the resting shadow so the shadow never blinks off. */
   @keyframes cover-pulse {
     0%,
     100% {
       box-shadow:
-        0 10px 34px -10px rgba(212, 175, 55, 0.55),
-        0 0 0 0 rgba(212, 175, 55, 0.4);
+        var(--card-shadow),
+        0 0 0 0 color-mix(in srgb, var(--c-rose-400) 45%, transparent);
     }
     70% {
       box-shadow:
-        0 10px 34px -10px rgba(212, 175, 55, 0.55),
-        0 0 0 16px rgba(212, 175, 55, 0);
+        var(--card-shadow),
+        0 0 0 16px color-mix(in srgb, var(--c-rose-400) 0%, transparent);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .cover__open-button,
-    .cover__title-xv,
-    .cover__ball,
-    .cover__star {
+    .cover__open-button {
       animation: none;
       transition: none;
     }

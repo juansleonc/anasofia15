@@ -1,53 +1,45 @@
 import { test, expect } from '@playwright/test';
 
-// Cover-fidelity smoke test: the landing/intro screen stacks, top to bottom, a cluster of three
-// mirror balls of different sizes, the handwritten "Let's disco party" script line, the
-// "MIS 15 AÑOS" monogram, and the "Abrir invitación" button — and stays scroll-gated behind
-// that button.
+// Cover-fidelity smoke test for the rose-garland cover (see Cover.astro for the scroll-lock
+// script these tests exercise).
 
 test.describe('Cover section', () => {
-  test('renders three disco balls in three visibly distinct sizes', async ({ page }) => {
-    // Note: with a baseURL that has a path (GH Pages `base: '/lu15/'`), a leading-slash
+  test('the heading reads as one invitation sentence naming the celebrant', async ({ page }) => {
+    // Note: with a baseURL that has a path (GH Pages `base: '/anasofia15/'`), a leading-slash
     // `page.goto('/')` resolves to the origin root, not the base subpath. Use `'./'`.
     await page.goto('./');
 
-    const balls = page.getByTestId('disco-ball');
-    await expect(balls).toHaveCount(3);
-
-    const widths: number[] = [];
-    for (const ball of await balls.all()) {
-      await expect(ball).toBeVisible();
-      const box = await ball.boundingBox();
-      widths.push(box?.width ?? 0);
-    }
-
-    // Large / medium / small — each tier clearly bigger than the next, not three near-equals.
-    const [large, medium, small] = [...widths].sort((a, b) => b - a);
-    expect(large).toBeGreaterThan(medium * 1.15);
-    expect(medium).toBeGreaterThan(small * 1.15);
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Invitación para los quince años de Ana Sofía',
+      }),
+    ).toBeVisible();
   });
 
-  test('every disco ball stays individually recognizable on a narrow phone', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
+  test('the celebrant name renders in the cursive display font', async ({ page }) => {
     await page.goto('./');
 
-    const balls = page.getByTestId('disco-ball');
-    await expect(balls).toHaveCount(3);
-    for (const ball of await balls.all()) {
-      await expect(ball).toBeVisible();
-      const box = await ball.boundingBox();
-      expect(box?.width ?? 0).toBeGreaterThanOrEqual(48);
-    }
+    const fontFamily = await page
+      .getByTestId('cover-celebrant-name')
+      .evaluate((el) => getComputedStyle(el).fontFamily);
+
+    expect(fontFamily).toContain('Great Vibes');
   });
 
-  test('the three balls carry different facet patterns, not clones', async ({ page }) => {
+  test('frames the cover with at least three rose shapes, all hidden from assistive tech', async ({
+    page,
+  }) => {
     await page.goto('./');
 
-    const facetSvgs = page.getByTestId('disco-ball-facets');
-    await expect(facetSvgs).toHaveCount(3);
+    const cover = page.getByTestId('cover');
+    const roses = cover.getByTestId('rose');
+    const count = await roses.count();
+    expect(count).toBeGreaterThanOrEqual(3);
 
-    const patterns = await facetSvgs.evaluateAll((els) => els.map((el) => el.innerHTML));
-    expect(new Set(patterns).size).toBe(3);
+    for (const rose of await roses.all()) {
+      await expect(rose).toHaveAttribute('aria-hidden', 'true');
+    }
   });
 
   test('never renders duplicate element ids', async ({ page }) => {
@@ -64,118 +56,63 @@ test.describe('Cover section', () => {
     expect(duplicateIds).toEqual([]);
   });
 
-  test('shows the "Let\'s disco party" script line in the cursive font, on two lines', async ({
-    page,
-  }) => {
-    await page.goto('./');
-
-    const script = page.getByText("Let's disco party");
-    await expect(script).toBeVisible();
-
-    const rendered = await script.evaluate((el) => {
-      const spans = el.querySelectorAll('span');
-      const first = spans[0]?.getBoundingClientRect();
-      const last = spans[spans.length - 1]?.getBoundingClientRect();
-      return {
-        fontFamily: getComputedStyle(el).fontFamily,
-        hiddenFromAssistiveTech: el.closest('[aria-hidden="true"]') !== null,
-        // Two lines: the last segment starts clearly below the first one, not beside it.
-        breaksIntoTwoLines:
-          !!first && !!last && last.top >= first.top + first.height * 0.5,
-      };
-    });
-
-    expect(rendered.fontFamily).toContain('Great Vibes');
-    expect(rendered.hiddenFromAssistiveTech).toBe(false);
-    expect(rendered.breaksIntoTwoLines).toBe(true);
-  });
-
-  test('the monogram reads as one "MIS 15 AÑOS" heading, with no hairline rules', async ({
-    page,
-  }) => {
-    await page.goto('./');
-
-    const heading = page.getByRole('heading', { level: 1, name: 'MIS 15 AÑOS' });
-    await expect(heading).toBeVisible();
-
-    // The redesigned monogram carries no decorative pseudo-element strokes (the old gold
-    // hairlines flanking MIS/AÑOS): nothing inside the heading may render generated content.
-    const decoratedElements = await heading.evaluate((h1) => {
-      const els = [h1, ...h1.querySelectorAll('*')];
-      return els.filter((el) =>
-        ['::before', '::after'].some((pseudo) => getComputedStyle(el, pseudo).content !== 'none'),
-      ).length;
-    });
-    expect(decoratedElements).toBe(0);
-  });
-
-  test('stacks cluster, script, monogram, and button top to bottom', async ({ page }) => {
-    await page.goto('./');
-
-    const ballBoxes = [];
-    for (const ball of await page.getByTestId('disco-ball').all()) {
-      ballBoxes.push(await ball.boundingBox());
-    }
-    const clusterBottom = Math.max(...ballBoxes.map((b) => (b?.y ?? 0) + (b?.height ?? 0)));
-
-    const scriptBox = await page.getByText("Let's disco party").boundingBox();
-    const headingBox = await page
-      .getByRole('heading', { level: 1, name: 'MIS 15 AÑOS' })
-      .boundingBox();
-    const buttonBox = await page
-      .getByRole('button', { name: 'Abrir invitación' })
-      .boundingBox();
-
-    // Reading order flows downward; adjacent blocks may kiss but never swap places.
-    expect(scriptBox!.y + scriptBox!.height / 2).toBeGreaterThan(clusterBottom * 0.5);
-    expect(scriptBox!.y).toBeGreaterThan(ballBoxes[0]!.y);
-    expect(headingBox!.y).toBeGreaterThan(scriptBox!.y);
-    expect(buttonBox!.y).toBeGreaterThan(headingBox!.y + headingBox!.height / 2);
-  });
-
-  test('renders the cover copy: monogram heading and open-invitation button', async ({ page }) => {
-    await page.goto('./');
-
-    await expect(page.getByRole('heading', { level: 1, name: 'MIS 15 AÑOS' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Abrir invitación' })).toBeVisible();
-  });
-
   test('the whole composition fits a short phone screen without cropping', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('./');
 
-    for (const ball of await page.getByTestId('disco-ball').all()) {
-      await expect(ball).toBeInViewport({ ratio: 0.9 });
-    }
-    await expect(page.getByText("Let's disco party")).toBeInViewport({ ratio: 0.9 });
     await expect(
-      page.getByRole('heading', { level: 1, name: 'MIS 15 AÑOS' }),
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Invitación para los quince años de Ana Sofía',
+      }),
     ).toBeInViewport({ ratio: 0.9 });
     await expect(
       page.getByRole('button', { name: 'Abrir invitación' }),
     ).toBeInViewport({ ratio: 0.9 });
 
-    const { scrollWidth, innerWidth } = await page.evaluate(() => ({
+    // Measure both locked (the guest's first view) and, since the fixed scroll-lock itself clips
+    // to the viewport and would hide a rose garland that bleeds past the edge, again right after
+    // unlocking — the state where any such overflow actually becomes scrollable.
+    const lockedOverflow = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
       innerWidth: window.innerWidth,
     }));
-    expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+    expect(lockedOverflow.scrollWidth).toBeLessThanOrEqual(lockedOverflow.innerWidth);
+
+    await page.getByRole('button', { name: 'Abrir invitación' }).click();
+    const unlockedOverflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(unlockedOverflow.scrollWidth).toBeLessThanOrEqual(unlockedOverflow.innerWidth);
   });
 
   test('the whole composition fits a wide desktop viewport', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 800 });
     await page.goto('./');
 
-    for (const ball of await page.getByTestId('disco-ball').all()) {
-      await expect(ball).toBeInViewport({ ratio: 0.9 });
-    }
-    await expect(page.getByText("Let's disco party")).toBeInViewport({ ratio: 0.9 });
     await expect(
-      page.getByRole('heading', { level: 1, name: 'MIS 15 AÑOS' }),
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Invitación para los quince años de Ana Sofía',
+      }),
     ).toBeInViewport({ ratio: 0.9 });
     await expect(
       page.getByRole('button', { name: 'Abrir invitación' }),
     ).toBeInViewport({ ratio: 0.9 });
+
+    const lockedOverflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(lockedOverflow.scrollWidth).toBeLessThanOrEqual(lockedOverflow.innerWidth);
+
+    await page.getByRole('button', { name: 'Abrir invitación' }).click();
+    const unlockedOverflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(unlockedOverflow.scrollWidth).toBeLessThanOrEqual(unlockedOverflow.innerWidth);
   });
 
   test('scroll is locked on load: the guest cannot scroll past the cover before opening', async ({
@@ -219,14 +156,13 @@ test.describe('Cover section', () => {
     await expect(page.getByTestId('hero')).toBeInViewport({ ratio: 0.5 });
   });
 
-  test('disco-ball spin runs by default and freezes under prefers-reduced-motion', async ({
+  test('the open button pulses softly by default and freezes under prefers-reduced-motion', async ({
     page,
   }) => {
     await page.goto('./');
 
-    const spinningFacets = page.getByTestId('disco-ball-facets').first();
-    await expect(spinningFacets).toBeAttached();
-    const runningAnimationName = await spinningFacets.evaluate(
+    const button = page.getByRole('button', { name: 'Abrir invitación' });
+    const runningAnimationName = await button.evaluate(
       (el) => getComputedStyle(el).animationName,
     );
     expect(runningAnimationName).not.toBe('none');
@@ -234,77 +170,13 @@ test.describe('Cover section', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.reload();
 
-    const frozenFacets = page.getByTestId('disco-ball-facets').first();
-    await expect(frozenFacets).toBeAttached();
-    const frozenAnimationName = await frozenFacets.evaluate(
-      (el) => getComputedStyle(el).animationName,
-    );
+    const frozenAnimationName = await page
+      .getByRole('button', { name: 'Abrir invitación' })
+      .evaluate((el) => getComputedStyle(el).animationName);
     expect(frozenAnimationName).toBe('none');
 
-    // The balls themselves must still render while the spin is frozen.
-    await expect(page.getByTestId('disco-ball').first()).toBeVisible();
-  });
-
-  test('the "Let\'s disco party" script reads noticeably larger on a narrow phone', async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('./');
-
-    const fontSizePx = await page
-      .getByTestId('disco-script')
-      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-
-    // Baseline computed size at this exact viewport before this pass (commit ebce714): 41.25px.
-    // The owner asked for a clearly bigger script, not a timid bump — require at least +25%.
-    const PREVIOUS_SCRIPT_FONT_SIZE_PX = 41.25;
-    expect(fontSizePx).toBeGreaterThanOrEqual(PREVIOUS_SCRIPT_FONT_SIZE_PX * 1.25);
-
-    // Still two lines of real, accessible cursive text — growing the type must not regress that.
-    const rendered = await page.getByTestId('disco-script').evaluate((el) => ({
-      fontFamily: getComputedStyle(el).fontFamily,
-      hiddenFromAssistiveTech: el.closest('[aria-hidden="true"]') !== null,
-    }));
-    expect(rendered.fontFamily).toContain('Great Vibes');
-    expect(rendered.hiddenFromAssistiveTech).toBe(false);
-  });
-
-  test('the "15" numeral renders in a self-hosted serif face, keeping its gold shimmer', async ({
-    page,
-  }) => {
-    const fontRequests: string[] = [];
-    page.on('request', (request) => {
-      if (/\.(woff2?|ttf|otf)(\?.*)?$/i.test(request.url())) {
-        fontRequests.push(request.url());
-      }
-    });
-
-    await page.goto('./');
-    await page.waitForLoadState('networkidle');
-
-    const numeral = page.locator('.cover__title-xv');
-    const style = await numeral.evaluate((el) => {
-      const computed = getComputedStyle(el);
-      return {
-        fontFamily: computed.fontFamily,
-        color: computed.color,
-        animationName: computed.animationName,
-        filter: computed.filter,
-      };
-    });
-
-    expect(style.fontFamily).toContain('Playfair Display');
-    // Gradient-clipped text paints transparent so the background gradient shows through.
-    expect(style.color).toBe('rgba(0, 0, 0, 0)');
-    expect(style.animationName).not.toBe('none');
-    expect(style.filter).toContain('drop-shadow');
-
-    // Every font file this page fetched must come from our own origin — no external font CDN.
-    expect(fontRequests.length).toBeGreaterThan(0);
-    const pageOrigin = new URL(page.url()).origin;
-    for (const url of fontRequests) {
-      expect(new URL(url).origin).toBe(pageOrigin);
-    }
+    // The button must still render while the pulse is frozen.
+    await expect(page.getByRole('button', { name: 'Abrir invitación' })).toBeVisible();
   });
 
   test('every cover animation freezes under prefers-reduced-motion', async ({ page }) => {
@@ -322,5 +194,23 @@ test.describe('Cover section', () => {
     });
 
     expect(stillAnimated).toEqual([]);
+  });
+
+  test('every font the cover requests is self-hosted on our own origin', async ({ page }) => {
+    const fontRequests: string[] = [];
+    page.on('request', (request) => {
+      if (/\.(woff2?|ttf|otf)(\?.*)?$/i.test(request.url())) {
+        fontRequests.push(request.url());
+      }
+    });
+
+    await page.goto('./');
+    await page.waitForLoadState('networkidle');
+
+    expect(fontRequests.length).toBeGreaterThan(0);
+    const pageOrigin = new URL(page.url()).origin;
+    for (const url of fontRequests) {
+      expect(new URL(url).origin).toBe(pageOrigin);
+    }
   });
 });
