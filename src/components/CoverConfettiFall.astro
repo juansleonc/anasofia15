@@ -23,6 +23,14 @@ const BOKEH: readonly (readonly [number, number, number, number])[] = [
   [7, 90, 44, 0.35],
 ];
 
+// Golden light flares glinting on the garland, like the reference's sparkle points:
+// [x %, y %, size px].
+const FLARES: readonly (readonly [number, number, number])[] = [
+  [31, 14, 70],
+  [72, 22, 56],
+  [58, 9, 44],
+];
+
 function round(value: number): string {
   return value.toFixed(2);
 }
@@ -54,6 +62,15 @@ function round(value: number): string {
         class="cover-confetti__bokeh"
         data-bokeh
         style={`left:${xPct}%;top:${yPct}%;--bokeh-size:${sizePx}px;opacity:${opacity};`}
+      />
+    ))
+  }
+  {
+    FLARES.map(([xPct, yPct, sizePx]) => (
+      <span
+        class="cover-confetti__flare"
+        data-flare
+        style={`left:${xPct}%;top:${yPct}%;--flare-size:${sizePx}px;`}
       />
     ))
   }
@@ -114,6 +131,35 @@ function round(value: number): string {
       color-mix(in srgb, var(--c-champagne-200) 35%, transparent) 55%,
       transparent 72%
     );
+  }
+
+  /* A 4-point star of light: a white core plus two thin crossing bars. */
+  .cover-confetti__flare {
+    position: absolute;
+    width: var(--flare-size);
+    height: var(--flare-size);
+    transform: translate(-50%, -50%);
+    background:
+      radial-gradient(
+          circle,
+          var(--c-white) 0%,
+          color-mix(in srgb, var(--c-champagne-200) 70%, transparent) 12%,
+          transparent 40%
+        ),
+      linear-gradient(
+          90deg,
+          transparent 0%,
+          color-mix(in srgb, var(--c-white) 85%, transparent) 50%,
+          transparent 100%
+        )
+        center / 100% 2px no-repeat,
+      linear-gradient(
+          0deg,
+          transparent 0%,
+          color-mix(in srgb, var(--c-white) 85%, transparent) 50%,
+          transparent 100%
+        )
+        center / 2px 70% no-repeat;
   }
 
   @keyframes cover-confetti-fall {

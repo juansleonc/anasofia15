@@ -193,3 +193,52 @@ test.describe('Cover bokeh', () => {
     });
   }
 });
+
+test.describe('Cover light flares', () => {
+  test('three static, hidden 4-point flares of 44-70px', async ({ page }) => {
+    await page.goto('./');
+
+    const flares = await page.locator('[data-flare]').evaluateAll((elements) =>
+      elements.map((el) => {
+        const style = getComputedStyle(el);
+        return {
+          hidden: el.closest('[aria-hidden="true"]') !== null,
+          width: parseFloat(style.width),
+          animationName: style.animationName,
+          gradients: style.backgroundImage.match(/[a-z-]+-gradient\(/g) ?? [],
+        };
+      }),
+    );
+    expect(flares).toHaveLength(3);
+    for (const flare of flares) {
+      expect(flare.hidden).toBe(true);
+      expect(flare.animationName).toBe('none');
+      expect(flare.width).toBeGreaterThanOrEqual(44);
+      expect(flare.width).toBeLessThanOrEqual(70);
+      expect(flare.gradients).toEqual(['radial-gradient(', 'linear-gradient(', 'linear-gradient(']);
+    }
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`flares sit on the garland, clear of the text, at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready);
+
+      const text = await textBoxes(page);
+      const coverBox = await page.getByTestId('cover').boundingBox();
+      expect(coverBox).not.toBeNull();
+      const flares = await page
+        .locator('[data-flare]')
+        .evaluateAll((elements) => elements.map((el) => el.getBoundingClientRect().toJSON()));
+      expect(flares).toHaveLength(3);
+      for (const flare of flares) {
+        const centerY = flare.y + flare.height / 2 - coverBox!.y;
+        expect(centerY).toBeLessThanOrEqual(0.3 * coverBox!.height);
+        expect(text.some((box) => intersects(flare, box))).toBe(false);
+      }
+    });
+  }
+});
