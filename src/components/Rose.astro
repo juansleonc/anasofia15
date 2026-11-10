@@ -1,0 +1,26 @@
+---
+// Thin per-instance reference into the shared sprite (`RoseSprite.astro`): every rose on the page
+// is a single <use>, never a fresh <symbol>, so no instance can introduce a duplicate id.
+// Purely decorative — always aria-hidden; callers size and position it entirely through
+// `class`/`style`.
+interface Props {
+  variant: 'bloom' | 'bud' | 'leaf';
+  class?: string;
+  style?: string;
+}
+
+const { variant, class: className, style } = Astro.props;
+---
+
+<svg class={`rose ${className ?? ''}`.trim()} data-testid="rose" aria-hidden="true" style={style}>
+  <use href={`#rose-${variant}`} />
+</svg>
+
+<style>
+  .rose {
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+</style>

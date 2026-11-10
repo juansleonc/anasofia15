@@ -1,0 +1,75 @@
+---
+// Cover's rose swag: a loose decorative arrangement of blooms/buds/leaves anchored at fixed
+// percentage positions along the top or bottom edge, so the arrangement keeps its shape at every
+// viewport width (same fixed-anchor approach the cluster it replaces used). Every rose here is
+// `aria-hidden` (handled by Rose itself) — the garland carries no accessible content of its own;
+// Cover's own heading/button remain the section's accessible content.
+import Rose from './Rose.astro';
+
+interface Props {
+  placement: 'top' | 'bottom';
+}
+
+const { placement } = Astro.props;
+
+interface GarlandRose {
+  variant: 'bloom' | 'bud' | 'leaf';
+  left: string;
+  size: string;
+  rotate: string;
+}
+
+const topRoses: GarlandRose[] = [
+  { variant: 'leaf', left: '4%', size: '15%', rotate: '-12deg' },
+  { variant: 'bloom', left: '16%', size: '22%', rotate: '-6deg' },
+  { variant: 'bud', left: '33%', size: '13%', rotate: '4deg' },
+  { variant: 'bloom', left: '50%', size: '18%', rotate: '0deg' },
+  { variant: 'bud', left: '67%', size: '13%', rotate: '-4deg' },
+  { variant: 'bloom', left: '84%', size: '22%', rotate: '6deg' },
+  { variant: 'leaf', left: '96%', size: '15%', rotate: '12deg' },
+];
+
+const bottomRoses: GarlandRose[] = [
+  { variant: 'leaf', left: '6%', size: '16%', rotate: '10deg' },
+  { variant: 'bud', left: '21%', size: '14%', rotate: '-5deg' },
+  { variant: 'bloom', left: '38%', size: '20%', rotate: '3deg' },
+  { variant: 'bloom', left: '62%', size: '20%', rotate: '-3deg' },
+  { variant: 'bud', left: '79%', size: '14%', rotate: '5deg' },
+  { variant: 'leaf', left: '94%', size: '16%', rotate: '-10deg' },
+];
+
+const roses = placement === 'top' ? topRoses : bottomRoses;
+---
+
+<div
+  class="rose-garland"
+  data-testid={`rose-garland-${placement}`}
+  aria-hidden="true"
+  style={placement === 'top' ? 'top:0' : 'bottom:0'}
+>
+  {
+    roses.map((rose) => (
+      <Rose
+        variant={rose.variant}
+        class="rose-garland__rose"
+        style={`left:${rose.left};width:${rose.size};transform:translateX(-50%) rotate(${rose.rotate})`}
+      />
+    ))
+  }
+</div>
+
+<style>
+  .rose-garland {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: clamp(3rem, 12vh, 5.5rem);
+    pointer-events: none;
+  }
+
+  .rose-garland :global(.rose-garland__rose) {
+    position: absolute;
+    top: 0;
+    aspect-ratio: 1;
+  }
+</style>

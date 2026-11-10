@@ -1,0 +1,38 @@
+---
+// "Para ellas": header + the interactive dress-color wheel (delegated to ColorWheelIsland, which
+// owns the radio-group/rotation state machine built on the pure `color-wheel` geometry module).
+import ColorWheelIsland from '../islands/ColorWheelIsland.astro';
+import EyebrowEmoji from '../components/EyebrowEmoji.astro';
+---
+
+<section class="color-wheel-section" data-testid="rueda-colores" aria-label="La rueda de colores">
+  <div class="color-wheel-section__header">
+    <p class="color-wheel-section__eyebrow"><EyebrowEmoji emoji="👗" />Para ellas</p>
+    <h2 class="color-wheel-section__title text-rose">La rueda de colores</h2>
+  </div>
+  <ColorWheelIsland />
+</section>
+
+<style>
+  .color-wheel-section {
+    padding: 2.5rem 1rem 3.75rem;
+  }
+
+  .color-wheel-section__header {
+    text-align: center;
+    margin-bottom: 1.875rem;
+  }
+
+  .color-wheel-section__eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--c-rose-700);
+  }
+
+  .color-wheel-section__title {
+    font-weight: 700;
+    font-size: clamp(1.75rem, 7vw, 2.75rem);
+    margin-top: 0.75rem;
+  }
+</style>
