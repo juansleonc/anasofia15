@@ -170,15 +170,17 @@ test.describe('Balloon arch', () => {
 
   test('both upper corners show foliage on screen', async ({ page }) => {
     // Floors are the real-render ceiling measured on the current composition (minimum of all 4
-    // viewports was 189px² on phones, 8568px² on landscape), rounded down — see the "measured, not
-    // chased" note on the model-level visible-foliage test in cover-garland.test.ts for why the
-    // original design floors (1200 / 9000) are not reachable without reworking the shoulder
-    // balloons this lane's write set doesn't own.
+    // viewports was 306px² on phones, 11142px² on landscape), rounded down. Shrinking the two
+    // corner blossoms into small rosebuds (G3/G4's flower rescale, plus the main-rose/peony
+    // shrink) uncovered more of the corner cluster mass than round 6's original design floors
+    // (1200 / 9000) assumed; those remain out of reach without also touching the shoulder
+    // balloons at the envelope's u = ±0.9 station, whose margin there is under 1 unit — shrinking
+    // either one drops the lower envelope below the arch pocket floor.
     const cases = [
-      { viewport: PHONE, floor: 180 },
-      { viewport: TALL_PHONE, floor: 180 },
-      { viewport: { width: 1366, height: 768 }, floor: 8500 },
-      { viewport: DESKTOP, floor: 8500 },
+      { viewport: PHONE, floor: 300 },
+      { viewport: TALL_PHONE, floor: 300 },
+      { viewport: { width: 1366, height: 768 }, floor: 11000 },
+      { viewport: DESKTOP, floor: 11000 },
     ];
     for (const { viewport, floor } of cases) {
       await page.setViewportSize(viewport);

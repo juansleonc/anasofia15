@@ -109,10 +109,10 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'rose-pink', x: 212, y: 86, size: 90, rotate: 8, depth: 3 },
       { symbol: 'rose-cream', x: 318, y: 98, size: 96, rotate: 0, depth: 3 },
       { symbol: 'peony-ivory', x: 260, y: 110, size: 60, rotate: 0, depth: 3 },
-      { symbol: 'blossom', x: 52, y: 204, size: 58, rotate: -10, depth: 3 },
+      { symbol: 'rosebud', x: 52, y: 204, size: 36, rotate: -10, depth: 3 },
       { symbol: 'rose-cream', x: 378, y: 214, size: 70, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 22, y: 214, size: 70, rotate: 0, depth: 3 },
-      { symbol: 'blossom', x: 390, y: 258, size: 40, rotate: 0, depth: 3 },
+      { symbol: 'rosebud', x: 390, y: 258, size: 32, rotate: 0, depth: 3 },
       { symbol: 'rosebud', x: 50, y: 216, size: 24, rotate: -40, depth: 3 },
       { symbol: 'rosebud', x: 350, y: 216, size: 24, rotate: 40, depth: 3 },
       // front accents re-seated to press against the enlarged roses, veiling part of each bloom;
