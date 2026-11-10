@@ -222,6 +222,27 @@ describe('ArchSprite balloons', () => {
     expect(symbol('balloon-champagne').querySelector('use[href="#balloon-gloss"]')?.getAttribute('style') ?? '').not.toContain('--balloon-spec');
   });
 
+  it('pastel pink keeps a rose-400 terminator and >= 6 stops, from a rose-100 core to a rose-300 rim', () => {
+    const stops = Array.from(gradient('balloon-pink-gradient').querySelectorAll('stop'));
+    const tokenAt = (k: number): string => (stops[k].getAttribute('style') ?? '').match(/--c-[\w-]+/)?.[0] ?? '';
+    expect(stops.length).toBeGreaterThanOrEqual(6);
+    expect(tokenAt(0)).toBe('--c-rose-100');
+    expect(tokenAt(stops.length - 1)).toBe('--c-rose-300');
+    expect(tokenAt(stops.length - 2)).toBe('--c-rose-400');
+    const terminatorOffset = parseFloat(stops[stops.length - 2].getAttribute('offset') ?? '');
+    expect(terminatorOffset).toBeGreaterThanOrEqual(80);
+    expect(terminatorOffset).toBeLessThanOrEqual(92);
+    expect(stops.slice(1, -2).some((_, k) => tokenAt(k + 1) === '--c-rose-300')).toBe(true);
+  });
+
+  it('pastel pink shows the softbox at full strength with a moderate specular', () => {
+    const style = symbol('balloon-pink').querySelector('use[href="#balloon-gloss"]')?.getAttribute('style') ?? '';
+    expect(style).not.toContain('--balloon-window');
+    const spec = Number(style.match(/--balloon-spec:\s*([\d.]+)/)?.[1]);
+    expect(spec).toBeGreaterThan(0.6);
+    expect(spec).toBeLessThan(1);
+  });
+
   it('balloon bodies stay within their element budget (8 own shapes + the shared gloss use)', () => {
     for (const id of ALL_BALLOONS) {
       const ownChildren = symbol(id).children.length;
