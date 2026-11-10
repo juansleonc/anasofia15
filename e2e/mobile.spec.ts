@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// Durable mobile/overflow sweep (T21): the whole-page version of the per-section overflow checks
-// earlier sections added ad hoc (e.g. album.spec.ts). Asserts a hard 375px viewport never
-// produces horizontal scroll, both for the page as shipped AND when it's stress-tested with
-// unusually long user-supplied content (a long RSVP name + a long suggested song), since those
-// are the two free-text fields a real guest controls.
+// Durable mobile/overflow sweep: the whole-page version of per-section overflow checks. Asserts a
+// hard 375px viewport never produces horizontal scroll, both for the page as shipped AND when
+// it's stress-tested with unusually long user-supplied content (a long RSVP name + a long
+// suggested song), since those are the two free-text fields a real guest controls.
 
 const LONG_NAME =
   'Maria Fernanda Alejandra Gutierrez Rodriguez de la Santisima Trinidad y Montenegro';

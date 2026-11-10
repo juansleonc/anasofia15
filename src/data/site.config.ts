@@ -11,7 +11,7 @@ export interface SiteConfig {
    * "not configured" state (no fetch ever sent) until this is swapped for a real UUID key. This
    * key is public-by-design (safe to ship in the client bundle): it only identifies which
    * Web3Forms form to submit to. The destination email address is configured on Web3Forms' own
-   * dashboard (juansleonc@gmail.com), NOT here — it never appears in this codebase or the bundle.
+   * dashboard, NOT here — it never appears in this codebase or the bundle.
    */
   web3formsAccessKey: string;
   /** Full deployed site origin (must match `site` in astro.config.mjs). */

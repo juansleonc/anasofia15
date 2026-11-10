@@ -121,10 +121,9 @@ export function markSubmitted(input: RsvpInput, storage?: Storage): void {
 }
 
 /**
- * Single reader for the guard record's shape — replaces RsvpForm's former private duplicate
- * (`readGuardRecord`) so there is exactly one place that parses it. Returns `null` on a missing
- * key, corrupt JSON, or an invalid `attending` value (fail closed: never surface a half-trusted
- * record as if it were confirmed).
+ * Single reader for the guard record's shape, so there is exactly one place that parses it.
+ * Returns `null` on a missing key, corrupt JSON, or an invalid `attending` value (fail closed:
+ * never surface a half-trusted record as if it were confirmed).
  */
 export function readSubmission(storage?: Storage): { name: string; attending: Attending } | null {
   const store = resolveStorage(storage);

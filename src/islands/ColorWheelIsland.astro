@@ -306,9 +306,9 @@ const HUB_RADIUS = 20;
   }
 
   // Belt-and-suspenders keyboard handling: native radio-group arrow-key behavior should already
-  // move + check the next/previous option, but WebKit support for that is unconfirmed (see the
-  // design's own risk note) — this handler guarantees the same ArrowRight/Down/Left/Up + wrap
-  // behavior regardless, always finishing through the shared `radios[i].click()` → `change` path.
+  // move + check the next/previous option, but WebKit support for that is unconfirmed — this
+  // handler guarantees the same ArrowRight/Down/Left/Up + wrap behavior regardless, always
+  // finishing through the shared `radios[i].click()` → `change` path.
   fieldset?.addEventListener('keydown', (event) => {
     const key = event.key;
     if (key !== 'ArrowRight' && key !== 'ArrowDown' && key !== 'ArrowLeft' && key !== 'ArrowUp') {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { extname, join, relative } from 'node:path';
+import { basename, extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // Leftovers guard: this site was copied from a sibling quinceañera invitation and must carry no
@@ -29,7 +29,7 @@ const OLD_SONG_SHA256 = '87d30123864bed0ca213ad1c242521bba3880a9c7d664745c40b57b
 const TEST_DIR = fileURLToPath(new URL('.', import.meta.url));
 const PROJECT_ROOT = join(TEST_DIR, '..', '..', '..');
 
-const SCAN_DIR_NAMES = ['src', 'e2e', 'public', '.github'];
+const SCAN_DIR_NAMES = ['src', 'e2e', 'public', '.github', '.vscode'];
 const SCAN_ROOT_FILE_NAMES = [
   'astro.config.mjs',
   'playwright.config.ts',
@@ -38,6 +38,8 @@ const SCAN_ROOT_FILE_NAMES = [
   'package.json',
   'README.md',
   'tsconfig.json',
+  '.gitignore',
+  'pnpm-workspace.yaml',
 ];
 
 const EXCLUDED_DIR_NAMES = new Set([
@@ -67,7 +69,14 @@ const TEXT_EXTENSIONS = new Set([
   '.yaml',
   '.svg',
   '.txt',
+  '.webmanifest',
+  '.html',
+  '.xml',
 ]);
+
+// Dotfiles (e.g. `.gitignore`) have no `extname()` — Node reports an empty string for them — so
+// they're named here explicitly rather than matched by extension.
+const FORCE_TEXT_BASENAMES = new Set(['.gitignore']);
 
 function exists(path: string): boolean {
   return statSync(path, { throwIfNoEntry: false }) !== undefined;
@@ -102,7 +111,8 @@ describe('leftovers guard', () => {
     const offenders: string[] = [];
 
     for (const file of targets) {
-      if (!TEXT_EXTENSIONS.has(extname(file))) continue; // binaries (images, audio, icons) skipped
+      const isTextFile = TEXT_EXTENSIONS.has(extname(file)) || FORCE_TEXT_BASENAMES.has(basename(file));
+      if (!isTextFile) continue; // binaries (images, audio, icons) skipped
 
       const relPath = relative(PROJECT_ROOT, file);
       readFileSync(file, 'utf8')
