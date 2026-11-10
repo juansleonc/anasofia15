@@ -84,8 +84,8 @@ export function buildWeb3FormsPayload(
 }
 
 /**
- * Namespaced with this site's own prefix so it can never collide with the sibling `lu15` site,
- * which shares the same GitHub Pages origin (and therefore the same localStorage).
+ * Namespaced with this site's own prefix so it can never collide with another site that happens
+ * to share the same GitHub Pages origin (and therefore the same localStorage).
  */
 export const RSVP_GUARD_STORAGE_KEY = 'anasofia15_rsvp_v1';
 

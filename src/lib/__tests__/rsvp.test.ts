@@ -169,7 +169,7 @@ describe('RSVP submit guard (localStorage)', () => {
 });
 
 describe('RSVP_GUARD_STORAGE_KEY', () => {
-  it('is namespaced to this site, distinct from the sibling lu15 site sharing the same origin', () => {
+  it('is namespaced to this site, distinct from another site sharing the same origin', () => {
     expect(RSVP_GUARD_STORAGE_KEY).toBe('anasofia15_rsvp_v1');
   });
 });
@@ -213,7 +213,7 @@ describe('isWeb3FormsKeyConfigured', () => {
   // Adversarial cases first: the ways an unconfigured site could be mistaken for a configured one.
 
   it('is true for a real-looking UUID access key', () => {
-    expect(isWeb3FormsKeyConfigured('b0737026-e800-4133-bf1c-68b8ab8cd045')).toBe(true);
+    expect(isWeb3FormsKeyConfigured('3f9a2c71-5b44-4e2f-9c3d-7a1e5f082b6d')).toBe(true);
   });
 
   it('is false for the shipped placeholder literal', () => {

@@ -56,9 +56,9 @@ body {
   font-family: var(--font-body);
 }
 
-/* Blush wash backdrop — replaces the old animated starfield. CSS-only (no canvas/JS), fixed in
-   the viewport (not `background-attachment: fixed`, which janks on iOS), and layered behind every
-   section via a negative z-index, same as the starfield it replaces. */
+/* Blush wash backdrop — replaces the old animated night-sky background. CSS-only (no canvas/JS),
+   fixed in the viewport (not `background-attachment: fixed`, which janks on iOS), and layered
+   behind every section via a negative z-index, same as what it replaces. */
 body::before {
   content: '';
   position: fixed;

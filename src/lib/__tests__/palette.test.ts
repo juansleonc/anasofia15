@@ -20,7 +20,7 @@ const SRC_DIR = join(PROJECT_ROOT, 'src');
 const ALLOWED_FILES = [join(SRC_DIR, 'styles', 'tokens.css'), join(SRC_DIR, 'data', 'dress-colors.ts')];
 const ALLOWED_DIR = join(SRC_DIR, 'lib', '__tests__') + sep;
 
-const DISCO_HEXES = ['#0a0a0f', '#c9ccd1', '#d4af37', '#eef0f3', '#f0d987', '#fbf0c4'];
+const RETIRED_THEME_HEXES = ['#0a0a0f', '#c9ccd1', '#d4af37', '#eef0f3', '#f0d987', '#fbf0c4'];
 
 function listSourceFiles(dir: string): string[] {
   const files: string[] = [];
@@ -65,10 +65,10 @@ describe('palette discipline', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('keeps none of the old disco-theme hexes in tokens.css', () => {
+  it('keeps none of the retired theme hexes in tokens.css', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8').toLowerCase();
 
-    const stillPresent = DISCO_HEXES.filter((hex) => tokensCss.includes(hex));
+    const stillPresent = RETIRED_THEME_HEXES.filter((hex) => tokensCss.includes(hex));
 
     expect(stillPresent).toEqual([]);
   });

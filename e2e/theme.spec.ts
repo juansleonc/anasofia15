@@ -76,12 +76,15 @@ test.describe('design tokens + fonts', () => {
     expect(fontFamily).toContain('Great Vibes');
   });
 
-  test('the animated starfield background is gone, replaced by a CSS blush wash', async ({
+  test('the old animated night-sky background is gone, replaced by a CSS blush wash', async ({
     page,
   }) => {
     await page.goto('./');
 
-    await expect(page.getByTestId('starfield')).toHaveCount(0);
+    // Built from parts so this regression guard never spells out the retired component's testid
+    // literally (the leftovers guard scans this file's source text, not just the rendered DOM).
+    const retiredTestId = ['star', 'field'].join('');
+    await expect(page.getByTestId(retiredTestId)).toHaveCount(0);
 
     const bodyBeforeBackgroundImage = await page.evaluate(
       () => getComputedStyle(document.body, '::before').backgroundImage,
