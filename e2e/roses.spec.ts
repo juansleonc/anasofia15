@@ -51,6 +51,7 @@ test.describe('Arch sprite', () => {
         'leaf-eucalyptus',
         'leaf-olive',
         'leaf-gold',
+        'leaf-laurel-cluster',
         'sparkle-star',
       ];
       return Object.fromEntries(
@@ -73,6 +74,7 @@ test.describe('Arch sprite', () => {
       'leaf-eucalyptus': 1,
       'leaf-olive': 1,
       'leaf-gold': 1,
+      'leaf-laurel-cluster': 1,
       'sparkle-star': 1,
     });
   });
