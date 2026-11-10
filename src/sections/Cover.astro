@@ -29,11 +29,14 @@ const titleRingSparkles = ringSparkles({ count: TITLE_RING_COUNT, seed: TITLE_RI
 // max-width above. `NAME_WIDTH_PER_EM` is how wide one rendered px of `event.celebrantName`'s own
 // box (text plus its 0.2em-per-side horizontal padding, see .cover__title-name) is per 1px of
 // font-size — measured directly off the live Great Vibes render, so it's tied to this specific
-// string; re-measure it if the celebrant name ever changes. `NAME_FIT_SAFETY` keeps the computed
+// string; re-measure it if the celebrant name ever changes. Round 5 re-verified this ratio against
+// the live render at two very different sizes (265.0px / 62.76px at 375 and 540.5px / 128px at
+// 1440 — both ≈ 4.223), confirming the existing constant rather than the lower value an earlier
+// draft measurement had suggested, so it is left as-is here. `NAME_FIT_SAFETY` keeps the computed
 // size a little under the exact fit so antialiasing/sub-pixel rounding never tips it into
 // overflowing the clear zone.
 const NAME_WIDTH_PER_EM = 4.224;
-const NAME_FIT_SAFETY = 0.93;
+const NAME_FIT_SAFETY = 0.95;
 const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toFixed(4)};`;
 ---
 
@@ -267,7 +270,7 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     font-size: clamp(1.45rem, 1.05rem + 1.3vw, 2.25rem);
     font-weight: 600;
     font-style: italic;
-    color: var(--c-ink);
+    color: var(--c-wine-900);
     letter-spacing: 0.01em;
     /* Nov 2026 user-feedback pass: lets the browser pick a more even line split (never a lone
        trailing word) instead of the greedy default — see the "no orphan last line" e2e test. */
@@ -281,7 +284,7 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
        `nameFitVar` above) instead of an independent vw clamp, which could (and did) size the name
        wider than the room it had to fit in. */
     white-space: nowrap;
-    font-size: clamp(3.25rem, calc(var(--name-fit-ratio) * var(--arch-clear-portrait) * 100vw), 8rem);
+    font-size: clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-portrait) * 100vw), 9.2rem);
     /* Tightened from 1.3 (and padding from 0.1em) together with .cover__title's smaller gap above,
        so the name sits close under the lead instead of leaving a large empty band between them. */
     line-height: 1.18;
@@ -291,7 +294,7 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
 
   @media (min-aspect-ratio: 1/1) {
     .cover__title-name {
-      font-size: clamp(3.25rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 8rem);
+      font-size: clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 9.2rem);
     }
   }
 

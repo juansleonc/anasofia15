@@ -30,6 +30,7 @@
   --c-rosegold-400: #dba592;
   --c-wine-500: #9a4462;
   --c-wine-700: #6e2440;
+  --c-wine-900: #4a1525;
   --c-champagne-800: #7a5c2e;
 
   /* Composite surfaces */
@@ -44,9 +45,9 @@
     var(--c-wine-700) 100%
   );
   --shadow-button-wine: 0 14px 30px -12px color-mix(in srgb, var(--c-wine-700) 55%, transparent);
-  /* Foil sheen laid over the button fill; white label text still stays >= 4.5:1 on the top stop
+  /* Foil sheen laid over the button fill; white label text still stays >= 5.0:1 on every stop
      under it (proved in palette.test.ts). */
-  --button-sheen-alpha: 10%;
+  --button-sheen-alpha: 6%;
   --gradient-button-sheen: linear-gradient(
     180deg,
     color-mix(in srgb, var(--c-white) var(--button-sheen-alpha), transparent) 0%,

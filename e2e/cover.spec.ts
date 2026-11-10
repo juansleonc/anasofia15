@@ -528,8 +528,19 @@ test.describe('Cover section', () => {
       const nameFontSizeDesktop = await page
         .getByTestId('cover-celebrant-name')
         .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-      expect(nameFontSizeDesktop).toBeGreaterThanOrEqual(120);
+      expect(nameFontSizeDesktop).toBeGreaterThanOrEqual(145);
     }
+  });
+
+  test('at 1366x768 the button stays above the fold', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('./');
+
+    const buttonBox = await page
+      .getByRole('button', { name: 'Abrir invitación' })
+      .boundingBox();
+    expect(buttonBox).not.toBeNull();
+    expect(buttonBox!.y + buttonBox!.height).toBeLessThanOrEqual(0.95 * 768);
   });
 
   test('the name is deep wine', async ({ page }) => {
@@ -539,6 +550,15 @@ test.describe('Cover section', () => {
       .getByTestId('cover-celebrant-name')
       .evaluate((el) => getComputedStyle(el).color);
     expect(color).toBe('rgb(110, 36, 64)');
+  });
+
+  test('the lead is deep wine', async ({ page }) => {
+    await page.goto('./');
+
+    const color = await page
+      .getByTestId('cover-title-lead')
+      .evaluate((el) => getComputedStyle(el).color);
+    expect(color).toBe('rgb(74, 21, 37)');
   });
 
   for (const { viewport, minLeadPx } of [
@@ -599,9 +619,7 @@ test.describe('Cover section', () => {
           lineTops: new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size,
           nameWidth: name.getBoundingClientRect().width,
           titleWidth: title.getBoundingClientRect().width,
-          fontSize: parseFloat(getComputedStyle(name).fontSize),
-          clearWidthCap:
-            (parseFloat(getComputedStyle(cover).getPropertyValue(clearVar)) * window.innerWidth) / 4.4,
+          clearWidthPx: parseFloat(getComputedStyle(cover).getPropertyValue(clearVar)) * window.innerWidth,
         };
       });
 
@@ -610,8 +628,9 @@ test.describe('Cover section', () => {
       // than a rect count, since one line can still yield several rects.
       expect(measurements.lineTops).toBe(1);
       expect(measurements.nameWidth).toBeLessThanOrEqual(measurements.titleWidth + 1);
-      // Never sized past what the arch's clear zone can hold, so it can't grow into the balloons.
-      expect(measurements.fontSize).toBeLessThanOrEqual(measurements.clearWidthCap);
+      // Never sized past what the arch's clear zone can hold, so it can't grow into the balloons —
+      // checked directly against the rendered box width rather than a font-size proxy.
+      expect(measurements.nameWidth).toBeLessThanOrEqual(measurements.clearWidthPx + 1);
     });
   }
 

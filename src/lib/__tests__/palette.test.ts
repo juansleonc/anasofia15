@@ -142,7 +142,18 @@ describe('palette discipline', () => {
       '--c-rosegold-400': '#dba592',
       '--c-wine-500': '#9a4462',
       '--c-wine-700': '#6e2440',
+      '--c-wine-900': '#4a1525',
     });
+  });
+
+  it("the lead's deep wine reads at least 7:1 on champagne-100, rose-100 and rose-200", () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    expect(tokens['--c-wine-900']).toBe('#4a1525');
+    for (const background of ['--c-champagne-100', '--c-rose-100', '--c-rose-200']) {
+      expect(contrastRatio(tokens['--c-wine-900'], tokens[background])).toBeGreaterThanOrEqual(7);
+    }
   });
 
   // Resolves the open button's fill gradient into its ordered stop tokens, so the contrast checks
@@ -159,37 +170,39 @@ describe('palette discipline', () => {
     expect(buttonFillStops(tokensCss)).toEqual(['--c-rose-700', '--c-wine-500', '--c-wine-700']);
   });
 
-  it('white label text keeps at least 4.5:1 on every button fill stop', () => {
+  it('white label text keeps at least 5.0:1 on every button fill stop', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
     const stops = buttonFillStops(tokensCss);
 
     expect(stops.length).toBeGreaterThanOrEqual(3);
     for (const stop of stops) {
-      expect(contrastRatio('#ffffff', tokens[stop])).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio('#ffffff', tokens[stop])).toBeGreaterThanOrEqual(5.0);
     }
   });
 
-  it('white stays at least 4.5:1 under the 10% button sheen', () => {
+  it('white stays at least 5.0:1 under the 6% button sheen on every stop', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
 
     const sheenAlphaMatch = tokensCss.match(/--button-sheen-alpha:\s*([\d.]+)%/);
     expect(sheenAlphaMatch).not.toBeNull();
     const sheenAlpha = parseFloat(sheenAlphaMatch![1]) / 100;
-    expect(sheenAlpha).toBe(0.1);
+    expect(sheenAlpha).toBeLessThanOrEqual(0.06);
 
-    // The sheen is a white layer painted at `sheenAlpha` over the fill, so the worst-case backdrop
-    // for the label is the lightest (top) stop composited with white at that alpha (source-over).
-    const topStop = hexToRgb(tokens[buttonFillStops(tokensCss)[0]]);
+    // The sheen is a white layer painted at `sheenAlpha` over the fill (source-over), checked on
+    // every stop rather than just the lightest, since the sheen covers the whole pill.
     const white = hexToRgb('#ffffff');
-    const composite: [number, number, number] = [
-      white[0] * sheenAlpha + topStop[0] * (1 - sheenAlpha),
-      white[1] * sheenAlpha + topStop[1] * (1 - sheenAlpha),
-      white[2] * sheenAlpha + topStop[2] * (1 - sheenAlpha),
-    ];
+    for (const stop of buttonFillStops(tokensCss)) {
+      const stopRgb = hexToRgb(tokens[stop]);
+      const composite: [number, number, number] = [
+        white[0] * sheenAlpha + stopRgb[0] * (1 - sheenAlpha),
+        white[1] * sheenAlpha + stopRgb[1] * (1 - sheenAlpha),
+        white[2] * sheenAlpha + stopRgb[2] * (1 - sheenAlpha),
+      ];
 
-    expect(contrastWithWhiteRgb(composite)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastWithWhiteRgb(composite)).toBeGreaterThanOrEqual(5.0);
+    }
   });
 
   it("the button fill's darkest stop is a deep wine", () => {
