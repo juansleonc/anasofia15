@@ -194,7 +194,7 @@ function partsOf(layout: GarlandLayout) {
   return { balloons, flowers, leaves, solids: [...balloons, ...flowers] };
 }
 
-const ROSE_AND_PEONY = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory'];
+const ROSE_AND_PEONY = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'rosebud'];
 const PEARL = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-champagne-satin'];
 
 /**
@@ -365,20 +365,33 @@ describe('north-star composition', () => {
     expect(cut.map(label)).toEqual([]);
   });
 
-  it.each(LAYOUTS)('%s: the main roses and peonies are big, and veiled by a front balloon', (_name, layout) => {
+  it.each(LAYOUTS)('%s: two main roses lead a mix of peonies and rosebuds', (_name, layout) => {
     const { balloons, flowers } = partsOf(layout);
-    const roseAndPeony = flowers.filter((f) => ROSE_AND_PEONY.includes(f.symbol));
     const M = Math.max(...balloons.map((b) => b.size));
 
-    const undersized = roseAndPeony.filter((f) => f.size < 0.53 * M);
-    expect(undersized.map(label)).toEqual([]);
+    const mainRoses = flowers.filter((f) => f.size >= 0.64 * M);
+    expect(mainRoses.length).toBe(2);
+    expect(mainRoses.every((f) => f.symbol === 'rose-pink' || f.symbol === 'rose-cream')).toBe(true);
 
-    const mean = roseAndPeony.reduce((sum, f) => sum + f.size, 0) / roseAndPeony.length;
-    expect(mean).toBeGreaterThanOrEqual(0.6 * M);
+    const sortedBySize = [...flowers].sort((a, b) => b.size - a.size);
+    expect(sortedBySize.slice(0, 2).map(label).sort()).toEqual(mainRoses.map(label).sort());
 
-    const frontAccents = balloons.filter((b) => b.depth === 4);
-    const veiled = roseAndPeony.filter((f) => frontAccents.some((b) => pressedTogether(f, b)));
-    expect(veiled.length / roseAndPeony.length).toBeGreaterThanOrEqual(0.5);
+    const others = flowers.filter((f) => !mainRoses.includes(f));
+    expect(others.filter((f) => f.size > 0.56 * M).map(label)).toEqual([]);
+
+    const peonies = others.filter((f) => f.symbol === 'peony-blush' || f.symbol === 'peony-ivory');
+    const bandedPeonies = peonies.filter((f) => f.size >= 0.4 * M && f.size <= 0.56 * M);
+    expect(bandedPeonies.length).toBeGreaterThanOrEqual(2);
+
+    const rosebuds = others.filter((f) => f.symbol === 'rosebud');
+    const bandedBuds = rosebuds.filter((f) => f.size >= 0.16 * M && f.size <= 0.32 * M);
+    expect(bandedBuds.length).toBeGreaterThanOrEqual(4);
+    expect(bandedBuds.some((f) => f.x <= 0.28 * layout.width)).toBe(true);
+    expect(bandedBuds.some((f) => f.x >= 0.72 * layout.width)).toBe(true);
+
+    const roseFamily = flowers.filter((f) => ROSE_AND_PEONY.includes(f.symbol));
+    const familySizes = roseFamily.map((f) => f.size);
+    expect(Math.max(...familySizes) / Math.min(...familySizes)).toBeGreaterThanOrEqual(3);
   });
 
   it.each(LAYOUTS)('%s: every sprig grows out of the mass, with no floating leaf', (_name, layout) => {

@@ -14,6 +14,7 @@ export type ArchSymbol =
   | 'rose-cream'
   | 'peony-blush'
   | 'peony-ivory'
+  | 'rosebud'
   | 'blossom'
   | 'leaf-eucalyptus'
   | 'leaf-olive'
@@ -102,13 +103,20 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'balloon-champagne-satin', x: 402, y: 218, size: 88, rotate: 0, depth: 2 },
       { symbol: 'balloon-rosegold', x: 4, y: 284, size: 60, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: 396, y: 284, size: 60, rotate: 0, depth: 2 },
-      { symbol: 'peony-blush', x: 100, y: 92, size: 94, rotate: 0, depth: 3 },
+      // two main roses lead; the once-oversized peony shrinks into the peony band and a second
+      // (ivory) peony joins it, with small rosebuds filling the seams and both corner zones
+      { symbol: 'peony-blush', x: 100, y: 92, size: 70, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 212, y: 86, size: 90, rotate: 8, depth: 3 },
       { symbol: 'rose-cream', x: 318, y: 98, size: 96, rotate: 0, depth: 3 },
+      { symbol: 'peony-ivory', x: 260, y: 110, size: 60, rotate: 0, depth: 3 },
       { symbol: 'blossom', x: 52, y: 204, size: 58, rotate: -10, depth: 3 },
       { symbol: 'rose-cream', x: 378, y: 214, size: 70, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 22, y: 214, size: 70, rotate: 0, depth: 3 },
       { symbol: 'blossom', x: 390, y: 258, size: 40, rotate: 0, depth: 3 },
+      { symbol: 'rosebud', x: 90, y: 170, size: 28, rotate: -20, depth: 3 },
+      { symbol: 'rosebud', x: 50, y: 216, size: 24, rotate: -40, depth: 3 },
+      { symbol: 'rosebud', x: 310, y: 170, size: 29, rotate: 20, depth: 3 },
+      { symbol: 'rosebud', x: 350, y: 216, size: 24, rotate: 40, depth: 3 },
       // front accents re-seated to press against the enlarged roses, veiling part of each bloom
       { symbol: 'balloon-rosegold-satin', x: 124, y: 112, size: 50, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 200, y: 112, size: 54, rotate: 0, depth: 4 },
@@ -164,14 +172,20 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'balloon-pink', x: 1258.5, y: 404, size: 187, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: 1156.8, y: 308, size: 154, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: 36.3, y: 462.4, size: 132, rotate: 0, depth: 2 },
-      { symbol: 'peony-blush', x: 508.4, y: 98, size: 190, rotate: 0, depth: 3 },
+      // two main roses lead; both peonies shrink into the peony band, the secondary roses and
+      // blossoms shrink to stay under the main roses, and small rosebuds fill both corner zones
+      { symbol: 'peony-blush', x: 508.4, y: 98, size: 130, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 617.3, y: 100, size: 182, rotate: 10, depth: 3 },
       { symbol: 'rose-cream', x: 897.4, y: 120, size: 220, rotate: 0, depth: 3 },
-      { symbol: 'peony-blush', x: 1021.9, y: 156, size: 150, rotate: 15, depth: 3 },
-      { symbol: 'blossom', x: 155.6, y: 256, size: 144, rotate: -10, depth: 3 },
-      { symbol: 'blossom', x: 1281.3, y: 264, size: 144, rotate: 20, depth: 3 },
-      { symbol: 'rose-cream', x: 1385.1, y: 360, size: 160, rotate: 0, depth: 3 },
-      { symbol: 'rose-pink', x: 311.3, y: 75, size: 140, rotate: 0, depth: 3 },
+      { symbol: 'peony-blush', x: 1021.9, y: 156, size: 115, rotate: 15, depth: 3 },
+      { symbol: 'blossom', x: 155.6, y: 256, size: 135, rotate: -10, depth: 3 },
+      { symbol: 'blossom', x: 1281.3, y: 264, size: 135, rotate: 20, depth: 3 },
+      { symbol: 'rose-cream', x: 1385.1, y: 360, size: 135, rotate: 0, depth: 3 },
+      { symbol: 'rose-pink', x: 311.3, y: 75, size: 135, rotate: 0, depth: 3 },
+      { symbol: 'rosebud', x: 100, y: 110, size: 55, rotate: -20, depth: 3 },
+      { symbol: 'rosebud', x: 70, y: 350, size: 50, rotate: -140, depth: 3 },
+      { symbol: 'rosebud', x: 1300, y: 120, size: 55, rotate: 20, depth: 3 },
+      { symbol: 'rosebud', x: 1340, y: 135, size: 50, rotate: 140, depth: 3 },
       { symbol: 'balloon-rosegold-satin', x: 223.1, y: 209.6, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 658.8, y: 172, size: 121, rotate: 0, depth: 4 },
       // re-seated closer to the walls so the lower envelope keeps dropping toward them (R5-2)

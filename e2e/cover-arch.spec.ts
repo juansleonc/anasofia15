@@ -120,6 +120,7 @@ test.describe('Balloon arch', () => {
             symbol === 'leaf-eucalyptus' || symbol === 'leaf-olive' || symbol === 'leaf-gold',
         ),
       ).toBe(false);
+      expect(symbols).toContain('rosebud');
     }
   });
 
