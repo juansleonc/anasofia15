@@ -154,6 +154,43 @@ describe('buildArch', () => {
       expect(crownRight).toBe(true);
     }
   });
+
+  it('fills the crown with most of the balloons', () => {
+    const extraSeeds = [2, 100, 4242, 777777, 9];
+    const specs = [...SPECS, ...SPECS.flatMap((spec) => extraSeeds.map((seed) => ({ ...spec, seed })))];
+    for (const spec of specs) {
+      const { items } = buildArch(spec);
+      const balloons = items.filter((item) => item.kind === 'balloon');
+      const inCrown = balloons.filter((item) => item.y < spec.band).length;
+      expect(inCrown / balloons.length).toBeGreaterThanOrEqual(0.55);
+    }
+  });
+
+  it('balloons overlap into a full garland', () => {
+    for (const spec of SPECS) {
+      const { items } = buildArch(spec);
+      const balloons = items.filter((item) => item.kind === 'balloon');
+      const overlapping = balloons.filter((item) =>
+        balloons.some(
+          (other) =>
+            other !== item &&
+            Math.hypot(item.x - other.x, item.y - other.y) < (item.size + other.size) / 2,
+        ),
+      );
+      expect(overlapping.length / balloons.length).toBeGreaterThanOrEqual(0.6);
+    }
+  });
+});
+
+describe('ARCH_SPECS fullness', () => {
+  it('keeps both specs full enough for a dense, overlapping crown', () => {
+    expect(ARCH_SPECS.portrait.counts.balloons).toBeGreaterThanOrEqual(30);
+    expect(ARCH_SPECS.portrait.counts.flowers).toBeGreaterThanOrEqual(14);
+    expect(ARCH_SPECS.portrait.counts.leaves).toBeGreaterThanOrEqual(22);
+    expect(ARCH_SPECS.landscape.counts.balloons).toBeGreaterThanOrEqual(44);
+    expect(ARCH_SPECS.landscape.counts.flowers).toBeGreaterThanOrEqual(20);
+    expect(ARCH_SPECS.landscape.counts.leaves).toBeGreaterThanOrEqual(30);
+  });
 });
 
 describe('archClearanceVars', () => {

@@ -41,6 +41,8 @@ export interface ArchSpec {
   sideDepth: number;
   /** viewBox y where the soft fade-out of the side columns starts; it always ends at `height`. */
   fadeStart: number;
+  /** 0 = uniform along the spine; >0 concentrates items on the crown (t≈0.15-0.85). */
+  crownBias: number;
   seed: number;
   counts: { balloons: number; flowers: number; leaves: number };
   /** Balloon diameter range in viewBox units, before taper. */
@@ -61,9 +63,10 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     gutter: 34,
     sideDepth: 455,
     fadeStart: 250,
+    crownBias: 8,
     seed: 15,
-    counts: { balloons: 22, flowers: 10, leaves: 16 },
-    sizeRange: [44, 78],
+    counts: { balloons: 32, flowers: 16, leaves: 24 },
+    sizeRange: [38, 84],
   },
   landscape: {
     width: 1440,
@@ -72,9 +75,10 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     gutter: 230,
     sideDepth: 525,
     fadeStart: 300,
+    crownBias: 8,
     seed: 1219,
-    counts: { balloons: 34, flowers: 14, leaves: 24 },
-    sizeRange: [60, 110],
+    counts: { balloons: 48, flowers: 22, leaves: 34 },
+    sizeRange: [54, 124],
   },
 };
 
@@ -166,6 +170,44 @@ function taper(t: number): number {
   return 0.45 + 0.55 * Math.sin(Math.PI * clamp(t, 0, 1));
 }
 
+const WARP_STEPS = 64;
+
+/**
+ * Warps a uniform slot position `u` ∈ [0,1] through the inverse CDF of the crown-weighting
+ * density `1 + crownBias·sin(πt)^0.5`, built as a fixed 64-step numeric table (no closed form
+ * needed). `crownBias` 0 leaves `u` unchanged; a higher bias packs more of the evenly spaced
+ * slots into the high-density region around the crown (t≈0.5), while the endpoints (t=0, t=1)
+ * stay exactly fixed so the sides still reach `sideDepth` and the crown still spans both gutters.
+ */
+function warp(u: number, crownBias: number): number {
+  const target = clamp(u, 0, 1);
+  if (crownBias === 0) {
+    return target;
+  }
+
+  const density = (t: number): number => 1 + crownBias * Math.sqrt(Math.sin(Math.PI * t));
+  const cdf = new Array<number>(WARP_STEPS + 1).fill(0);
+  for (let i = 1; i <= WARP_STEPS; i++) {
+    const t0 = (i - 1) / WARP_STEPS;
+    const t1 = i / WARP_STEPS;
+    cdf[i] = cdf[i - 1] + density((t0 + t1) / 2) * (t1 - t0);
+  }
+  const total = cdf[WARP_STEPS];
+  for (let i = 0; i <= WARP_STEPS; i++) {
+    cdf[i] /= total;
+  }
+
+  let i = 0;
+  while (i < WARP_STEPS && cdf[i + 1] < target) {
+    i++;
+  }
+  const c0 = cdf[i];
+  const c1 = cdf[Math.min(i + 1, WARP_STEPS)];
+  const span = c1 - c0;
+  const frac = span === 0 ? 0 : (target - c0) / span;
+  return (i + frac) / WARP_STEPS;
+}
+
 /**
  * Round-robin tones across `count` slots, then seeded-shuffle the slots so the mix is guaranteed
  * (each tone gets floor(count/3) or ceil(count/3)) rather than left to an independent random pick.
@@ -194,7 +236,7 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
   const items: ArchItem[] = [];
 
   for (let i = 0; i < count; i++) {
-    const base = count <= 1 ? 0.5 : i / (count - 1);
+    const base = count <= 1 ? 0.5 : warp(i / (count - 1), spec.crownBias);
     const jitter = (rng() - 0.5) * (0.6 / Math.max(count, 1));
     const t = clamp(base + jitter, 0, 1);
 
@@ -204,7 +246,7 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
     const size = (spec.sizeRange[0] + sizeSpan * taper(t)) * (isBack ? 1 : 0.75);
 
     const side = rng() < 0.5 ? -1 : 1;
-    const offset = side * 0.35 * size;
+    const offset = side * (0.15 + 0.45 * rng()) * size;
     const rawX = sample.x + sample.nx * offset;
     const rawY = sample.y + sample.ny * offset;
 
@@ -238,7 +280,7 @@ function placeFlowers(spec: ArchSpec, points: Point[], rng: () => number): ArchI
   const items: ArchItem[] = [];
 
   for (let i = 0; i < count; i++) {
-    const base = count <= 1 ? 0.5 : i / (count - 1);
+    const base = count <= 1 ? 0.5 : warp(i / (count - 1), spec.crownBias);
     // Half-step phase shift so flowers land between balloon slots, not on top of them.
     const phase = 0.5 / Math.max(count, 1);
     const jitter = (rng() - 0.5) * (0.4 / Math.max(count, 1));
