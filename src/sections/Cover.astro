@@ -406,9 +406,9 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     padding: clamp(1.1rem, 1vw + 0.85rem, 1.5rem) clamp(2.75rem, 6vw, 4rem);
     border: 2px solid var(--c-champagne-500);
     border-radius: 999px;
-    /* Sheen first so it paints over the rose gradient underneath (both rose stops stay in the
-       computed `background-image`, just with a translucent highlight laid on top). */
-    background: var(--gradient-button-sheen), var(--gradient-button-rose);
+    /* Sheen first so it paints over the wine/rose gradient underneath (every fill stop stays in
+       the computed `background-image`, just with a translucent highlight laid on top). */
+    background: var(--gradient-button-sheen), var(--gradient-button-wine-rose);
     /* Relief stack, named so the pulse keyframes below can reuse it instead of repeating it:
        bevel highlight (top inset), inner shadow (bottom inset, gives the pill its "pressed-in"
        depth), a gold outer ring (double rim with the solid border), a tight contact shadow, a
