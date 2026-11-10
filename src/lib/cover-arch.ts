@@ -51,9 +51,11 @@ export interface ArchSpec {
   sideDepth: number;
   /** viewBox y where the soft fade-out of the side columns starts; it always ends at `height`. */
   fadeStart: number;
-  /** 0 = uniform along the spine; >0 concentrates items on the crown (t≈0.15-0.85). */
+  /** viewBox units every visible item keeps clear of the canvas edge, so the cover frame never clips it. */
+  inset: number;
+  /** 0 = balloons go wherever there is most room; >0 favours the crown, as a fraction of the biggest balloon. */
   crownBias: number;
-  /** 0 = no extra weight; >0 packs balloons, and bigger ones, into the two top corners. */
+  /** 0 = no extra weight; >0 favours the two top corners, as a fraction of the biggest balloon. */
   cornerBias: number;
   seed: number;
   /** `fillers` are extra small balloons tucked into the gaps the main balloons leave. */
@@ -76,11 +78,12 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     gutter: 42,
     sideDepth: 455,
     fadeStart: 250,
-    crownBias: 8,
-    cornerBias: 20,
+    inset: 12,
+    crownBias: 0.1,
+    cornerBias: 1,
     seed: 15,
-    counts: { balloons: 30, fillers: 12, flowers: 8, leaves: 24 },
-    sizeRange: [38, 84],
+    counts: { balloons: 18, fillers: 2, flowers: 7, leaves: 18 },
+    sizeRange: [34, 76],
   },
   landscape: {
     width: 1440,
@@ -89,11 +92,12 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     gutter: 230,
     sideDepth: 525,
     fadeStart: 300,
-    crownBias: 8,
-    cornerBias: 34,
+    inset: 24,
+    crownBias: 0.3,
+    cornerBias: 0.5,
     seed: 1219,
-    counts: { balloons: 46, fillers: 16, flowers: 13, leaves: 34 },
-    sizeRange: [54, 124],
+    counts: { balloons: 28, fillers: 4, flowers: 11, leaves: 26 },
+    sizeRange: [50, 106],
   },
 };
 
@@ -133,11 +137,11 @@ function spinePoints(spec: ArchSpec): Point[] {
   const { width, band, gutter, sideDepth } = spec;
   return [
     { x: gutter / 2, y: sideDepth },
-    { x: gutter / 2, y: band * 0.6 },
-    { x: width * 0.18, y: band * 0.4 },
-    { x: width / 2, y: band * 0.4 },
-    { x: width * 0.82, y: band * 0.4 },
-    { x: width - gutter / 2, y: band * 0.6 },
+    { x: gutter / 2, y: band * 0.7 },
+    { x: width * 0.18, y: band * 0.5 },
+    { x: width / 2, y: band * 0.5 },
+    { x: width * 0.82, y: band * 0.5 },
+    { x: width - gutter / 2, y: band * 0.7 },
     { x: width - gutter / 2, y: sideDepth },
   ];
 }
@@ -211,34 +215,7 @@ function cornerBump(t: number, corners: [number, number]): number {
 
 /** Balloon size profile: biggest at the corners, still generous mid-crown, smallest down the sides. */
 function balloonTaper(t: number, corners: [number, number]): number {
-  return 0.45 + 0.55 * Math.max(0.7 * Math.sin(Math.PI * clamp(t, 0, 1)), cornerBump(t, corners));
-}
-
-const WARP_STEPS = 64;
-
-/** Inverse-CDF warp of `u` ∈ [0,1] through an arbitrary positive density over t ∈ [0,1]. */
-function warpByDensity(u: number, density: (t: number) => number): number {
-  const target = clamp(u, 0, 1);
-  const cdf = new Array<number>(WARP_STEPS + 1).fill(0);
-  for (let i = 1; i <= WARP_STEPS; i++) {
-    const t0 = (i - 1) / WARP_STEPS;
-    const t1 = i / WARP_STEPS;
-    cdf[i] = cdf[i - 1] + density((t0 + t1) / 2) * (t1 - t0);
-  }
-  const total = cdf[WARP_STEPS];
-  for (let i = 0; i <= WARP_STEPS; i++) {
-    cdf[i] /= total;
-  }
-
-  let i = 0;
-  while (i < WARP_STEPS && cdf[i + 1] < target) {
-    i++;
-  }
-  const c0 = cdf[i];
-  const c1 = cdf[Math.min(i + 1, WARP_STEPS)];
-  const span = c1 - c0;
-  const frac = span === 0 ? 0 : (target - c0) / span;
-  return (i + frac) / WARP_STEPS;
+  return 0.45 + 0.55 * Math.max(0.35 * Math.sin(Math.PI * clamp(t, 0, 1)), cornerBump(t, corners));
 }
 
 /**
@@ -313,11 +290,135 @@ function mirrorItem(item: ArchItem, spec: ArchSpec, rng: () => number): ArchItem
 }
 
 /**
- * Spreads balloons evenly along the left half of the spine (with seeded jitter), tapering their
- * size down the side, in two paint layers (big back balloons, smaller front accents); mirrors each
- * to the right, and puts an odd one out at the crown's center.
+ * Moves an item out of the text clear zone, then wholly inside the canvas's top and side edges
+ * (inset by `spec.inset`), shrinking it if a side column is too narrow to hold it.
  */
-function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
+function fitInside(item: ArchItem, spec: ArchSpec): ArchItem {
+  const cleared = clampOutOfClearZone(item, spec);
+  const margin = spec.inset;
+  const inSideColumn = cleared.y + cleared.size / 2 > spec.band;
+  const size = inSideColumn ? Math.min(cleared.size, spec.gutter - margin) : cleared.size;
+  const r = size / 2;
+  const onLeft = cleared.x < spec.width / 2;
+  const [minX, maxX] = !inSideColumn
+    ? [margin + r, spec.width - margin - r]
+    : onLeft
+      ? [margin + r, spec.gutter - r]
+      : [spec.width - spec.gutter + r, spec.width - margin - r];
+  return { ...cleared, size, x: clamp(cleared.x, minX, maxX), y: Math.max(cleared.y, margin + r) };
+}
+
+/** Most of an item's disc that may hide under the items painted in front of it. */
+const BURY_LIMIT = 0.36;
+const BURY_SAMPLES = 10;
+
+/** Final paint order is by layer, then by y — so this is known as soon as both are placed. */
+function paintsAbove(a: ArchItem, b: ArchItem): boolean {
+  return a.layer > b.layer || (a.layer === b.layer && a.y > b.y);
+}
+
+function overlaps(a: ArchItem, b: ArchItem): boolean {
+  return Math.hypot(a.x - b.x, a.y - b.y) < (a.size + b.size) / 2;
+}
+
+/** Fraction of `item`'s disc hidden under those of `others` that paint above it, by grid sampling. */
+function buriedFraction(item: ArchItem, others: ArchItem[]): number {
+  const above = others.filter((other) => other !== item && paintsAbove(other, item) && overlaps(other, item));
+  if (above.length === 0) {
+    return 0;
+  }
+  const r = item.size / 2;
+  let inside = 0;
+  let hidden = 0;
+  for (let i = 0; i < BURY_SAMPLES; i++) {
+    for (let j = 0; j < BURY_SAMPLES; j++) {
+      const x = item.x + r * ((2 * (i + 0.5)) / BURY_SAMPLES - 1);
+      const y = item.y + r * ((2 * (j + 0.5)) / BURY_SAMPLES - 1);
+      if (Math.hypot(x - item.x, y - item.y) > r) {
+        continue;
+      }
+      inside += 1;
+      if (above.some((other) => Math.hypot(x - other.x, y - other.y) <= other.size / 2)) {
+        hidden += 1;
+      }
+    }
+  }
+  return hidden / inside;
+}
+
+/** True when adding `candidate` leaves neither it nor anything it overlaps buried past the limit. */
+function fitsAmong(candidate: ArchItem, placed: ArchItem[]): boolean {
+  const neighbors = placed.filter((other) => overlaps(other, candidate));
+  if (buriedFraction(candidate, neighbors) > BURY_LIMIT) {
+    return false;
+  }
+  return neighbors.every(
+    (other) =>
+      !paintsAbove(candidate, other) ||
+      buriedFraction(other, [...placed.filter((p) => overlaps(p, other)), candidate]) <= BURY_LIMIT,
+  );
+}
+
+/**
+ * Takes the first candidate that fits among `placed` together with its mirrored twin (when it has
+ * one), falling back to the first candidate so counts always stay exact.
+ */
+function pickFitting(
+  candidates: ArchItem[],
+  placed: ArchItem[],
+  twinOf: (item: ArchItem) => ArchItem | null,
+): ArchItem[] {
+  for (const candidate of candidates) {
+    if (!fitsAmong(candidate, placed)) {
+      continue;
+    }
+    const twin = twinOf(candidate);
+    if (twin === null) {
+      return [candidate];
+    }
+    if (fitsAmong(twin, [...placed, candidate])) {
+      return [candidate, twin];
+    }
+  }
+  const fallback = candidates[0];
+  const twin = twinOf(fallback);
+  return twin === null ? [fallback] : [fallback, twin];
+}
+
+/** Share of the crown's balloon area the two outer quarters aim for: a gentle corner emphasis. */
+const CORNER_SHARE = 0.58;
+
+function inCrownCorner(item: ArchItem, spec: ArchSpec): boolean {
+  return item.x < spec.width * 0.25 || item.x > spec.width * 0.75;
+}
+
+/**
+ * Reorders `candidates` (keeping their own order within each group) so the zone of the crown that
+ * is behind its share of balloon area so far — the two outer quarters or the middle half — is tried
+ * first, then the side columns below the crown (which count for neither), then the other zone.
+ */
+function steerCorners(candidates: ArchItem[], balloons: ArchItem[], spec: ArchSpec): ArchItem[] {
+  const crown = balloons.filter((item) => item.y < spec.band);
+  const area = (items: ArchItem[]): number => items.reduce((sum, item) => sum + item.size * item.size, 0);
+  const total = area(crown);
+  const wantCorner = total === 0 || area(crown.filter((item) => inCrownCorner(item, spec))) / total < CORNER_SHARE;
+  const rank = (item: ArchItem): number =>
+    item.y >= spec.band ? 1 : inCrownCorner(item, spec) === wantCorner ? 0 : 2;
+  return [0, 1, 2].flatMap((group) => candidates.filter((item) => rank(item) === group));
+}
+
+/** Spine steps across the left half where a balloon may be centered. */
+const BALLOON_SPINE_STEPS = 80;
+
+/**
+ * Spreads balloons along the left half of the spine one at a time, each into the open spot with
+ * the most room around it (nudged toward the crown and the corners by the spec's biases), sized by
+ * the taper: biggest at the corners, smaller down the sides. Every balloon must sit clear of being
+ * buried by — or burying — what is already placed, flowers included. Alternate balloons go behind
+ * (big) and in front (smaller accents); each is mirrored to the right, and an odd one out goes on
+ * the axis. The side columns only reach a quarter of the way into the masked-out fade.
+ */
+function placeBalloons(spec: ArchSpec, points: Point[], flowers: ArchItem[], rng: () => number): ArchItem[] {
   const count = spec.counts.balloons;
   const half = Math.floor(count / 2);
   const maxSize = spec.sizeRange[1];
@@ -325,43 +426,85 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
   const leftTones = shuffledTones(half, rng);
   const rightTones = shuffledTones(half, rng, half);
   const corners = cornerTs(points);
-  const density = (t: number): number =>
-    1 + spec.crownBias * Math.sqrt(Math.sin(Math.PI * t)) + spec.cornerBias * cornerBump(t, corners);
+  const lowest = spec.fadeStart + 0.25 * (spec.sideDepth - spec.fadeStart);
+  const preference = (t: number): number =>
+    maxSize * (spec.crownBias * Math.sqrt(Math.sin(Math.PI * t)) + spec.cornerBias * cornerBump(t, corners));
 
-  const balloonAt = (t: number, isBack: boolean, tone: ArchTone): ArchItem => {
+  const balloonAt = (
+    t: number,
+    isBack: boolean,
+    tone: ArchTone,
+    offsetFrac: number,
+    rotate: number,
+    scale: number,
+  ): ArchItem => {
     const sample = sampleSpine(points, t);
-    const size = (spec.sizeRange[0] + sizeSpan * balloonTaper(t, corners)) * (isBack ? 1 : 0.75);
-    const side = rng() < 0.5 ? -1 : 1;
-    const offset = side * (0.15 + 0.45 * rng()) * (1 + 0.6 * cornerBump(t, corners)) * size;
-    return {
-      symbol: toneSymbol(tone, 0),
-      kind: 'balloon',
-      tone,
-      x: clamp(sample.x + sample.nx * offset, -maxSize, spec.width + maxSize),
-      y: clamp(sample.y + sample.ny * offset, -maxSize, spec.height),
-      size,
-      rotate: (rng() - 0.5) * 20,
-      layer: isBack ? 1 : 2,
-    };
+    const size = (spec.sizeRange[0] + sizeSpan * balloonTaper(t, corners)) * (isBack ? 1 : 0.75) * scale;
+    const offset = offsetFrac * size;
+    return fitInside(
+      {
+        symbol: toneSymbol(tone, 0),
+        kind: 'balloon',
+        tone,
+        x: clamp(sample.x + sample.nx * offset, -maxSize, spec.width + maxSize),
+        y: clamp(sample.y + sample.ny * offset, -maxSize, spec.height),
+        size,
+        rotate,
+        layer: isBack ? 1 : 2,
+      },
+      spec,
+    );
   };
 
+  /**
+   * Every open spot for the next balloon, roomiest (plus preference) first — then the same again at
+   * smaller sizes, so a balloon that no longer fits anywhere at full size still finds a gap.
+   */
+  const rankedCandidates = (isBack: boolean, tone: ArchTone, ts: number[], placed: ArchItem[]): ArchItem[] => {
+    const rotate = (rng() - 0.5) * 20;
+    return [1, 0.7, 0.5].flatMap((scale) => {
+      const scored: { item: ArchItem; score: number }[] = [];
+      for (const t of ts) {
+        if (sampleSpine(points, t).y > lowest) {
+          continue;
+        }
+        for (const offset of [-0.45, 0.45]) {
+          const item = balloonAt(t, isBack, tone, offset, rotate, scale);
+          const room = clearance(item, placed) - item.size / 2;
+          scored.push({ item, score: room + preference(t) + rng() * 0.05 * item.size });
+        }
+      }
+      return scored.sort((a, b) => b.score - a.score).map(({ item }) => item);
+    });
+  };
+
+  const leftTs = Array.from({ length: BALLOON_SPINE_STEPS + 1 }, (_, i) => (LEFT_HALF_END * i) / BALLOON_SPINE_STEPS);
+  const isSide = (t: number): boolean => sampleSpine(points, t).y >= spec.band;
+  const reachable = leftTs.filter((t) => sampleSpine(points, t).y <= lowest);
+  // The side column gets its share of balloons by spine length; the crown gets the rest.
+  const sideCount = Math.round((half * reachable.filter(isSide).length) / reachable.length);
   const items: ArchItem[] = [];
   for (let i = 0; i < half; i++) {
-    const base = half <= 1 ? 0 : 0.5 * warpByDensity(i / (half - 0.5), (u) => density(u / 2));
-    const jitter = (rng() - 0.5) * (0.6 / count);
-    const left = clampOutOfClearZone(balloonAt(clamp(base + jitter, 0, LEFT_HALF_END), i % 2 === 0, leftTones[i]), spec);
-    const right = clampOutOfClearZone(mirrorItem(left, spec, rng), spec);
-    items.push(left, { ...right, tone: rightTones[i] });
+    const placed = [...flowers, ...items];
+    const onSide = i >= half - sideCount;
+    const ts = leftTs.filter((t) => isSide(t) === onSide);
+    const twinOf = (left: ArchItem): ArchItem => fitInside({ ...mirrorItem(left, spec, rng), tone: rightTones[i] }, spec);
+    const candidates = rankedCandidates(i % 2 === 0, leftTones[i], ts, placed);
+    items.push(...pickFitting(onSide ? candidates : steerCorners(candidates, items, spec), placed, twinOf));
   }
   if (count % 2 === 1) {
     const tone = BALLOON_TONES[(2 * half) % BALLOON_TONES.length];
-    items.push(clampOutOfClearZone({ ...balloonAt(0.5, true, tone), x: spec.width / 2 }, spec));
+    const placed = [...flowers, ...items];
+    const onAxis = rankedCandidates(true, tone, [0.5], placed).map((item) => fitInside({ ...item, x: spec.width / 2 }, spec));
+    items.push(...pickFitting(onAxis, placed, () => null));
   }
 
   return withFinishes(items);
 }
 
 const FILLER_SPINE_STEPS = 120;
+/** How many of the biggest holes a filler may try before giving up on fitting cleanly. */
+const FILLER_CANDIDATES = 24;
 
 /** How far `point` sits from the edge of the nearest solid: negative inside one, positive in a gap. */
 function clearance(point: Point, solids: ArchItem[]): number {
@@ -377,8 +520,8 @@ function inClearZone(point: Point, spec: ArchSpec): boolean {
 }
 
 /**
- * Spots across the visible garland band where a filler may go: along the spine and on lines a
- * third of the biggest balloon to either side, skipping the masked-out bottom, the text clear
+ * Spots across the visible garland band where a filler may go: on lines a third of the biggest
+ * balloon to either side of the spine (never on it, so the spine keeps its soft gaps), skipping the masked-out bottom, the text clear
  * zone and anything off-canvas.
  */
 function fillerSpots(spec: ArchSpec, points: Point[]): Point[] {
@@ -386,7 +529,7 @@ function fillerSpots(spec: ArchSpec, points: Point[]): Point[] {
   const spots: Point[] = [];
   for (let i = 0; i <= FILLER_SPINE_STEPS; i++) {
     const sample = sampleSpine(points, i / FILLER_SPINE_STEPS);
-    for (const offset of [0, -halfWidth, halfWidth]) {
+    for (const offset of [-halfWidth, halfWidth]) {
       spots.push({ x: sample.x + sample.nx * offset, y: sample.y + sample.ny * offset });
     }
   }
@@ -397,10 +540,11 @@ function fillerSpots(spec: ArchSpec, points: Point[]): Point[] {
 }
 
 /**
- * Second pass of small balloons tucked into the garland's gaps, greedily: each filler goes to the
- * left-half or on-axis band spot furthest from any balloon or flower edge (the biggest visible
- * hole), sized to just overlap that edge so it plugs the hole while touching the garland rather
- * than floating free. Every left filler gets a mirrored twin, re-sized to the hole it lands in.
+ * Second pass of small balloons tucked into the garland's gaps, greedily: each filler goes to one
+ * of the left-half band spots furthest from any balloon or flower edge (the biggest visible holes)
+ * where it buries nothing, sized to just overlap that edge so it touches the garland rather than
+ * floating free. Every left filler gets a mirrored twin, re-sized to the hole it lands in; an odd
+ * count puts its odd one out on the axis.
  */
 function placeFillers(spec: ArchSpec, points: Point[], solids: ArchItem[], rng: () => number): ArchItem[] {
   const maxSize = spec.sizeRange[1];
@@ -419,47 +563,49 @@ function placeFillers(spec: ArchSpec, points: Point[], solids: ArchItem[], rng: 
   let leftCount = 0;
   let rightCount = 0;
 
-  const fillerAt = (spot: Point, gap: number, tone: ArchTone): ArchItem => ({
-    symbol: toneSymbol(tone, 0),
-    kind: 'balloon',
-    tone,
-    x: clamp(spot.x, -maxSize, spec.width + maxSize),
-    y: clamp(spot.y, -maxSize, spec.height),
-    size: clamp(2.2 * gap, minSize, fillerMax),
-    rotate: (rng() - 0.5) * 20,
-    layer: 2,
-  });
+  const fillerAt = (spot: Point, gap: number, tone: ArchTone): ArchItem =>
+    fitInside(
+      {
+        symbol: toneSymbol(tone, 0),
+        kind: 'balloon',
+        tone,
+        x: clamp(spot.x, -maxSize, spec.width + maxSize),
+        y: clamp(spot.y, -maxSize, spec.height),
+        size: clamp(2.2 * gap, minSize, fillerMax),
+        rotate: (rng() - 0.5) * 20,
+        layer: 2,
+      },
+      spec,
+    );
 
   while (remaining > 0) {
-    const candidates = remaining >= 2 ? spots : spots.filter(isOnAxis);
-    let best: { spot: Point; gap: number } | null = null;
-    for (const spot of candidates) {
-      const gap = clearance(spot, placed);
-      if (best === null || gap > best.gap) {
-        best = { spot, gap };
-      }
-    }
-    if (best === null) {
+    // An odd count puts its odd one out on the axis first; the rest go in mirrored pairs.
+    const onAxis = remaining % 2 === 1;
+    const ranked = spots
+      .filter((spot) => isOnAxis(spot) === onAxis)
+      .map((spot) => ({ spot, gap: clearance(spot, placed) }))
+      .sort((a, b) => b.gap - a.gap)
+      .slice(0, FILLER_CANDIDATES);
+    if (ranked.length === 0) {
       break;
     }
 
-    const filler = clampOutOfClearZone(fillerAt(best.spot, best.gap, leftTones[leftCount++]), spec);
-    items.push(filler);
-    placed.push(filler);
-    remaining -= 1;
-    if (isOnAxis(best.spot)) {
-      continue;
-    }
-
-    const mirrored = mirrorItem(filler, spec, rng);
-    const twin = clampOutOfClearZone(
-      { ...mirrored, tone: rightTones[rightCount], size: clamp(2.2 * clearance(mirrored, placed), minSize, fillerMax) },
-      spec,
-    );
-    rightCount += 1;
-    items.push(twin);
-    placed.push(twin);
-    remaining -= 1;
+    const tone = leftTones[leftCount];
+    const candidates = ranked.map(({ spot, gap }) => fillerAt(spot, gap, tone));
+    const twinOf = (filler: ArchItem): ArchItem | null => {
+      if (onAxis) {
+        return null;
+      }
+      const mirrored = mirrorItem(filler, spec, rng);
+      const size = clamp(2.2 * clearance(mirrored, [...placed, filler]), minSize, fillerMax);
+      return fitInside({ ...mirrored, tone: rightTones[rightCount], size }, spec);
+    };
+    const picked = pickFitting(candidates, placed, twinOf);
+    leftCount += 1;
+    rightCount += picked.length - 1;
+    remaining -= picked.length;
+    items.push(...picked);
+    placed.push(...picked);
   }
 
   return withFinishes(items);
@@ -487,16 +633,22 @@ function clusterSizes(count: number, clusters: number): { sides: number[]; cente
   return { sides, center: hasCenter ? perCluster + spare : 0 };
 }
 
+/** How far down the side columns, in spine fraction, the corner flower clusters sit below the corners — leaving the corners themselves to the big balloons. */
+const CORNER_CLUSTER_DROP = 0.04;
+/** How far inside the spine, as a fraction of the local balloon size, a flower cluster nestles. */
+const FLOWER_INSET = 0.4;
+
 /** Candidate spots across the garland around spine position `t`, clamped so a flower of `size` stays on canvas above the band. */
 function flowerSpots(spec: ArchSpec, points: Point[], t: number, size: number): Point[] {
   const r = size / 2;
+  const margin = spec.inset;
   const spots: Point[] = [];
   for (let step = -4; step <= 4; step++) {
     const sample = sampleSpine(points, clamp(t + step * 0.012, 0, 1));
     for (const offset of [-0.4, -0.2, 0, 0.2, 0.4]) {
       spots.push({
-        x: clamp(sample.x + sample.nx * offset * size, r, spec.width - r),
-        y: clamp(sample.y + sample.ny * offset * size, r, spec.band - r * (1 + 1e-6)),
+        x: clamp(sample.x + sample.nx * offset * size, margin + r, spec.width - margin - r),
+        y: clamp(sample.y + sample.ny * offset * size, margin + r, spec.band - r * (1 + 1e-6)),
       });
     }
   }
@@ -504,15 +656,15 @@ function flowerSpots(spec: ArchSpec, points: Point[], t: number, size: number): 
 }
 
 /**
- * Bunches the flowers into clusters of two or three — one at each top corner, the rest spread
- * evenly across the crown between them, and one centered on the axis — sized close to the local
- * balloons. Each flower goes to the nearby spot with the most clearance from the balloons and
- * flowers already placed (nestled into a gap), and every flower after a cluster's first stays
- * within touching distance of it. Left flowers are mirrored to the right as a shifted symbol, and
+ * Bunches the flowers into clusters of two or three — one just below each top corner, the rest
+ * spread evenly across the crown between them, and one centered on the axis — each about two
+ * thirds the biggest balloon. Flowers are placed before the balloons, which then fit around them.
+ * Each flower goes to the spot nearest its cluster's anchor (just inside the spine) where it
+ * buries nothing, and every flower after a cluster's first stays within touching distance of it. Left flowers are mirrored to the right as a shifted symbol, and
  * the center cluster is built from on-axis flowers and mirrored pairs straddling the axis.
  * Round-robin over the four flower symbols, so a spec with at least 4 flowers uses all of them.
  */
-function placeFlowers(spec: ArchSpec, points: Point[], balloons: ArchItem[], rng: () => number): ArchItem[] {
+function placeFlowers(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
   const corners = cornerTs(points);
   const count = spec.counts.flowers;
   const minClusters = Math.max(2, Math.ceil(count / 3));
@@ -521,67 +673,71 @@ function placeFlowers(spec: ArchSpec, points: Point[], balloons: ArchItem[], rng
   const { sides, center } = clusterSizes(count, clusters);
   const axis = spec.width / 2;
   const symbolShift = 1 + Math.floor(rng() * (FLOWER_SYMBOLS.length - 1));
-  const placed = [...balloons];
+  const placed: ArchItem[] = [];
   const items: ArchItem[] = [];
   let symbolIndex = 0;
 
   const insideCanvas = (flower: ArchItem): ArchItem => {
     const r = flower.size / 2;
+    const margin = spec.inset;
     return {
       ...flower,
-      x: clamp(flower.x, r, spec.width - r),
-      y: clamp(flower.y, r, spec.band - r * (1 + 1e-6)),
+      x: clamp(flower.x, margin + r, spec.width - margin - r),
+      y: clamp(flower.y, margin + r, spec.band - r * (1 + 1e-6)),
     };
   };
 
   const placeCluster = (t: number, pairs: number, onAxis: number): void => {
     const isCenter = t === 0.5;
     const localBalloon = spec.sizeRange[0] + (spec.sizeRange[1] - spec.sizeRange[0]) * balloonTaper(t, corners);
+    const sample = sampleSpine(points, t);
+    const inward = FLOWER_INSET * localBalloon;
+    const anchor = { x: sample.x + sample.nx * inward, y: sample.y + sample.ny * inward };
     const members: ArchItem[] = [];
     for (let m = 0; m < onAxis + pairs; m++) {
       const axial = m < onAxis;
-      const size = localBalloon * (0.63 + 0.2 * rng());
+      const size = spec.sizeRange[1] * (0.65 + 0.06 * rng());
       const spread = (spot: Point): boolean => {
         const group = isCenter && !axial ? [...members, { x: spec.width - spot.x, y: spot.y }] : members;
         return (
-          group.every((other) => Math.hypot(spot.x - other.x, spot.y - other.y) >= 0.6 * size) &&
+          group.every((other) => Math.hypot(spot.x - other.x, spot.y - other.y) >= 0.75 * size) &&
           (group.length === 0 || group.some((other) => Math.hypot(spot.x - other.x, spot.y - other.y) <= 1.1 * size))
         );
       };
       const allSpots = flowerSpots(spec, points, t, size).map((spot) => (axial ? { x: axis, y: spot.y } : spot));
       const spots = allSpots.filter((spot) => (axial || spot.x < axis) && spread(spot));
-      const best = spots.reduce<{ spot: Point; gap: number } | null>((acc, spot) => {
-        const gap = clearance(spot, placed);
-        return acc === null || gap > acc.gap ? { spot, gap } : acc;
-      }, null);
-      const spot = best?.spot ?? allSpots[0];
+      const ranked = (spots.length > 0 ? spots : allSpots.slice(0, 1))
+        .map((spot) => ({ spot, distance: Math.hypot(spot.x - anchor.x, spot.y - anchor.y) }))
+        .sort((a, b) => a.distance - b.distance);
 
-      const flower: ArchItem = {
-        symbol: FLOWER_SYMBOLS[symbolIndex++ % FLOWER_SYMBOLS.length],
+      const symbol = FLOWER_SYMBOLS[symbolIndex++ % FLOWER_SYMBOLS.length];
+      const rotate = (rng() - 0.5) * 20;
+      const candidates = ranked.map(({ spot }): ArchItem => ({
+        symbol,
         kind: 'flower',
         x: spot.x,
         y: spot.y,
         size,
-        rotate: (rng() - 0.5) * 20,
+        rotate,
         layer: 3,
-      };
-      const placedNow = axial
-        ? [flower]
-        : [
-            flower,
-            insideCanvas({
+      }));
+      const twinOf = (flower: ArchItem): ArchItem | null =>
+        axial
+          ? null
+          : insideCanvas({
               ...mirrorItem(flower, spec, rng),
               symbol: shiftedSymbol(FLOWER_SYMBOLS, flower.symbol, symbolShift),
-            }),
-          ];
+            });
+      const placedNow = pickFitting(candidates, placed, twinOf);
       members.push(...placedNow);
       items.push(...placedNow);
       placed.push(...placedNow);
     }
   };
 
+  const first = corners[0] - CORNER_CLUSTER_DROP;
   sides.forEach((size, c) => {
-    placeCluster(corners[0] + ((corners[1] - corners[0]) * c) / (clusters - 1), size, 0);
+    placeCluster(first + ((1 - 2 * first) * c) / (clusters - 1), size, 0);
   });
   if (center > 0) {
     placeCluster(0.5, Math.floor(center / 2), center % 2);
@@ -623,12 +779,12 @@ function placeLeaves(spec: ArchSpec, points: Point[], rng: () => number): ArchIt
   for (let i = 0; i < half; i++) {
     const base = half <= 1 ? 0 : (0.5 * i) / (half - 0.5);
     const jitter = (rng() - 0.5) * (0.5 / count);
-    const left = clampOutOfClearZone(leafAt(clamp(base + jitter, 0, LEFT_HALF_END), LEAF_SYMBOLS[i % LEAF_SYMBOLS.length]), spec);
-    const right = clampOutOfClearZone(mirrorItem(left, spec, rng), spec);
+    const left = fitInside(leafAt(clamp(base + jitter, 0, LEFT_HALF_END), LEAF_SYMBOLS[i % LEAF_SYMBOLS.length]), spec);
+    const right = fitInside(mirrorItem(left, spec, rng), spec);
     items.push(left, { ...right, symbol: shiftedSymbol(LEAF_SYMBOLS, left.symbol, symbolShift) });
   }
   if (count % 2 === 1) {
-    items.push({ ...leafAt(0.5, LEAF_SYMBOLS[half % LEAF_SYMBOLS.length]), x: spec.width / 2 });
+    items.push(fitInside({ ...leafAt(0.5, LEAF_SYMBOLS[half % LEAF_SYMBOLS.length]), x: spec.width / 2 }, spec));
   }
 
   return items;
@@ -701,8 +857,8 @@ export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
   const points = spinePoints(spec);
   const leaves = placeLeaves(spec, points, rng);
-  const balloons = placeBalloons(spec, points, rng);
-  const solids = [...balloons, ...placeFlowers(spec, points, balloons, rng)];
+  const flowers = placeFlowers(spec, points, rng);
+  const solids = [...placeBalloons(spec, points, flowers, rng), ...flowers];
   const fillers = placeFillers(spec, points, solids, rng);
   const items = [...leaves, ...solids, ...fillers].sort((a, b) => a.layer - b.layer || a.y - b.y);
 

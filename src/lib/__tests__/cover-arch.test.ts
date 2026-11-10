@@ -223,49 +223,60 @@ describe('buildArch', () => {
   });
 });
 
-describe('garland density', () => {
-  // Samples the spine and two parallel lines either side of it, so a one-balloon-thin band fails
-  // as well as a broken one. Only the opaque, on-canvas stretch counts: below `fadeStart` the side
-  // columns are masked out, and the text clear zone is empty by design.
-  it('fills the garland band solid, with no background gaps', () => {
+describe('airy garland', () => {
+  // Below `fadeStart` the side columns are masked out, so only the opaque part has to stay whole.
+  it('keeps every visible item wholly inside the canvas, never cut at an edge', () => {
     for (const spec of SEEDED_SPECS) {
-      const solids = buildArch(spec).items.filter((item) => item.kind !== 'leaf');
-      const samples = garlandBandSamples(spec, 0.3 * spec.sizeRange[1]);
-      expect(samples.length).toBeGreaterThan(300);
-      const covered = samples.filter((point) =>
-        solids.some((item) => Math.hypot(item.x - point.x, item.y - point.y) <= item.size / 2),
-      );
-      expect(covered.length / samples.length).toBeGreaterThanOrEqual(0.95);
+      const visible = buildArch(spec).items.filter((item) => item.y <= spec.fadeStart);
+      expect(visible.length).toBeGreaterThan(0);
+      for (const item of visible) {
+        const r = item.size / 2;
+        const where = `${item.kind} at (${item.x.toFixed(1)}, ${item.y.toFixed(1)}) size ${item.size.toFixed(1)}`;
+        expect(item.x - r, where).toBeGreaterThanOrEqual(0);
+        expect(item.x + r, where).toBeLessThanOrEqual(spec.width);
+        expect(item.y - r, where).toBeGreaterThanOrEqual(0);
+      }
     }
   });
 
-  // The reference mockup's crown carries most of its balloon mass in the two top corners and
-  // thins toward the middle; a crown spread evenly by area would put ~50% in the outer quarters.
-  it('weights the crown toward its two top corners', () => {
+  // Overlap stays modest: no balloon or flower hides more than 40% of itself behind the items
+  // painted in front of it.
+  it('never buries a balloon or flower more than 40% under the items in front of it', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { items } = buildArch(spec);
+      const solids = items.filter((item) => item.kind !== 'leaf');
+      expect(solids.length).toBeGreaterThan(0);
+      solids.forEach((item, index) => {
+        const inFront = solids.slice(index + 1);
+        const where = `${item.kind} at (${item.x.toFixed(1)}, ${item.y.toFixed(1)})`;
+        expect(coveredFraction(item, inFront), where).toBeLessThanOrEqual(0.4);
+      });
+    }
+  });
+
+  // Airy but continuous: background shows between items along the spine, yet no hole along it is
+  // wider than a big balloon, so the ∩ still reads as one band.
+  it('covers the visible spine with soft gaps but no big holes', () => {
+    for (const spec of SEEDED_SPECS) {
+      const solids = buildArch(spec).items.filter((item) => item.kind !== 'leaf');
+      const runs = spineCoverage(spec, solids);
+      expect(runs.samples).toBeGreaterThan(300);
+      expect(runs.covered / runs.samples).toBeGreaterThanOrEqual(0.65);
+      expect(runs.covered / runs.samples).toBeLessThanOrEqual(0.9);
+      const maxBalloon = Math.max(...solids.filter((item) => item.kind === 'balloon').map((item) => item.size));
+      expect(runs.maxGap).toBeLessThanOrEqual(1.2 * maxBalloon);
+    }
+  });
+
+  // The reference mockup's corners carry a little more balloon mass than the middle of the crown
+  // — a crown spread evenly by area would put ~50% in the outer quarters — without piling up.
+  it('weights the crown gently toward its two top corners', () => {
     for (const spec of SEEDED_SPECS) {
       const crown = buildArch(spec).items.filter((item) => item.kind === 'balloon' && item.y < spec.band);
       const inCorners = crown.filter((item) => item.x < spec.width * 0.25 || item.x > spec.width * 0.75);
-      expect(balloonArea(inCorners) / balloonArea(crown)).toBeGreaterThanOrEqual(0.65);
-    }
-  });
-
-  it('tucks small filler balloons into the garland, each touching a neighbor', () => {
-    for (const spec of SEEDED_SPECS) {
-      const solids = buildArch(spec).items.filter((item) => item.kind !== 'leaf');
-      const balloons = solids.filter((item) => item.kind === 'balloon');
-      const fillers = balloons.filter((item) => item.size <= 0.6 * spec.sizeRange[1]);
-      expect(fillers.length).toBeGreaterThanOrEqual(Math.ceil(balloons.length * 0.2));
-      // Below `fadeStart` the side columns are masked out, so a stray small balloon there is never seen.
-      const visibleFillers = fillers.filter((item) => item.y <= spec.fadeStart);
-      expect(visibleFillers.length).toBeGreaterThan(0);
-      for (const filler of visibleFillers) {
-        const touches = solids.some(
-          (other) =>
-            other !== filler &&
-            Math.hypot(filler.x - other.x, filler.y - other.y) <= (filler.size + other.size) / 2,
-        );
-        expect(touches).toBe(true);
-      }
+      const weight = balloonArea(inCorners) / balloonArea(crown);
+      expect(weight).toBeGreaterThanOrEqual(0.5);
+      expect(weight).toBeLessThanOrEqual(0.65);
     }
   });
 });
@@ -404,14 +415,25 @@ describe('mirror balance', () => {
   });
 });
 
-describe('ARCH_SPECS fullness', () => {
-  it('keeps both specs full enough for a dense, overlapping crown', () => {
-    expect(ARCH_SPECS.portrait.counts.balloons).toBeGreaterThanOrEqual(30);
-    expect(ARCH_SPECS.portrait.counts.flowers).toBeGreaterThanOrEqual(8);
-    expect(ARCH_SPECS.portrait.counts.leaves).toBeGreaterThanOrEqual(22);
-    expect(ARCH_SPECS.landscape.counts.balloons).toBeGreaterThanOrEqual(44);
-    expect(ARCH_SPECS.landscape.counts.flowers).toBeGreaterThanOrEqual(13);
-    expect(ARCH_SPECS.landscape.counts.leaves).toBeGreaterThanOrEqual(30);
+describe('ARCH_SPECS restraint', () => {
+  // Fewer, better-spaced items than the earlier packed garland (30+12 / 46+16 balloons, 74 / 109
+  // items in all), so the arch's shape can breathe.
+  it('keeps both specs lighter than the earlier packed garland', () => {
+    const total = (spec: ArchSpec): number =>
+      spec.counts.balloons + spec.counts.fillers + spec.counts.flowers + spec.counts.leaves;
+    expect(ARCH_SPECS.portrait.counts.balloons).toBeLessThan(30);
+    expect(ARCH_SPECS.portrait.counts.fillers).toBeLessThan(12);
+    expect(total(ARCH_SPECS.portrait)).toBeLessThan(74);
+    expect(ARCH_SPECS.landscape.counts.balloons).toBeLessThan(46);
+    expect(ARCH_SPECS.landscape.counts.fillers).toBeLessThan(16);
+    expect(total(ARCH_SPECS.landscape)).toBeLessThan(109);
+  });
+
+  it('still leaves both specs enough items for a full arch', () => {
+    expect(ARCH_SPECS.portrait.counts.balloons).toBeGreaterThanOrEqual(18);
+    expect(ARCH_SPECS.portrait.counts.flowers).toBeGreaterThanOrEqual(6);
+    expect(ARCH_SPECS.landscape.counts.balloons).toBeGreaterThanOrEqual(28);
+    expect(ARCH_SPECS.landscape.counts.flowers).toBeGreaterThanOrEqual(10);
   });
 });
 
@@ -442,30 +464,68 @@ describe('archFadeMask', () => {
   });
 });
 
-/** Points on the spine and on lines offset `halfWidth` to either side of it, kept to the visible garland. */
-function garlandBandSamples(spec: ArchSpec, halfWidth: number): { x: number; y: number }[] {
-  const steps = 400;
-  const points: { x: number; y: number }[] = [];
+function isVisibleGarland(spec: ArchSpec, point: { x: number; y: number }): boolean {
+  return (
+    point.x >= 0 &&
+    point.x <= spec.width &&
+    point.y >= 0 &&
+    point.y <= spec.fadeStart &&
+    !(point.y > spec.band && point.x > spec.gutter && point.x < spec.width - spec.gutter)
+  );
+}
+
+/**
+ * Walks the spine's visible stretch and reports how many samples fall inside some item, plus the
+ * longest uncovered run along it (in viewBox units).
+ */
+function spineCoverage(
+  spec: ArchSpec,
+  solids: ArchItem[],
+): { samples: number; covered: number; maxGap: number } {
+  const steps = 1200;
+  let samples = 0;
+  let covered = 0;
+  let gap = 0;
+  let maxGap = 0;
+  let previous = archSpinePoint(spec, 0);
   for (let i = 0; i < steps; i++) {
-    const t = i / (steps - 1);
-    const p = archSpinePoint(spec, t);
-    const ahead = archSpinePoint(spec, Math.min(1, t + 0.002));
-    const behind = archSpinePoint(spec, Math.max(0, t - 0.002));
-    const len = Math.hypot(ahead.x - behind.x, ahead.y - behind.y) || 1;
-    const nx = -(ahead.y - behind.y) / len;
-    const ny = (ahead.x - behind.x) / len;
-    for (const offset of [0, -halfWidth, halfWidth]) {
-      points.push({ x: p.x + nx * offset, y: p.y + ny * offset });
+    const point = archSpinePoint(spec, i / (steps - 1));
+    const stepLength = Math.hypot(point.x - previous.x, point.y - previous.y);
+    previous = point;
+    if (!isVisibleGarland(spec, point)) {
+      gap = 0;
+      continue;
+    }
+    samples += 1;
+    if (solids.some((item) => Math.hypot(item.x - point.x, item.y - point.y) <= item.size / 2)) {
+      covered += 1;
+      gap = 0;
+    } else {
+      gap += stepLength;
+      maxGap = Math.max(maxGap, gap);
     }
   }
-  return points.filter(
-    (point) =>
-      point.x >= 0 &&
-      point.x <= spec.width &&
-      point.y >= 0 &&
-      point.y <= spec.fadeStart &&
-      !(point.y > spec.band && point.x > spec.gutter && point.x < spec.width - spec.gutter),
-  );
+  return { samples, covered, maxGap };
+}
+
+/** Fraction of `item`'s disc that lies under at least one of `others`, by grid sampling. */
+function coveredFraction(item: ArchItem, others: ArchItem[]): number {
+  const n = 16;
+  const r = item.size / 2;
+  let inside = 0;
+  let covered = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const x = item.x + r * ((2 * (i + 0.5)) / n - 1);
+      const y = item.y + r * ((2 * (j + 0.5)) / n - 1);
+      if (Math.hypot(x - item.x, y - item.y) > r) continue;
+      inside += 1;
+      if (others.some((other) => Math.hypot(x - other.x, y - other.y) <= other.size / 2)) {
+        covered += 1;
+      }
+    }
+  }
+  return covered / inside;
 }
 
 function balloonArea(items: ArchItem[]): number {
