@@ -121,10 +121,10 @@ test.describe('Cover section', () => {
     await page.goto('./');
 
     // A guest attempting to scroll programmatically before opening must not move at all — the
-    // hero stays unreachable until "Abrir invitación" is clicked.
+    // countdown stays unreachable until "Abrir invitación" is clicked.
     await page.evaluate(() => window.scrollTo(0, 2000));
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
-    await expect(page.getByTestId('hero')).not.toBeInViewport();
+    await expect(page.getByTestId('countdown')).not.toBeInViewport();
   });
 
   test('clicking "Abrir invitación" unlocks scroll so the page can move past the cover', async ({
@@ -134,26 +134,31 @@ test.describe('Cover section', () => {
 
     await page.getByRole('button', { name: 'Abrir invitación' }).click();
 
-    // The click itself already scrolls to the hero (covered below); reset to the top and prove a
-    // FRESH scroll now actually moves the page — i.e. the lock was lifted, not just bypassed once.
+    // The click itself already scrolls to the countdown (covered below); reset to the top and
+    // prove a FRESH scroll now actually moves the page — i.e. the lock was lifted, not just
+    // bypassed once.
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.evaluate(() => window.scrollTo(0, 2000));
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   });
 
-  test('clicking "Abrir invitación" scrolls the guest down to the hero section', async ({
+  test('before opening, the countdown is below the fold', async ({ page }) => {
+    await page.goto('./');
+
+    // Sanity: before opening, the guest is at the top and the countdown is below the fold.
+    await expect(page.getByTestId('countdown')).not.toBeInViewport();
+  });
+
+  test('clicking "Abrir invitación" scrolls the guest down to the countdown section', async ({
     page,
   }) => {
     await page.goto('./');
 
-    // Sanity: before opening, the guest is at the top and the hero is below the fold.
-    await expect(page.getByTestId('hero')).not.toBeInViewport();
-
     await page.getByRole('button', { name: 'Abrir invitación' }).click();
 
-    // The open gesture must visibly "open" the invitation by bringing the hero into view
+    // The open gesture must visibly "open" the invitation by bringing the countdown into view
     // (in addition to starting the music, covered by music.spec.ts).
-    await expect(page.getByTestId('hero')).toBeInViewport({ ratio: 0.5 });
+    await expect(page.getByTestId('countdown')).toBeInViewport({ ratio: 0.5 });
   });
 
   test('the open button pulses softly by default and freezes under prefers-reduced-motion', async ({

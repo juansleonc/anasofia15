@@ -125,10 +125,14 @@ import { event } from '../data/event';
 
     window.dispatchEvent(new CustomEvent(OPEN_INVITATION_EVENT));
 
-    // "Opening" must be visible, not just audible: glide down to the hero/name screen. Guests
-    // who prefer reduced motion jump there instantly instead of animating the scroll.
-    const hero = document.querySelector('[data-testid="hero"]');
+    // "Opening" must be visible, not just audible: glide down to the countdown, which now sits
+    // right after the cover. Guests who prefer reduced motion jump there instantly instead of
+    // animating the scroll.
+    const countdown = document.querySelector('[data-testid="countdown"]');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    hero?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+    countdown?.scrollIntoView({
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
   });
 </script>
