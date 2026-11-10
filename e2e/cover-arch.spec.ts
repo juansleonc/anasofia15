@@ -175,6 +175,17 @@ test.describe('Balloon arch', () => {
       { width: 768, height: 1024 },
       { width: 900, height: 1000 },
       { width: 1024, height: 768 },
+      // Short landscape screens — see cover.spec.ts's "fully visible and clickable" tests for the
+      // bug these sizes guard against.
+      { width: 667, height: 375 },
+      { width: 750, height: 342 },
+      { width: 844, height: 390 },
+      { width: 863, height: 360 },
+      { width: 568, height: 320 },
+      { width: 932, height: 430 },
+      { width: 1280, height: 600 },
+      { width: 1366, height: 657 },
+      { width: 1536, height: 730 },
     ];
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);

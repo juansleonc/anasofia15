@@ -471,6 +471,63 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
       transition: none;
     }
   }
+
+  /* Short landscape screens (a phone held sideways, or a browser window resized short) have a
+     width-driven landscape layout above that never accounted for height: the clear-zone padding
+     and the name's own size both scale with viewport WIDTH only, so a wide-but-short viewport got
+     the same tall padding and large name as a wide-but-tall one, pushing "Abrir invitación" below
+     the one locked screen the guest can see — with no way to scroll down to it. Below this
+     height, every vertical dimension in the text block considers the real viewport height too.
+     The clear-zone padding is scaled down from its own (conservative) value rather than replaced —
+     `--arch-band-landscape` marks where the garland's crown sits, but no single item actually
+     reaches that deep directly behind the lead/name/button at these sizes, so a safety factor
+     under 1 still clears every item while leaving enough room for the rest of the stack. The name
+     and lead sizes are capped at the smaller of their usual width-fit formula and a height-based
+     ceiling, so they never grow past what the width already allows. `dvh` degrades gracefully to
+     `vh` on engines that don't support it: the second declaration in each pair simply never
+     parses, leaving the first in effect. */
+  @media (orientation: landscape) and (max-height: 760px) {
+    .cover {
+      padding-top: max(0.5rem, calc(var(--arch-band-landscape) * 100% * 0.92));
+      padding-bottom: clamp(0.5rem, 3vh, 1.25rem);
+      padding-bottom: clamp(0.5rem, 3dvh, 1.25rem);
+    }
+
+    .cover__content {
+      gap: clamp(0.3rem, 1.6vh, 1rem);
+      gap: clamp(0.3rem, 1.6dvh, 1rem);
+    }
+
+    .cover__title {
+      gap: clamp(0.2rem, 0.8vh, 0.6rem);
+      gap: clamp(0.2rem, 0.8dvh, 0.6rem);
+    }
+
+    .cover__title-lead {
+      font-size: min(clamp(1.45rem, 1.05rem + 1.3vw, 2.25rem), clamp(0.95rem, 5.6vh, 1.8rem));
+      font-size: min(clamp(1.45rem, 1.05rem + 1.3vw, 2.25rem), clamp(0.95rem, 5.6dvh, 1.8rem));
+    }
+
+    .cover__title-name {
+      font-size: min(
+        clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 9.2rem),
+        clamp(1.8rem, 15vh, 5rem)
+      );
+      font-size: min(
+        clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 9.2rem),
+        clamp(1.8rem, 15dvh, 5rem)
+      );
+    }
+
+    .cover__open-button {
+      margin-top: 0;
+      min-height: 44px;
+      padding: clamp(0.5rem, 2vh, 1rem) clamp(1.5rem, 5vw, 3rem);
+      padding: clamp(0.5rem, 2dvh, 1rem) clamp(1.5rem, 5vw, 3rem);
+      font-size: clamp(0.9rem, 4.5vh, 1.2rem);
+      font-size: clamp(0.9rem, 4.5dvh, 1.2rem);
+    }
+  }
 </style>
 
 <script>

@@ -540,6 +540,42 @@ test.describe('Cover section', () => {
     }
   });
 
+  // Short landscape screens (a phone held sideways, or a browser window resized short) used to
+  // push the open button below the one locked screen the guest can see, with no way to scroll to
+  // reach it.
+  for (const viewport of [
+    { width: 667, height: 375 },
+    { width: 750, height: 342 },
+    { width: 844, height: 390 },
+    { width: 863, height: 360 },
+    { width: 568, height: 320 },
+    { width: 932, height: 430 },
+    { width: 1280, height: 600 },
+    { width: 1366, height: 657 },
+    { width: 1536, height: 730 },
+  ]) {
+    test(`the open button is fully visible and clickable without scrolling at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const button = page.getByRole('button', { name: 'Abrir invitación' });
+      const box = await button.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.y).toBeGreaterThanOrEqual(0);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+
+      // Playwright's click already requires the target to be visible, stable and unobscured —
+      // if the button were actually below the fold this would time out and fail.
+      await button.click();
+      const scrollLocked = await page.evaluate(() =>
+        document.body.classList.contains('scroll-locked'),
+      );
+      expect(scrollLocked).toBe(false);
+    });
+  }
+
   test('at 1366x768 the button stays above the fold', async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.goto('./');
