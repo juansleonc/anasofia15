@@ -708,8 +708,41 @@ test.describe('Cover section', () => {
       // Measured off the actual text (Range), not the elements' own box edges — a box's
       // line-height adds leading inside its own edges, which would hide exactly the whitespace
       // this test is meant to catch.
-      expect(gap / nameFontSize).toBeLessThanOrEqual(0.2);
+      //
+      // Nov 2026 user-feedback pass: widened from 0.2 to 0.25 for the slightly larger box-edge
+      // gap added below (the "breathe further apart" tests) — still well inside the title-cohesion
+      // ceiling of 0.35 × name font-size.
+      expect(gap / nameFontSize).toBeLessThanOrEqual(0.25);
       expect(gap).toBeGreaterThanOrEqual(0);
+    });
+  }
+
+  // Nov 2026 user-feedback pass: the block above reads as cohesive, but the user still wanted a
+  // touch more breathing room between the lead and the name (+12-16px over the box edges, not the
+  // glyph ink measured above).
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 1366, height: 768 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`the lead and the name breathe further apart at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      const gap = await page.evaluate(() => {
+        const lead = document.querySelector('[data-testid="cover-title-lead"]') as HTMLElement;
+        const name = document.querySelector('[data-testid="cover-celebrant-name"]') as HTMLElement;
+        const leadBox = lead.getBoundingClientRect();
+        const nameBox = name.getBoundingClientRect();
+        return nameBox.top - leadBox.bottom;
+      });
+
+      expect(gap).toBeGreaterThanOrEqual(14);
+      expect(gap).toBeLessThanOrEqual(19);
     });
   }
 
