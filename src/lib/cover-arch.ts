@@ -11,16 +11,23 @@ export type ArchItemKind = 'balloon' | 'flower' | 'leaf';
 export type ArchSymbol =
   | 'balloon-pink'
   | 'balloon-rosegold'
+  | 'balloon-rosegold-satin'
   | 'balloon-champagne'
+  | 'balloon-champagne-satin'
   | 'rose-bloom'
   | 'rose-cream'
   | 'blossom'
   | 'leaf-eucalyptus'
   | 'leaf-gold';
 
+/** A balloon's metallic/pearl tone, independent of which chrome-vs-satin finish it renders as. */
+export type ArchTone = 'pink' | 'rosegold' | 'champagne';
+
 export interface ArchItem {
   symbol: ArchSymbol;
   kind: ArchItemKind;
+  /** Set on balloons only — the tone before chrome/satin finish is applied. */
+  tone?: ArchTone;
   x: number;
   y: number;
   size: number;
@@ -82,7 +89,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
   },
 };
 
-const BALLOON_SYMBOLS: readonly ArchSymbol[] = ['balloon-pink', 'balloon-rosegold', 'balloon-champagne'];
+const BALLOON_TONES: readonly ArchTone[] = ['pink', 'rosegold', 'champagne'];
 const FLOWER_SYMBOLS: readonly ArchSymbol[] = ['rose-bloom', 'rose-cream', 'blossom'];
 const LEAF_SYMBOLS: readonly ArchSymbol[] = ['leaf-eucalyptus', 'leaf-gold'];
 
@@ -212,16 +219,33 @@ function warp(u: number, crownBias: number): number {
  * Round-robin tones across `count` slots, then seeded-shuffle the slots so the mix is guaranteed
  * (each tone gets floor(count/3) or ceil(count/3)) rather than left to an independent random pick.
  */
-function shuffledTones(count: number, rng: () => number): ArchSymbol[] {
-  const tones: ArchSymbol[] = [];
+function shuffledTones(count: number, rng: () => number): ArchTone[] {
+  const tones: ArchTone[] = [];
   for (let i = 0; i < count; i++) {
-    tones.push(BALLOON_SYMBOLS[i % BALLOON_SYMBOLS.length]);
+    tones.push(BALLOON_TONES[i % BALLOON_TONES.length]);
   }
   for (let i = tones.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [tones[i], tones[j]] = [tones[j], tones[i]];
   }
   return tones;
+}
+
+/**
+ * Each metallic tone's finish alternates chrome/satin as it recurs (1st chrome, 2nd satin, 3rd
+ * chrome, …) so any spec with ≥ 2 balloons of a given metallic tone shows both finishes; pink has
+ * no satin counterpart and is always pearl.
+ */
+function toneSymbol(tone: ArchTone, occurrence: number): ArchSymbol {
+  const isChrome = occurrence % 2 === 0;
+  switch (tone) {
+    case 'pink':
+      return 'balloon-pink';
+    case 'rosegold':
+      return isChrome ? 'balloon-rosegold' : 'balloon-rosegold-satin';
+    case 'champagne':
+      return isChrome ? 'balloon-champagne' : 'balloon-champagne-satin';
+  }
 }
 
 /**
@@ -233,6 +257,7 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
   const maxSize = spec.sizeRange[1];
   const sizeSpan = spec.sizeRange[1] - spec.sizeRange[0];
   const tones = shuffledTones(count, rng);
+  const toneOccurrences: Record<ArchTone, number> = { pink: 0, rosegold: 0, champagne: 0 };
   const items: ArchItem[] = [];
 
   for (let i = 0; i < count; i++) {
@@ -250,9 +275,13 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
     const rawX = sample.x + sample.nx * offset;
     const rawY = sample.y + sample.ny * offset;
 
+    const tone = tones[i];
+    const occurrence = toneOccurrences[tone]++;
+
     items.push({
-      symbol: tones[i],
+      symbol: toneSymbol(tone, occurrence),
       kind: 'balloon',
+      tone,
       x: clamp(rawX, -maxSize, spec.width + maxSize),
       y: clamp(rawY, -maxSize, spec.height),
       size,

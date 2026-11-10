@@ -48,16 +48,39 @@ describe('buildArch', () => {
       const { items } = buildArch(spec);
       const balloons = items.filter((item) => item.kind === 'balloon');
       const minShare = Math.floor(spec.counts.balloons / 3);
-      const tallies = { 'balloon-pink': 0, 'balloon-rosegold': 0, 'balloon-champagne': 0 } as Record<
-        string,
-        number
-      >;
+      const tallies = { pink: 0, rosegold: 0, champagne: 0 } as Record<string, number>;
       for (const balloon of balloons) {
-        tallies[balloon.symbol] += 1;
+        tallies[balloon.tone as string] += 1;
       }
-      expect(tallies['balloon-pink']).toBeGreaterThanOrEqual(minShare);
-      expect(tallies['balloon-rosegold']).toBeGreaterThanOrEqual(minShare);
-      expect(tallies['balloon-champagne']).toBeGreaterThanOrEqual(minShare);
+      expect(tallies.pink).toBeGreaterThanOrEqual(minShare);
+      expect(tallies.rosegold).toBeGreaterThanOrEqual(minShare);
+      expect(tallies.champagne).toBeGreaterThanOrEqual(minShare);
+    }
+  });
+
+  it('each metallic tone shows both the chrome and the satin finish', () => {
+    for (const spec of SPECS) {
+      const { items } = buildArch(spec);
+      const symbols = items.filter((item) => item.kind === 'balloon').map((item) => item.symbol);
+      expect(symbols).toEqual(expect.arrayContaining(['balloon-rosegold', 'balloon-rosegold-satin']));
+      expect(symbols).toEqual(expect.arrayContaining(['balloon-champagne', 'balloon-champagne-satin']));
+      expect(symbols).not.toContain('balloon-pink-satin');
+    }
+  });
+
+  it('keeps every balloon symbol matching its own tone, pink always pearl', () => {
+    for (const spec of SPECS) {
+      const { items } = buildArch(spec);
+      for (const item of items.filter((i) => i.kind === 'balloon')) {
+        if (item.tone === 'pink') {
+          expect(item.symbol).toBe('balloon-pink');
+        } else if (item.tone === 'rosegold') {
+          expect(['balloon-rosegold', 'balloon-rosegold-satin']).toContain(item.symbol);
+        } else {
+          expect(item.tone).toBe('champagne');
+          expect(['balloon-champagne', 'balloon-champagne-satin']).toContain(item.symbol);
+        }
+      }
     }
   });
 
