@@ -1,5 +1,5 @@
 ---
-// Fixed bottom-right chrome music toggle (reuses the disco-night silver/black tokens): an
+// Fixed bottom-right chrome music toggle, themed from the rose tokens: an
 // animated equalizer while the ambient track is playing, a musical note while paused. Owns the
 // single <audio> element for the site (nothing else may render another one) — it stays paused on
 // load and only starts via a real user gesture: either this button, or the Cover section's
@@ -55,7 +55,7 @@ const musicSrc = withBase(siteConfig.musicSrc);
     align-items: center;
     justify-content: center;
     background: var(--gradient-rose);
-    box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 10px 30px -8px color-mix(in srgb, var(--c-ink) 55%, transparent);
   }
 
   .music-toggle__note {

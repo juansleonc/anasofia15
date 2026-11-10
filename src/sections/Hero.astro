@@ -90,7 +90,7 @@ const portraitSrc = withBase(siteConfig.portraitPath);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at 35% 30%, #f4f5f7, var(--c-rose-700));
+    background: radial-gradient(circle at 35% 30%, var(--c-rose-100), var(--c-rose-700));
   }
 
   .hero__portrait-initials {
@@ -118,8 +118,8 @@ const portraitSrc = withBase(siteConfig.portraitPath);
     background-clip: text;
     color: transparent;
     /* Halo that survives background-clip:text (box-shadow/text-shadow would not). */
-    filter: drop-shadow(0 0 22px rgba(212, 175, 55, 0.3))
-      drop-shadow(0 0 60px rgba(238, 240, 243, 0.14));
+    filter: drop-shadow(0 0 22px color-mix(in srgb, var(--c-rose-400) 30%, transparent))
+      drop-shadow(0 0 60px color-mix(in srgb, var(--c-rose-100) 14%, transparent));
   }
 
   /* Signature-style stagger: "Ana" up top hugging the left, "Sofía" below shifted right, the two
@@ -140,7 +140,7 @@ const portraitSrc = withBase(siteConfig.portraitPath);
     width: 90px;
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--c-rose-400), transparent);
-    box-shadow: 0 0 12px rgba(212, 175, 55, 0.45);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--c-rose-400) 45%, transparent);
   }
 
   .hero__tagline {

@@ -72,7 +72,7 @@ import { event } from '../data/event';
     background-clip: text;
     color: transparent;
     /* Cool halo that survives background-clip:text (text-shadow would not). */
-    filter: drop-shadow(0 0 12px rgba(238, 240, 243, 0.22));
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--c-rose-100) 22%, transparent));
     transition: opacity var(--motion-duration-base) var(--motion-easing);
   }
 

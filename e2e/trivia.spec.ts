@@ -59,13 +59,13 @@ test.describe('Trivia section', () => {
     await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta 1 de ${triviaQuestions.length}`);
   });
 
-  test('option buttons keep the dark glass styling on re-rendered questions', async ({ page }) => {
+  test('option buttons keep the translucent glass styling on re-rendered questions', async ({ page }) => {
     await page.goto('./');
     // The cover gates scroll until opened — unlock it before reaching the trivia section below.
     await page.getByRole('button', { name: 'Abrir invitación' }).click();
 
     // The island re-creates the option buttons in JS on every question change (and on restart),
-    // so this guards against dynamically created buttons losing the styled dark treatment and
+    // so this guards against dynamically created buttons losing the styled glass treatment and
     // falling back to the UA's default white <button> — SSR'd question 1 alone can't catch that.
     await page
       .getByTestId(`trivia-option-${triviaQuestions[0].correctIndex}`)
@@ -78,9 +78,11 @@ test.describe('Trivia section', () => {
       return { backgroundColor: computed.backgroundColor, color: computed.color };
     });
 
-    // Translucent glass (resting or hover alpha, both ≤ 0.1), never the UA's opaque
-    // light button face.
-    const alphaMatch = styles.backgroundColor.match(/^rgba\(255, 255, 255, (0\.\d+)\)$/);
+    // The background is `color-mix(in srgb, var(--c-white) 4%, transparent)`; WebKit serializes
+    // that resolved value as `oklab(… / alpha)` rather than `rgba(255, 255, 255, alpha)`, so the
+    // alpha is read off whichever trailing component the engine used (the slash form for
+    // oklab/lab/lch, the final comma for rgba) instead of matching one fixed literal shape.
+    const alphaMatch = styles.backgroundColor.match(/[/,]\s*([\d.]+)\s*\)$/);
     expect(alphaMatch).not.toBeNull();
     expect(Number(alphaMatch![1])).toBeLessThanOrEqual(0.1);
     // Ink label (--c-ink, #4a2632), not the UA's dark default button text.

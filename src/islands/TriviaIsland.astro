@@ -84,7 +84,7 @@ const totalQuestions = triviaQuestions.length;
     flex: 1;
     height: 3px;
     border-radius: 2px;
-    background: rgba(201, 204, 209, 0.18);
+    background: color-mix(in srgb, var(--c-rose-700) 18%, transparent);
     transition: background var(--motion-duration-base) var(--motion-easing);
   }
 
@@ -120,8 +120,8 @@ const totalQuestions = triviaQuestions.length;
     text-align: left;
     padding: 1rem 1.125rem;
     border-radius: 0.875rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(201, 204, 209, 0.2);
+    background: color-mix(in srgb, var(--c-white) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-rose-700) 20%, transparent);
     color: var(--c-ink);
     font-family: var(--font-body);
     font-weight: 500;
@@ -131,8 +131,8 @@ const totalQuestions = triviaQuestions.length;
   }
 
   .trivia-options :global(.trivia-option:hover:enabled) {
-    background: rgba(255, 255, 255, 0.09);
-    border-color: rgba(212, 175, 55, 0.55);
+    background: color-mix(in srgb, var(--c-white) 9%, transparent);
+    border-color: color-mix(in srgb, var(--c-rose-400) 55%, transparent);
   }
 
   .trivia-options :global(.trivia-option:disabled) {
@@ -141,16 +141,16 @@ const totalQuestions = triviaQuestions.length;
 
   .trivia-options :global(.trivia-option--correct),
   .trivia-options :global(.trivia-option--correct:disabled) {
-    background: rgba(180, 230, 190, 0.14);
-    border-color: rgba(150, 220, 160, 0.6);
-    color: #d6f5dc;
+    background: color-mix(in srgb, var(--c-success) 14%, transparent);
+    border-color: color-mix(in srgb, var(--c-success) 60%, transparent);
+    color: var(--c-success);
   }
 
   .trivia-options :global(.trivia-option--wrong),
   .trivia-options :global(.trivia-option--wrong:disabled) {
-    background: rgba(240, 160, 160, 0.12);
-    border-color: rgba(230, 130, 130, 0.55);
-    color: #f6d6d6;
+    background: color-mix(in srgb, var(--c-error) 12%, transparent);
+    border-color: color-mix(in srgb, var(--c-error) 55%, transparent);
+    color: var(--c-error);
   }
 
   .trivia-result {
@@ -187,8 +187,8 @@ const totalQuestions = triviaQuestions.length;
     margin-top: 1.625rem;
     padding: 0.875rem 1.875rem;
     border-radius: 2.5rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(201, 204, 209, 0.24);
+    background: color-mix(in srgb, var(--c-white) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-rose-700) 24%, transparent);
     color: var(--c-ink-soft);
     font-family: var(--font-body);
     font-weight: 600;
@@ -263,6 +263,16 @@ const totalQuestions = triviaQuestions.length;
     renderProgress();
   }
 
+  // Read the burst colors from the live rose tokens rather than hardcoding hex — this canvas is
+  // the one place in the island that paints pixels directly instead of letting CSS resolve a
+  // `var(--…)` reference, so it has to ask the computed style for the token's current value.
+  function roseBurstPalette(): string[] {
+    const rootStyles = getComputedStyle(document.documentElement);
+    return ['--c-rose-700', '--c-rose-400', '--c-rose-100']
+      .map((token) => rootStyles.getPropertyValue(token).trim())
+      .filter((value) => value.length > 0);
+  }
+
   function burstConfetti(): void {
     if (prefersReducedMotion || !confettiCanvas || !root) return;
     const rect = root.getBoundingClientRect();
@@ -272,7 +282,7 @@ const totalQuestions = triviaQuestions.length;
     confettiCanvas.width = rect.width;
     confettiCanvas.height = rect.height;
 
-    const colors = ['#d4af37', '#eef0f3', '#c9ccd1'];
+    const colors = roseBurstPalette();
     const particles = Array.from({ length: 36 }, () => ({
       x: rect.width / 2,
       y: rect.height / 2,

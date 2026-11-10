@@ -89,10 +89,10 @@ import EyebrowEmoji from '../components/EyebrowEmoji.astro';
     width: 0.75rem;
     height: 0.75rem;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #f4f5f7, var(--c-rose-700));
+    background: radial-gradient(circle at 35% 30%, var(--c-rose-100), var(--c-rose-700));
     box-shadow:
       0 0 0 4px var(--c-bg),
-      0 0 14px rgba(212, 175, 55, 0.6);
+      0 0 14px color-mix(in srgb, var(--c-rose-400) 60%, transparent);
   }
 
   .detalles__tag {

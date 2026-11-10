@@ -127,8 +127,8 @@ const accessKey = siteConfig.web3formsAccessKey;
     width: 100%;
     padding: 1rem 1.125rem;
     border-radius: 0.875rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(201, 204, 209, 0.18);
+    background: color-mix(in srgb, var(--c-white) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-rose-700) 18%, transparent);
     color: var(--c-ink-soft);
     font-family: var(--font-body);
     font-size: 0.9375rem;
@@ -146,8 +146,8 @@ const accessKey = siteConfig.web3formsAccessKey;
     min-width: 0;
     padding: 1.125rem;
     border-radius: 0.875rem;
-    border: 1px solid rgba(201, 204, 209, 0.24);
-    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid color-mix(in srgb, var(--c-rose-700) 24%, transparent);
+    background: color-mix(in srgb, var(--c-white) 4%, transparent);
     color: var(--c-ink-soft);
     font-family: var(--font-body);
     font-weight: 700;
@@ -164,7 +164,7 @@ const accessKey = siteConfig.web3formsAccessKey;
 
   .rsvp-error {
     min-height: 1.125rem;
-    color: #f0a0a0;
+    color: var(--c-error);
     font-size: 0.8125rem;
     margin-top: 0.375rem;
   }
@@ -213,8 +213,9 @@ const accessKey = siteConfig.web3formsAccessKey;
     text-align: center;
     padding: 1.75rem 1.5rem;
     border-radius: 1rem;
-    border: 1px solid rgba(212, 175, 55, 0.28);
-    background: linear-gradient(160deg, #151519, #0a0a0d);
+    border: var(--card-border);
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
   }
 
   .rsvp-confirmed[hidden] {
@@ -222,7 +223,7 @@ const accessKey = siteConfig.web3formsAccessKey;
   }
 
   .rsvp-confirmed__message {
-    color: var(--c-white);
+    color: var(--c-ink);
     font-size: 1rem;
     line-height: 1.6;
   }
