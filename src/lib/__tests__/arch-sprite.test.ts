@@ -97,7 +97,7 @@ const SATIN_BALLOONS = ['balloon-rosegold-satin', 'balloon-champagne-satin'];
 const ALL_BALLOONS = ['balloon-pink', ...CHROME_BALLOONS, ...SATIN_BALLOONS];
 const PEARL_BALLOONS = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-champagne-satin'];
 
-const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'blossom'];
+const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom'];
 
 /** The symbol's viewBox as numbers: [minX, minY, width, height]. */
 function viewBoxOf(el: Element): number[] {
@@ -359,7 +359,7 @@ describe('ArchSprite gloss', () => {
 // The garland's text clearance (cover-garland) sizes every item from these symbol extents, so the
 // art may change freely only while each symbol stays inside the footprint it promised.
 describe('footprint contract', () => {
-  it.each(['rose-pink', 'rose-cream', 'peony-blush'])('%s keeps every petal inside the inscribed circle', (id) => {
+  it.each(['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory'])('%s keeps every petal inside the inscribed circle', (id) => {
     const el = symbol(id);
     const [, , width] = viewBoxOf(el);
     const shapes = Array.from(el.querySelectorAll('path[fill^="url(#"]'));
@@ -412,6 +412,8 @@ const ROSE_IDS = ['rose-pink', 'rose-cream'];
 const GARDEN_ROSE_IDS = ['rose-pink', 'rose-cream'];
 const roseRingGradientIds = (id: string): string[] => [`${id}-outer`, `${id}-mid`, `${id}-inner`];
 const PEONY_RING_IDS = ['peony-blush-outer', 'peony-blush-mid', 'peony-blush-inner'];
+const PEONY_IDS = ['peony-blush', 'peony-ivory'];
+const peonyRingGradientIds = (id: string): string[] => [`${id}-outer`, `${id}-mid`, `${id}-inner`];
 
 function petalPaths(el: Element, ringGradientIds: string[]): Element[] {
   return Array.from(el.querySelectorAll('path')).filter((path) =>
@@ -663,12 +665,42 @@ describe('ArchSprite peony', () => {
     }
   });
 
-  it('peony-blush shows a few champagne stamen hints peeking from its center', () => {
-    const el = symbol('peony-blush');
-    const stamens = Array.from(el.querySelectorAll('circle, ellipse')).filter(
-      (shape) => shape.getAttribute('fill') === 'var(--c-champagne-300)',
+  it.each(PEONY_IDS)('%s has >= 18 ruffled petals and >= 5 gold stamens', (id) => {
+    const el = symbol(id);
+    const petals = petalPaths(el, peonyRingGradientIds(id));
+    expect(petals.length).toBeGreaterThanOrEqual(18);
+    for (const petal of petals) {
+      // A ruffled lip: walking the outline, the distance from the petal's base swings out and
+      // back several times instead of rising once to a smooth dome and falling again.
+      const [{ segments }] = cubicSubpaths(petal.getAttribute('d') ?? '');
+      const base = segments[0].from;
+      const reach = segments.map(({ to }) => Math.hypot(to[0] - base[0], to[1] - base[1]));
+      let turns = 0;
+      for (let k = 2; k < reach.length; k++) {
+        if (Math.sign(reach[k] - reach[k - 1]) !== Math.sign(reach[k - 1] - reach[k - 2])) turns += 1;
+      }
+      expect(turns).toBeGreaterThanOrEqual(4);
+    }
+    const stamens = Array.from(el.querySelectorAll('circle, ellipse')).filter((shape) =>
+      /^var\(--c-champagne-(300|500|700)\)$/.test(shape.getAttribute('fill') ?? ''),
     );
-    expect(stamens.length).toBeGreaterThanOrEqual(3);
+    expect(stamens.length).toBeGreaterThanOrEqual(5);
+    // Stamens peek out of the heart of the bloom, not from its petals' edges.
+    const [, , width] = viewBoxOf(el);
+    for (const stamen of stamens) {
+      const offset = Math.hypot(Number(stamen.getAttribute('cx')) - width / 2, Number(stamen.getAttribute('cy')) - width / 2);
+      expect(offset).toBeLessThanOrEqual(width * 0.12);
+    }
+  });
+
+  it('peony-ivory reuses the blush petal outlines, painted only from ivory tokens', () => {
+    const outline = (id: string): string[] =>
+      petalPaths(symbol(id), peonyRingGradientIds(id)).map((petal) => `${petal.getAttribute('d')}|${petal.getAttribute('transform')}`);
+    expect(outline('peony-ivory').length).toBeGreaterThanOrEqual(18);
+    expect(outline('peony-ivory')).toEqual(outline('peony-blush'));
+    const ivoryStops = peonyRingGradientIds('peony-ivory').flatMap((ringId) => stopColors(gradient(ringId)));
+    expect(ivoryStops.length).toBeGreaterThanOrEqual(9);
+    for (const style of ivoryStops) expect(style).toMatch(/var\(--c-(champagne|rosegold)-\d+\)/);
   });
 });
 
