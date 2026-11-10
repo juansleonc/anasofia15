@@ -258,11 +258,12 @@
       <stop offset="65%" style="stop-color: var(--c-leaf)" />
       <stop offset="100%" style="stop-color: var(--c-leaf)" />
     </linearGradient>
-    <linearGradient id="leaf-gold-metal" x1="15%" y1="0%" x2="85%" y2="100%">
-      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
-      <stop offset="35%" style="stop-color: var(--c-champagne-300)" />
-      <stop offset="70%" style="stop-color: var(--c-champagne-500)" />
-      <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
+    <linearGradient id="leaf-gold-metal" x1="0%" y1="10%" x2="100%" y2="90%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="30%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="52%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="78%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-800)" />
     </linearGradient>
   </defs>
 
@@ -559,24 +560,27 @@
     />
   </symbol>
 
-  <!-- `leaf-gold`: a champagne-gold foil-leaf CLUSTER — a short stem bearing 7 small filled
-       almond leaves fanning out (no lone outline leaf remains, every leaf is fully opaque), plus a
-       multi-subpath vein, one crease per leaf. -->
-  <symbol id="leaf-gold" viewBox="0 0 72 72">
-    <path d="M36 64c0 -6 0 -10 0 -16" fill="none" stroke="var(--c-champagne-500)" stroke-width="1.1" stroke-opacity="0.7" />
-    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(20 44) rotate(-55)" />
-    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(14 28) rotate(-35)" />
-    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(20 14) rotate(-15)" />
-    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(36 16)" />
-    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(52 14) rotate(15)" />
-    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(58 28) rotate(35)" />
-    <path d="M0 -16C2.6 -12.5 3.8 -7 3.8 0C3.8 7 2.6 12.5 0 16C-2.6 12.5 -3.8 7 -3.8 0C-3.8 -7 -2.6 -12.5 0 -16Z" fill="url(#leaf-gold-metal)" transform="translate(52 44) rotate(55)" />
+  <!-- `leaf-gold`: a gold-foil branch with the sage branch's structure (9 alternating leaves
+       plus a terminal leaf on a bowed stem, base at the bottom centre), painted with a diagonal
+       metallic foil gradient and a fine deep-gold edge on every side leaf. -->
+  <symbol id="leaf-gold" viewBox="0 0 40 110">
+    <path d="M20 109C16 74.8 23 33 21 15" fill="none" stroke="var(--c-champagne-500)" stroke-width="1.1" stroke-opacity="0.7" stroke-linecap="round" />
+    <path d="M0 0C3.44 -4.2 4.3 -9.45 3.66 -13.65C3.01 -16.8 1.51 -19.32 0 -21C-1.5 -19.32 -3.01 -16.8 -3.65 -13.65C-4.3 -9.45 -3.44 -4.2 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(19.11 98.54) rotate(-49.23)" />
+    <path d="M0 0C3.31 -3.98 4.14 -8.95 3.52 -12.93C2.9 -15.92 1.45 -18.31 0 -19.9C-1.45 -18.31 -2.9 -15.92 -3.52 -12.93C-4.14 -8.95 -3.31 -3.98 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(18.76 88.09) rotate(43.31)" />
+    <path d="M0 0C3.18 -3.76 3.98 -8.46 3.38 -12.22C2.79 -15.04 1.39 -17.3 0 -18.8C-1.39 -17.3 -2.79 -15.04 -3.38 -12.22C-3.98 -8.46 -3.18 -3.76 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(18.82 77.55) rotate(-40.81)" />
+    <path d="M0 0C3.06 -3.54 3.82 -7.96 3.25 -11.5C2.67 -14.16 1.34 -16.28 0 -17.7C-1.34 -16.28 -2.67 -14.16 -3.25 -11.5C-3.82 -7.96 -3.06 -3.54 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(19.16 67.12) rotate(42.52)" />
+    <path d="M0 0C2.93 -3.32 3.66 -7.47 3.11 -10.79C2.56 -13.28 1.28 -15.27 0 -16.6C-1.28 -15.27 -2.56 -13.28 -3.11 -10.79C-3.66 -7.47 -2.93 -3.32 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(19.69 56.95) rotate(-34.68)" />
+    <path d="M0 0C2.8 -3.1 3.5 -6.97 2.98 -10.08C2.45 -12.4 1.22 -14.26 0 -15.5C-1.22 -14.26 -2.45 -12.4 -2.97 -10.08C-3.5 -6.97 -2.8 -3.1 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(20.28 47.22) rotate(39.58)" />
+    <path d="M0 0C2.67 -2.88 3.34 -6.48 2.84 -9.36C2.34 -11.52 1.17 -13.25 0 -14.4C-1.17 -13.25 -2.34 -11.52 -2.84 -9.36C-3.34 -6.48 -2.67 -2.88 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(20.84 38.11) rotate(-30.77)" />
+    <path d="M0 0C2.54 -2.66 3.18 -5.98 2.7 -8.64C2.23 -10.64 1.11 -12.24 0 -13.3C-1.11 -12.24 -2.23 -10.64 -2.7 -8.64C-3.18 -5.98 -2.54 -2.66 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(21.23 29.8) rotate(34.07)" />
+    <path d="M0 0C2.42 -2.44 3.02 -5.49 2.57 -7.93C2.11 -9.76 1.06 -11.22 0 -12.2C-1.06 -11.22 -2.11 -9.76 -2.57 -7.93C-3.02 -5.49 -2.42 -2.44 0 0Z" fill="url(#leaf-gold-metal)" stroke="var(--c-champagne-700)" stroke-width="0.4" transform="translate(21.37 22.45) rotate(-30.32)" />
+    <path d="M0 0C2.08 -2.6 2.6 -5.85 2.21 -8.45C1.82 -10.4 0.91 -11.96 0 -13C-0.91 -11.96 -1.82 -10.4 -2.21 -8.45C-2.6 -5.85 -2.08 -2.6 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(21 17) rotate(-6.34)" />
     <path
-      d="M9.35 36.54L30.65 51.46 M6.54 17.35L21.46 38.65 M16.63 1.44L23.37 26.56 M36 3L36 29 M55.37 1.44L48.63 26.56 M65.46 17.35L50.54 38.65 M62.65 36.54L41.35 51.46"
+      d="M17.97 97.56L6.39 87.57 M19.79 87L29.68 76.5 M17.84 76.42L8.99 66.17 M20.18 66.01L28.73 56.68 M18.84 55.71L12.13 46.03 M21.24 46.06L28.19 37.66 M20.07 36.82L14.94 28.22 M22.07 28.56L27.19 20.99 M20.61 21.16L16.44 14.03 M20.89 16.01L19.85 6.66"
       fill="none"
       stroke="var(--c-champagne-700)"
-      stroke-width="0.5"
-      stroke-opacity="0.55"
+      stroke-width="0.4"
+      stroke-opacity="0.5"
       stroke-linecap="round"
     />
   </symbol>

@@ -97,9 +97,9 @@ const SATIN_BALLOONS = ['balloon-rosegold-satin', 'balloon-champagne-satin'];
 const ALL_BALLOONS = ['balloon-pink', ...CHROME_BALLOONS, ...SATIN_BALLOONS];
 const PEARL_BALLOONS = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-champagne-satin'];
 
-const BRANCH_IDS = ['leaf-olive'];
+const BRANCH_IDS = ['leaf-olive', 'leaf-gold'];
 const BRANCH_LEAF_GRADIENT: Record<string, string> = { 'leaf-olive': 'leaf-olive-gradient', 'leaf-gold': 'leaf-gold-metal' };
-const LEAF_IDS = ['leaf-eucalyptus', 'leaf-olive'];
+const LEAF_IDS = ['leaf-eucalyptus', 'leaf-olive', 'leaf-gold'];
 const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom'];
 
 /** Both ends of a single stem path drawn with M plus absolute C or relative c curves. */
@@ -919,7 +919,7 @@ describe('ArchSprite foliage', () => {
     expect(symbol('leaf-olive').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(14);
   });
 
-  it('leaf-gold is a cluster of at least 7 filled almond leaves, no lone outline', () => {
+  it('leaf-gold is made of filled foil leaves, no lone outline', () => {
     const el = symbol('leaf-gold');
     const metalGradient = gradient('leaf-gold-metal');
     const stops = stopColors(metalGradient);
