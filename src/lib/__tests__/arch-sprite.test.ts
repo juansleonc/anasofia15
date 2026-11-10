@@ -100,7 +100,7 @@ const PEARL_BALLOONS = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-c
 const BRANCH_IDS = ['leaf-olive', 'leaf-gold'];
 const BRANCH_LEAF_GRADIENT: Record<string, string> = { 'leaf-olive': 'leaf-olive-gradient', 'leaf-gold': 'leaf-gold-metal' };
 const LEAF_IDS = ['leaf-eucalyptus', 'leaf-olive', 'leaf-gold'];
-const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom'];
+const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom', 'rosebud'];
 const CLUSTER_IDS = ['leaf-laurel-cluster', 'leaf-eucalyptus-cluster'];
 
 /** Both ends of a single stem path drawn with M plus absolute C or relative c curves. */
@@ -626,6 +626,7 @@ const PETAL_FILL_IDS_BY_FLOWER: Record<string, string[]> = {
   'peony-blush': peonyRingGradientIds('peony-blush'),
   'peony-ivory': peonyRingGradientIds('peony-ivory'),
   blossom: ['blossom-petal'],
+  rosebud: ['rose-pink-outer', 'rose-pink-mid'],
 };
 
 /** A petal path's raw (numeric-pair) points, carried through every ancestor `transform` — its own
@@ -1106,6 +1107,40 @@ describe('ArchSprite foliage clusters', () => {
     expect(gold.length).toBeGreaterThanOrEqual(2);
     const gilt = leaves.filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
     expect(gilt.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('ArchSprite rosebud', () => {
+  it('is a furled bud with sepals, drawn only from existing gradients', () => {
+    const el = symbol('rosebud');
+    const fillId = (shape: Element): string => (shape.getAttribute('fill') ?? '').replace(/^url\(#(.+)\)$/, '$1');
+    const petals = Array.from(el.querySelectorAll('path')).filter((path) => ['rose-pink-outer', 'rose-pink-mid'].includes(fillId(path)));
+    expect(petals.length).toBeGreaterThanOrEqual(2);
+    const sepals = Array.from(el.querySelectorAll('[fill="url(#leaf-olive-gradient)"]'));
+    expect(sepals.length).toBeGreaterThanOrEqual(2);
+    expect(el.querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(12);
+    for (const shape of Array.from(el.querySelectorAll('[fill^="url(#"]'))) {
+      expect(root.querySelector(`#${fillId(shape)}`)).not.toBeNull();
+    }
+  });
+
+  it('keeps every drawn point within 0.45x48 of the centre, reaching at least 0.38x48', () => {
+    const el = symbol('rosebud');
+    const [, , width] = viewBoxOf(el);
+    const center = width / 2;
+    let maxR = 0;
+    for (const path of Array.from(el.querySelectorAll('path'))) {
+      const transform = path.getAttribute('transform') ?? '';
+      for (const point of rawPoints(path.getAttribute('d') ?? '').map((p) => applyTransform(transform, p))) {
+        maxR = Math.max(maxR, Math.hypot(point[0] - center, point[1] - center));
+      }
+    }
+    const seat = el.querySelector('ellipse');
+    expect(seat).not.toBeNull();
+    const offset = Math.hypot(Number(seat!.getAttribute('cx')) - center, Number(seat!.getAttribute('cy')) - center);
+    maxR = Math.max(maxR, offset + Math.max(Number(seat!.getAttribute('rx')), Number(seat!.getAttribute('ry'))));
+    expect(maxR).toBeLessThanOrEqual(0.45 * width);
+    expect(maxR).toBeGreaterThanOrEqual(0.38 * width);
   });
 });
 

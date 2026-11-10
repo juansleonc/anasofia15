@@ -47,6 +47,7 @@ test.describe('Arch sprite', () => {
         'rose-cream',
         'peony-blush',
         'peony-ivory',
+        'rosebud',
         'blossom',
         'leaf-eucalyptus',
         'leaf-olive',
@@ -71,6 +72,7 @@ test.describe('Arch sprite', () => {
       'rose-cream': 1,
       'peony-blush': 1,
       'peony-ivory': 1,
+      rosebud: 1,
       blossom: 1,
       'leaf-eucalyptus': 1,
       'leaf-olive': 1,
@@ -139,6 +141,7 @@ const FLOWER_PETAL_FILLS: Record<string, string[]> = {
   'rose-cream': ['rose-cream-outer', 'rose-cream-mid', 'rose-cream-inner'],
   'peony-blush': ['peony-blush-outer', 'peony-blush-mid', 'peony-blush-inner'],
   'peony-ivory': ['peony-ivory-outer', 'peony-ivory-mid', 'peony-ivory-inner'],
+  rosebud: ['rose-pink-outer', 'rose-pink-mid'],
 };
 
 test.describe('Arch flowers have no halo', () => {
