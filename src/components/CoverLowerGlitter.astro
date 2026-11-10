@@ -1,0 +1,186 @@
+---
+// Lower-half atmosphere, added by the Nov 2026 "la mitad inferior se siente desaprovechada"
+// feedback pass: the gradient below the button read as empty, and the leaf/branch icons that used
+// to live down there are being removed by a parallel task — this is the "soft destellos y
+// confeti sutiles" the feedback asked for in their place. Three static-friendly pieces, all
+// aria-hidden/pointer-events:none and bounded to the cover itself:
+//   1. a warm light pool anchored at the bottom centre (static radial-gradient)
+//   2. a very faint dust texture over the lower ~45% of the cover (static, <=6% opacity)
+//   3. a soft glitter band: tiny twinkling light flecks (glow) growing denser toward the bottom
+//      edge, plus a few larger, static, blurred bokeh discs — see lowerGlitter() in
+//      lib/sparkles.ts for placement.
+// SSR'd from the seeded generator, same pattern as CoverSparkles — no client script, no
+// layout/paint cost beyond the first frame.
+//
+// Follow-up pass: the band used to start at 88%, which only covered the strip already below the
+// button. It now starts around the cover's own midpoint (LOWER_REGION_START_PCT) so the whole
+// lower half reads alive — the name and button are kept clear with fixed keep-out rects instead,
+// since this component has no client script and can't measure their rendered boxes. The rects
+// below are tuned against the actual rendered layout at 375x667, 390x844 and 1440x800 (measured
+// name/button boxes, each padded a few percent beyond their largest measured box).
+import { lowerGlitter, type KeepOutRect } from '../lib/sparkles';
+
+// Twinkling flecks are capped well under the e2e render-budget's running-animation allowance (see
+// cover.spec.ts) — bokeh discs are static on purpose so they never count against it.
+const FLAKE_COUNT = 12;
+const BOKEH_COUNT = 3;
+const SEED = 7421;
+
+const KEEP_OUT_RECTS: KeepOutRect[] = [
+  // The celebrant's name (and lead line above it).
+  { xPct: 8, yPct: 34, widthPct: 84, heightPct: 34 },
+  // The open-invitation button, padded beyond its measured box (contract: +12px).
+  { xPct: 10, yPct: 67, widthPct: 80, heightPct: 21 },
+];
+
+const particles = lowerGlitter({
+  flakeCount: FLAKE_COUNT,
+  bokehCount: BOKEH_COUNT,
+  seed: SEED,
+  keepOutRects: KEEP_OUT_RECTS,
+});
+
+const FLAKE_TONES = ['--c-white', '--c-champagne-100'];
+const BOKEH_TONES = ['--c-champagne-200', '--c-champagne-100'];
+---
+
+<div class="cover-lower-atmosphere" data-testid="cover-lower-atmosphere" aria-hidden="true">
+  <div class="cover-lower-light-pool" data-testid="cover-lower-light-pool"></div>
+  <div class="cover-lower-texture" data-testid="cover-lower-texture"></div>
+  <div class="cover-lower-glitter" data-testid="cover-lower-glitter">
+    {
+      particles.map((particle, index) => {
+        const vars =
+          `--sparkle-x:${particle.xPct}%;` +
+          `--sparkle-y:${particle.yPct}%;` +
+          `--sparkle-size:${particle.sizePx}px;` +
+          `--sparkle-delay:${particle.delayMs}ms;` +
+          `--sparkle-duration:${particle.durationMs}ms;`;
+
+        if (particle.kind === 'bokeh') {
+          const tone = BOKEH_TONES[index % BOKEH_TONES.length];
+          return (
+            <span
+              class="cover-lower-glitter__item cover-lower-glitter__bokeh"
+              data-lower-sparkle="bokeh"
+              style={`${vars}--sparkle-tone:var(${tone});`}
+            />
+          );
+        }
+
+        const tone = FLAKE_TONES[index % FLAKE_TONES.length];
+        return (
+          <span
+            class="cover-lower-glitter__item cover-lower-glitter__flake"
+            data-lower-sparkle="flake"
+            style={`${vars}--sparkle-tone:var(${tone});`}
+          />
+        );
+      })
+    }
+  </div>
+</div>
+
+<style>
+  .cover-lower-atmosphere {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Warm light cast up from the bottom centre — a gentle, static glow, never animated. */
+  .cover-lower-light-pool {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 42%;
+    background-image: radial-gradient(
+      ellipse 70% 65% at 50% 100%,
+      color-mix(in srgb, var(--c-champagne-200) 55%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  /* Very faint shimmering dust: two layered repeating-radial-gradient dot fields at a staggered
+     scale/offset so the texture doesn't read as a mechanical grid. Opacity kept at 5% (<=6% per
+     the feedback) and masked to fade out above the lower ~45% of the cover so it never reaches the
+     title/button block. Static — no animation needed or wanted here. */
+  .cover-lower-texture {
+    position: absolute;
+    inset: 55% 0 0 0;
+    opacity: 0.05;
+    background-image:
+      repeating-radial-gradient(
+        circle at 12% 18%,
+        var(--c-champagne-100) 0,
+        var(--c-champagne-100) 1px,
+        transparent 1.5px,
+        transparent 16px
+      ),
+      repeating-radial-gradient(
+        circle at 58% 64%,
+        var(--c-white) 0,
+        var(--c-white) 1px,
+        transparent 1.5px,
+        transparent 22px
+      );
+    mask-image: linear-gradient(to bottom, transparent 0%, var(--c-white) 40%, var(--c-white) 100%);
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      var(--c-white) 40%,
+      var(--c-white) 100%
+    );
+  }
+
+  .cover-lower-glitter {
+    position: absolute;
+    inset: 0;
+  }
+
+  .cover-lower-glitter__item {
+    position: absolute;
+    left: var(--sparkle-x);
+    top: var(--sparkle-y);
+    width: var(--sparkle-size);
+    height: var(--sparkle-size);
+    border-radius: 50%;
+  }
+
+  /* Tiny twinkling light fleck: a bright core fading straight to transparent, same soft-round
+     shape language as CoverSparkles's `glow` kind — no flat fill, no edge. */
+  .cover-lower-glitter__flake {
+    background: radial-gradient(circle, var(--sparkle-tone) 0%, transparent 72%);
+    animation-name: cover-lower-glitter-twinkle;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-delay: var(--sparkle-delay);
+    animation-duration: var(--sparkle-duration);
+  }
+
+  /* Larger, out-of-focus golden disc — static (no twinkle) so it reads as ambient bokeh light
+     rather than another blinking element, and stays outside the twinkling-element budget. */
+  .cover-lower-glitter__bokeh {
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--sparkle-tone) 45%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  @keyframes cover-lower-glitter-twinkle {
+    0%,
+    100% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover-lower-glitter__flake {
+      animation: none;
+    }
+  }
+</style>

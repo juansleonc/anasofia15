@@ -12,12 +12,45 @@
 // existing 4-point sparkle with a blurred radial-gradient halo behind it (no SVG filters), and
 // `bokeh` is a large, very faint out-of-focus disc. See src/lib/sparkles.ts for the Poisson-like
 // placement (denser near the arch/name, sparse at the bottom) and the lower, calmer count.
-import { scatterSparkles } from '../lib/sparkles';
+import { scatterSparkles, confettiSlivers, type KeepOutRect } from '../lib/sparkles';
 
 const SPARKLE_COUNT = 24;
 const SPARKLE_SEED = 2026;
 
 const sparkles = scatterSparkles({ count: SPARKLE_COUNT, seed: SPARKLE_SEED });
+
+// Static gold confetti slivers: the north-star reference's scattered thin ribbons,
+// kept out of the lead/name/button text. A distinct layer from the soft round glints above —
+// slivers are deliberately hard-edged, so they never join that round-only scatter. Rects mirror
+// the ones CoverLowerGlitter.astro passes for its own particles (tuned against the rendered
+// layout at 375x667/390x844/1440x800), padded a few extra percent so a rotated sliver's
+// diagonal — up to ~6px at its longest — never clips into the padded box.
+const SLIVER_COUNT = 8;
+const SLIVER_SEED = 31415;
+const SLIVER_KEEP_OUT_PAD_PCT = 3;
+
+const SLIVER_KEEP_OUT_RECTS: KeepOutRect[] = [
+  // The lead line and the celebrant's name.
+  {
+    xPct: 8 - SLIVER_KEEP_OUT_PAD_PCT,
+    yPct: 34 - SLIVER_KEEP_OUT_PAD_PCT,
+    widthPct: 84 + SLIVER_KEEP_OUT_PAD_PCT * 2,
+    heightPct: 34 + SLIVER_KEEP_OUT_PAD_PCT * 2,
+  },
+  // The open-invitation button.
+  {
+    xPct: 10 - SLIVER_KEEP_OUT_PAD_PCT,
+    yPct: 67 - SLIVER_KEEP_OUT_PAD_PCT,
+    widthPct: 80 + SLIVER_KEEP_OUT_PAD_PCT * 2,
+    heightPct: 21 + SLIVER_KEEP_OUT_PAD_PCT * 2,
+  },
+];
+
+const slivers = confettiSlivers({
+  count: SLIVER_COUNT,
+  seed: SLIVER_SEED,
+  keepOutRects: SLIVER_KEEP_OUT_RECTS,
+});
 
 // Cycles each kind across a couple of warm-light tones so the scatter reads as varied glow rather
 // than one flat color repeated 24 times. Glow's core alternates bright white and champagne-100 —
@@ -73,6 +106,16 @@ const BOKEH_TONES = ['--c-champagne-100', '--c-champagne-200'];
           style={`${vars}--sparkle-tone:var(${tone});`}
         />
       );
+    })
+  }
+  {
+    slivers.map((sliver) => {
+      const vars =
+        `--sliver-x:${sliver.xPct}%;` +
+        `--sliver-y:${sliver.yPct}%;` +
+        `--sliver-length:${sliver.sizePx}px;` +
+        `--sliver-rotate:${sliver.rotateDeg}deg;`;
+      return <span class="cover-sparkles__sliver" data-confetti="sliver" style={vars} />;
     })
   }
 </div>
@@ -161,5 +204,20 @@ const BOKEH_TONES = ['--c-champagne-100', '--c-champagne-200'];
     .cover-sparkles__item {
       animation: none;
     }
+  }
+
+  /* Static gold confetti sliver: a thin foil ribbon, fixed width, rotated — intentionally
+     hard-edged (not a soft light), so it stays its own shape language and is never animated
+     no animation, so it costs nothing against the running-animation budget). */
+  .cover-sparkles__sliver {
+    position: absolute;
+    left: var(--sliver-x);
+    top: var(--sliver-y);
+    width: 2px;
+    height: var(--sliver-length);
+    border-radius: 1px;
+    transform: rotate(var(--sliver-rotate));
+    background-image: linear-gradient(180deg, var(--c-champagne-300), var(--c-champagne-500));
+    opacity: 0.7;
   }
 </style>
