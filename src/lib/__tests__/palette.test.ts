@@ -192,23 +192,12 @@ describe('palette discipline', () => {
     expect(luminance).toBeLessThanOrEqual(0.183);
   });
 
-  it("keeps the open button's relief off the retired wine token (round-3 follow-up)", () => {
-    // The fill moved off wine in an earlier pass (N11), but the relief's inset/outer shadows and
-    // the label's text-shadow still mixed in `--c-wine-700`, leaving a dark wine undertone under
-    // the lighter rose fill — the thing round-3 feedback called "heavy". None of the button rules
-    // may reference either retired wine token any more.
-    const coverAstro = readFileSync(join(SRC_DIR, 'sections', 'Cover.astro'), 'utf8');
-
-    expect(coverAstro).not.toContain('--c-wine-500');
-    expect(coverAstro).not.toContain('--c-wine-700');
-  });
-
-  it('the name stays readable on the warm glow', () => {
+  it('the deep wine name reads strongly on the warm glow', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
 
     expect(
-      contrastRatio(tokens['--c-rose-700'], tokens['--c-champagne-100']),
-    ).toBeGreaterThanOrEqual(4.5);
+      contrastRatio(tokens['--c-wine-700'], tokens['--c-champagne-100']),
+    ).toBeGreaterThanOrEqual(7);
   });
 });

@@ -553,6 +553,15 @@ test.describe('Cover section', () => {
     expect(nameFontSize1440).toBeGreaterThanOrEqual(96);
   });
 
+  test('the name is deep wine', async ({ page }) => {
+    await page.goto('./');
+
+    const color = await page
+      .getByTestId('cover-celebrant-name')
+      .evaluate((el) => getComputedStyle(el).color);
+    expect(color).toBe('rgb(110, 36, 64)');
+  });
+
   test('the lead line is large enough to read at 375 and scales up further on desktop', async ({
     page,
   }) => {
