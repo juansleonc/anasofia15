@@ -405,9 +405,9 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     padding: clamp(1.1rem, 1vw + 0.85rem, 1.5rem) clamp(2.75rem, 6vw, 4rem);
     border: 2px solid var(--c-champagne-500);
     border-radius: 999px;
-    /* Sheen first so it paints over the wine gradient underneath (both wine stops stay in the
+    /* Sheen first so it paints over the rose gradient underneath (both rose stops stay in the
        computed `background-image`, just with a translucent highlight laid on top). */
-    background: var(--gradient-button-sheen), var(--gradient-button-wine);
+    background: var(--gradient-button-sheen), var(--gradient-button-rose);
     /* Relief stack, named so the pulse keyframes below can reuse it instead of repeating it:
        bevel highlight (top inset), inner shadow (bottom inset, gives the pill its "pressed-in"
        depth), a gold outer ring (double rim with the solid border), a tight contact shadow, a
@@ -416,7 +416,7 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
       inset 0 -3px 6px color-mix(in srgb, var(--c-wine-700) 75%, var(--c-ink)),
       0 0 0 1px color-mix(in srgb, var(--c-champagne-300) 70%, transparent),
       0 2px 3px color-mix(in srgb, var(--c-wine-700) 35%, transparent),
-      0 10px 22px -10px color-mix(in srgb, var(--c-wine-700) 45%, transparent), var(--shadow-button-wine);
+      0 10px 22px -10px color-mix(in srgb, var(--c-wine-700) 45%, transparent), var(--shadow-button-rose);
     box-shadow: var(--cover-button-shadow);
     color: var(--c-white);
     /* 1.25rem (20px) floor at a 375px viewport, growing toward 1.5rem on wider screens. */
@@ -446,7 +446,7 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     --cover-button-shadow: inset 0 1px 0 color-mix(in srgb, var(--c-champagne-100) 60%, transparent),
       inset 0 -5px 9px color-mix(in srgb, var(--c-wine-700) 85%, var(--c-ink)),
       0 0 0 1px color-mix(in srgb, var(--c-champagne-300) 70%, transparent),
-      0 1px 2px color-mix(in srgb, var(--c-wine-700) 35%, transparent), var(--shadow-button-wine);
+      0 1px 2px color-mix(in srgb, var(--c-wine-700) 35%, transparent), var(--shadow-button-rose);
   }
 
   /* Soft expanding champagne-gold ring, layered on top of the resting shadow so the shadow never

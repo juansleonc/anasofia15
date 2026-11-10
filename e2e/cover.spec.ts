@@ -169,7 +169,7 @@ test.describe('Cover section', () => {
     await expect(page.getByRole('button', { name: 'Abrir invitación' })).toBeVisible();
   });
 
-  test('the open button is a wine pill with a champagne-gold border', async ({ page }) => {
+  test('the open button is a dusty-rose pill with a champagne-gold border', async ({ page }) => {
     await page.goto('./');
 
     const button = page.getByRole('button', { name: 'Abrir invitación' });
@@ -187,9 +187,11 @@ test.describe('Cover section', () => {
       };
     });
 
-    // Anchored on the darker wine stop only (not the lighter one) so the white label clears
-    // 7:1 contrast against it — see palette.test.ts for the measured ratio.
-    expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
+    // Lighter dusty-rose fill (round-3 feedback: the wine fill read as too heavy/dark against the
+    // pastel palette) — bottom stop is the bare --c-rose-700 token; no wine rgb survives. See
+    // palette.test.ts for the measured contrast/luminance.
+    expect(styles.backgroundImage).toContain('rgb(158, 74, 99)');
+    expect(styles.backgroundImage).not.toContain('rgb(110, 36, 64)');
     expect(styles.backgroundImage).not.toContain('rgb(154, 68, 98)');
     expect(styles.borderTopColor).toBe('rgb(205, 168, 105)');
     expect(styles.borderRightColor).toBe('rgb(205, 168, 105)');
@@ -215,7 +217,8 @@ test.describe('Cover section', () => {
 
     const gradientCount = (styles.backgroundImage.match(/[a-z-]+-gradient\(/gi) ?? []).length;
     expect(gradientCount).toBeGreaterThanOrEqual(2);
-    expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
+    expect(styles.backgroundImage).toContain('rgb(158, 74, 99)');
+    expect(styles.backgroundImage).not.toContain('rgb(110, 36, 64)');
     expect(styles.backgroundImage).not.toContain('rgb(154, 68, 98)');
 
     // Split the resolved `box-shadow` on top-level commas only — a layer's own colour may be an
