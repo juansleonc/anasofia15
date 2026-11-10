@@ -232,4 +232,70 @@ test.describe('Cover section', () => {
       expect(new URL(url).origin).toBe(pageOrigin);
     }
   });
+
+  test('a thin gold frame surrounds the cover', async ({ page }) => {
+    await page.goto('./');
+
+    const frame = page.getByTestId('cover-frame');
+    await expect(frame).toHaveAttribute('aria-hidden', 'true');
+
+    const styles = await frame.evaluate((el) => {
+      const computed = getComputedStyle(el);
+      return {
+        pointerEvents: computed.pointerEvents,
+        borderTopColor: computed.borderTopColor,
+        borderRightColor: computed.borderRightColor,
+        borderBottomColor: computed.borderBottomColor,
+        borderLeftColor: computed.borderLeftColor,
+        borderTopWidth: parseFloat(computed.borderTopWidth),
+        borderRadius: parseFloat(computed.borderTopLeftRadius),
+      };
+    });
+
+    expect(styles.pointerEvents).toBe('none');
+    expect(styles.borderTopColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderRightColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderBottomColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderLeftColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderTopWidth).toBeGreaterThanOrEqual(0.5);
+    expect(styles.borderTopWidth).toBeLessThanOrEqual(2.5);
+    expect(styles.borderRadius).toBeGreaterThanOrEqual(12);
+  });
+
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`the frame sits inside the viewport and around the text at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const frameBox = await page.getByTestId('cover-frame').boundingBox();
+      expect(frameBox).not.toBeNull();
+      const frame = frameBox!;
+
+      expect(frame.x).toBeGreaterThanOrEqual(4);
+      expect(frame.x).toBeLessThanOrEqual(32);
+      expect(viewport.width - (frame.x + frame.width)).toBeGreaterThanOrEqual(4);
+      expect(viewport.width - (frame.x + frame.width)).toBeLessThanOrEqual(32);
+      expect(frame.y).toBeGreaterThanOrEqual(4);
+      expect(frame.y).toBeLessThanOrEqual(32);
+      expect(frame.y + frame.height).toBeLessThanOrEqual(viewport.height);
+
+      const margin = 8;
+      for (const testId of ['cover-title-lead', 'cover-celebrant-name', 'open-invitation-button']) {
+        const box = await page.getByTestId(testId).boundingBox();
+        expect(box).not.toBeNull();
+        const rect = box!;
+
+        expect(rect.x).toBeGreaterThanOrEqual(frame.x + margin);
+        expect(rect.x + rect.width).toBeLessThanOrEqual(frame.x + frame.width - margin);
+        expect(rect.y).toBeGreaterThanOrEqual(frame.y + margin);
+        expect(rect.y + rect.height).toBeLessThanOrEqual(frame.y + frame.height - margin);
+      }
+    });
+  }
 });
