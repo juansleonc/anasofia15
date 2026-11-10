@@ -460,11 +460,13 @@ describe('footprint contract', () => {
     expect(reach).toBeLessThanOrEqual(width / 2);
   });
 
-  it.each(CLUSTER_IDS)('%s is a 120x120 square rooted near (60, 114), with every drawn point inside it', (id) => {
+  const CLUSTER_STEM_COUNT: Record<string, number> = { 'leaf-laurel-cluster': 5, 'leaf-eucalyptus-cluster': 4 };
+
+  it.each(CLUSTER_IDS)('%s is rooted near (60, 114), with every drawn point within 0.5x120 of its centre', (id) => {
     const el = symbol(id);
     expect(el.getAttribute('viewBox')).toBe('0 0 120 120');
     const stems = clusterStems(el);
-    expect(stems.length).toBe(3);
+    expect(stems.length).toBe(CLUSTER_STEM_COUNT[id]);
     for (const stem of stems) {
       const [start] = stemEnds(stem.getAttribute('d') ?? '');
       expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
@@ -472,10 +474,7 @@ describe('footprint contract', () => {
     for (const path of Array.from(el.querySelectorAll('path'))) {
       const transform = path.getAttribute('transform') ?? '';
       for (const point of rawPoints(path.getAttribute('d') ?? '').map((p) => applyTransform(transform, p))) {
-        expect(point[0]).toBeGreaterThanOrEqual(0);
-        expect(point[0]).toBeLessThanOrEqual(120);
-        expect(point[1]).toBeGreaterThanOrEqual(0);
-        expect(point[1]).toBeLessThanOrEqual(120);
+        expect(Math.hypot(point[0] - 60, point[1] - 60)).toBeLessThanOrEqual(60);
       }
     }
   });
@@ -1079,34 +1078,38 @@ describe('ArchSprite foliage', () => {
 });
 
 describe('ArchSprite foliage clusters', () => {
-  it('the laurel cluster has >= 15 leaves on 3 stems from one root, >= 30% gold', () => {
+  it('the laurel cluster has 5 stems from one root, >= 28 leaves, >= 30% gold, >= 2 gilt, <= 42 elements', () => {
     const el = symbol('leaf-laurel-cluster');
     const stems = clusterStems(el);
-    expect(stems.length).toBe(3);
+    expect(stems.length).toBe(5);
     for (const stem of stems) {
       const [start] = stemEnds(stem.getAttribute('d') ?? '');
       expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
     }
     const leaves = Array.from(el.querySelectorAll('[fill="url(#leaf-olive-gradient)"], [fill="url(#leaf-gold-metal)"]'));
-    expect(leaves.length).toBeGreaterThanOrEqual(15);
+    expect(leaves.length).toBeGreaterThanOrEqual(28);
     const gold = leaves.filter((leaf) => leaf.getAttribute('fill') === 'url(#leaf-gold-metal)');
     expect(gold.length / leaves.length).toBeGreaterThanOrEqual(0.3);
+    const gilt = leaves.filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
+    expect(gilt.length).toBeGreaterThanOrEqual(2);
+    expect(el.querySelectorAll('path').length).toBeLessThanOrEqual(42);
   });
 
-  it('the eucalyptus cluster has >= 14 round leaves on 3 stems, >= 2 gold and >= 2 gilt', () => {
+  it('the eucalyptus cluster has 4 stems, >= 20 round leaves, >= 4 gold, >= 2 gilt, <= 36 elements', () => {
     const el = symbol('leaf-eucalyptus-cluster');
     const stems = clusterStems(el);
-    expect(stems.length).toBe(3);
+    expect(stems.length).toBe(4);
     for (const stem of stems) {
       const [start] = stemEnds(stem.getAttribute('d') ?? '');
       expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
     }
     const leaves = Array.from(el.querySelectorAll('ellipse[fill="url(#leaf-eucalyptus-gradient)"], ellipse[fill="url(#leaf-gold-metal)"]'));
-    expect(leaves.length).toBeGreaterThanOrEqual(14);
+    expect(leaves.length).toBeGreaterThanOrEqual(20);
     const gold = leaves.filter((leaf) => leaf.getAttribute('fill') === 'url(#leaf-gold-metal)');
-    expect(gold.length).toBeGreaterThanOrEqual(2);
+    expect(gold.length).toBeGreaterThanOrEqual(4);
     const gilt = leaves.filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
     expect(gilt.length).toBeGreaterThanOrEqual(2);
+    expect(el.querySelectorAll('ellipse').length).toBeLessThanOrEqual(36);
   });
 });
 
