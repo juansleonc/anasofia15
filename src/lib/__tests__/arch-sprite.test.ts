@@ -100,7 +100,7 @@ const PEARL_BALLOONS = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-c
 const BRANCH_IDS = ['leaf-olive', 'leaf-gold'];
 const BRANCH_LEAF_GRADIENT: Record<string, string> = { 'leaf-olive': 'leaf-olive-gradient', 'leaf-gold': 'leaf-gold-metal' };
 const LEAF_IDS = ['leaf-eucalyptus', 'leaf-olive', 'leaf-gold'];
-const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom'];
+const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom', 'rosebud'];
 const CLUSTER_IDS = ['leaf-laurel-cluster', 'leaf-eucalyptus-cluster'];
 
 /** Both ends of a single stem path drawn with M plus absolute C or relative c curves. */
@@ -460,11 +460,13 @@ describe('footprint contract', () => {
     expect(reach).toBeLessThanOrEqual(width / 2);
   });
 
-  it.each(CLUSTER_IDS)('%s is a 120x120 square rooted near (60, 114), with every drawn point inside it', (id) => {
+  const CLUSTER_STEM_COUNT: Record<string, number> = { 'leaf-laurel-cluster': 5, 'leaf-eucalyptus-cluster': 4 };
+
+  it.each(CLUSTER_IDS)('%s is rooted near (60, 114), with every drawn point within 0.5x120 of its centre', (id) => {
     const el = symbol(id);
     expect(el.getAttribute('viewBox')).toBe('0 0 120 120');
     const stems = clusterStems(el);
-    expect(stems.length).toBe(3);
+    expect(stems.length).toBe(CLUSTER_STEM_COUNT[id]);
     for (const stem of stems) {
       const [start] = stemEnds(stem.getAttribute('d') ?? '');
       expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
@@ -472,10 +474,7 @@ describe('footprint contract', () => {
     for (const path of Array.from(el.querySelectorAll('path'))) {
       const transform = path.getAttribute('transform') ?? '';
       for (const point of rawPoints(path.getAttribute('d') ?? '').map((p) => applyTransform(transform, p))) {
-        expect(point[0]).toBeGreaterThanOrEqual(0);
-        expect(point[0]).toBeLessThanOrEqual(120);
-        expect(point[1]).toBeGreaterThanOrEqual(0);
-        expect(point[1]).toBeLessThanOrEqual(120);
+        expect(Math.hypot(point[0] - 60, point[1] - 60)).toBeLessThanOrEqual(60);
       }
     }
   });
@@ -620,14 +619,61 @@ function veinPath(el: Element, minSubpaths: number): Element | undefined {
   );
 }
 
+const PETAL_FILL_IDS_BY_FLOWER: Record<string, string[]> = {
+  'rose-pink': roseRingGradientIds('rose-pink'),
+  'rose-cream': roseRingGradientIds('rose-cream'),
+  'peony-blush': peonyRingGradientIds('peony-blush'),
+  'peony-ivory': peonyRingGradientIds('peony-ivory'),
+  blossom: ['blossom-petal'],
+  rosebud: ['rose-pink-outer', 'rose-pink-mid'],
+};
+
+/** A petal path's raw (numeric-pair) points, carried through every ancestor `transform` — its own
+ *  `rotate`, and any wrapping `<g transform="translate(…)">` — up to (but excluding) the flower's
+ *  own `<symbol>`, so the result sits in the symbol's own coordinate space no matter how the petal
+ *  is nested. */
+function petalPointsInSymbolSpace(symbolEl: Element, petal: Element): Point[] {
+  return rawPoints(petal.getAttribute('d') ?? '').map((point) => {
+    let p = point;
+    for (let el: Element | null = petal; el && el !== symbolEl; el = el.parentElement) {
+      const t = el.getAttribute('transform');
+      if (t) p = applyTransform(t, p);
+    }
+    return p;
+  });
+}
+
+/** A flower's outermost petal radius: the farthest any petal point (anchors and control points)
+ *  lies from the bloom centre — an intentional overestimate, since a cubic curve's true edge sits
+ *  inside its control polygon. */
+function outermostPetalRadius(id: string): number {
+  const el = symbol(id);
+  const [, , width, height] = viewBoxOf(el);
+  const center: Point = [width / 2, height / 2];
+  let max = 0;
+  for (const petal of petalPaths(el, PETAL_FILL_IDS_BY_FLOWER[id])) {
+    for (const point of petalPointsInSymbolSpace(el, petal)) {
+      max = Math.max(max, Math.hypot(point[0] - center[0], point[1] - center[1]));
+    }
+  }
+  return max;
+}
+
 describe('ArchSprite flower seat shadow', () => {
-  it('shares one soft rose-700 seat-shadow gradient fading from 28% to nothing', () => {
+  it('shares one soft rose-700 seat-shadow gradient fading to nothing before its own edge', () => {
     const seat = gradient('flower-seat-shadow');
     expect(seat.tagName.toLowerCase()).toBe('radialgradient');
     const stops = Array.from(seat.querySelectorAll('stop'));
     for (const style of stopColors(seat)) expect(style).toMatch(/var\(--c-rose-700\)/);
-    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.28);
-    expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.26);
+    const midStop = stops.find((stop) => parseFloat(stop.getAttribute('offset') ?? '') === 55);
+    expect(midStop).not.toBeUndefined();
+    expect(Number(midStop!.getAttribute('stop-opacity'))).toBeCloseTo(0.12);
+    for (const stop of stops) {
+      if (parseFloat(stop.getAttribute('offset') ?? '') >= 88) {
+        expect(Number(stop.getAttribute('stop-opacity'))).toBe(0);
+      }
+    }
   });
 
   it.each(FLOWER_IDS)('%s starts with a seat-shadow ellipse offset down and right', (id) => {
@@ -639,31 +685,21 @@ describe('ArchSprite flower seat shadow', () => {
     expect(Number(first.getAttribute('cx'))).toBeGreaterThan(width / 2);
     expect(Number(first.getAttribute('cy'))).toBeGreaterThan(height / 2);
   });
-});
 
-describe('ArchSprite flower rim occlusion', () => {
-  it('shares one rose-700 rim-occlusion gradient, transparent up to 62% then 0.22 at the rim', () => {
-    const occ = gradient('flower-occlusion');
-    expect(occ.tagName.toLowerCase()).toBe('radialgradient');
-    const stops = Array.from(occ.querySelectorAll('stop'));
-    for (const style of stopColors(occ)) expect(style).toMatch(/var\(--c-rose-700\)/);
-    expect(Number(stops[0].getAttribute('stop-opacity'))).toBe(0);
-    const midStop = stops.find((stop) => parseFloat(stop.getAttribute('offset') ?? '') === 62);
-    expect(midStop).not.toBeUndefined();
-    expect(Number(midStop!.getAttribute('stop-opacity'))).toBe(0);
-    expect(Number(stops[stops.length - 1].getAttribute('stop-opacity'))).toBeCloseTo(0.22);
+  it.each(FLOWER_IDS)('%s paints no shadow beyond 1.06x its outermost petal', (id) => {
+    const el = symbol(id);
+    const seat = el.querySelector('ellipse[fill="url(#flower-seat-shadow)"]');
+    expect(seat).not.toBeNull();
+    const [, , width, height] = viewBoxOf(el);
+    const center: Point = [width / 2, height / 2];
+    const offset = Math.hypot(Number(seat!.getAttribute('cx')) - center[0], Number(seat!.getAttribute('cy')) - center[1]);
+    const reach = offset + Math.max(Number(seat!.getAttribute('rx')), Number(seat!.getAttribute('ry')));
+    expect(reach).toBeLessThanOrEqual(1.06 * outermostPetalRadius(id));
   });
 
-  it.each([...ROSE_IDS, ...PEONY_IDS])('%s ends with a rim-occlusion circle inside its inscribed circle', (id) => {
-    const el = symbol(id);
-    const last = el.lastElementChild!;
-    expect(last.tagName.toLowerCase()).toBe('circle');
-    expect(last.getAttribute('fill')).toBe('url(#flower-occlusion)');
-    const [, , width] = viewBoxOf(el);
-    const cx = Number(last.getAttribute('cx'));
-    const cy = Number(last.getAttribute('cy'));
-    const r = Number(last.getAttribute('r'));
-    expect(Math.hypot(cx - width / 2, cy - width / 2) + r).toBeLessThanOrEqual(width / 2);
+  it('no flower uses a rim-occlusion fill', () => {
+    expect(root.querySelector('#flower-occlusion')).toBeNull();
+    expect(root.querySelector('[fill="url(#flower-occlusion)"]')).toBeNull();
   });
 });
 
@@ -1042,34 +1078,72 @@ describe('ArchSprite foliage', () => {
 });
 
 describe('ArchSprite foliage clusters', () => {
-  it('the laurel cluster has >= 15 leaves on 3 stems from one root, >= 30% gold', () => {
+  it('the laurel cluster has 5 stems from one root, >= 28 leaves, >= 30% gold, >= 2 gilt, <= 42 elements', () => {
     const el = symbol('leaf-laurel-cluster');
     const stems = clusterStems(el);
-    expect(stems.length).toBe(3);
+    expect(stems.length).toBe(5);
     for (const stem of stems) {
       const [start] = stemEnds(stem.getAttribute('d') ?? '');
       expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
     }
     const leaves = Array.from(el.querySelectorAll('[fill="url(#leaf-olive-gradient)"], [fill="url(#leaf-gold-metal)"]'));
-    expect(leaves.length).toBeGreaterThanOrEqual(15);
+    expect(leaves.length).toBeGreaterThanOrEqual(28);
     const gold = leaves.filter((leaf) => leaf.getAttribute('fill') === 'url(#leaf-gold-metal)');
     expect(gold.length / leaves.length).toBeGreaterThanOrEqual(0.3);
+    const gilt = leaves.filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
+    expect(gilt.length).toBeGreaterThanOrEqual(2);
+    expect(el.querySelectorAll('path').length).toBeLessThanOrEqual(42);
   });
 
-  it('the eucalyptus cluster has >= 14 round leaves on 3 stems, >= 2 gold and >= 2 gilt', () => {
+  it('the eucalyptus cluster has 4 stems, >= 20 round leaves, >= 4 gold, >= 2 gilt, <= 36 elements', () => {
     const el = symbol('leaf-eucalyptus-cluster');
     const stems = clusterStems(el);
-    expect(stems.length).toBe(3);
+    expect(stems.length).toBe(4);
     for (const stem of stems) {
       const [start] = stemEnds(stem.getAttribute('d') ?? '');
       expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
     }
     const leaves = Array.from(el.querySelectorAll('ellipse[fill="url(#leaf-eucalyptus-gradient)"], ellipse[fill="url(#leaf-gold-metal)"]'));
-    expect(leaves.length).toBeGreaterThanOrEqual(14);
+    expect(leaves.length).toBeGreaterThanOrEqual(20);
     const gold = leaves.filter((leaf) => leaf.getAttribute('fill') === 'url(#leaf-gold-metal)');
-    expect(gold.length).toBeGreaterThanOrEqual(2);
+    expect(gold.length).toBeGreaterThanOrEqual(4);
     const gilt = leaves.filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
     expect(gilt.length).toBeGreaterThanOrEqual(2);
+    expect(el.querySelectorAll('ellipse').length).toBeLessThanOrEqual(36);
+  });
+});
+
+describe('ArchSprite rosebud', () => {
+  it('is a furled bud with sepals, drawn only from existing gradients', () => {
+    const el = symbol('rosebud');
+    const fillId = (shape: Element): string => (shape.getAttribute('fill') ?? '').replace(/^url\(#(.+)\)$/, '$1');
+    const petals = Array.from(el.querySelectorAll('path')).filter((path) => ['rose-pink-outer', 'rose-pink-mid'].includes(fillId(path)));
+    expect(petals.length).toBeGreaterThanOrEqual(2);
+    const sepals = Array.from(el.querySelectorAll('[fill="url(#leaf-olive-gradient)"]'));
+    expect(sepals.length).toBeGreaterThanOrEqual(2);
+    expect(el.querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(12);
+    for (const shape of Array.from(el.querySelectorAll('[fill^="url(#"]'))) {
+      expect(root.querySelector(`#${fillId(shape)}`)).not.toBeNull();
+    }
+  });
+
+  it('keeps every drawn point within 0.45x48 of the centre, reaching at least 0.38x48', () => {
+    const el = symbol('rosebud');
+    const [, , width] = viewBoxOf(el);
+    const center = width / 2;
+    let maxR = 0;
+    for (const path of Array.from(el.querySelectorAll('path'))) {
+      const transform = path.getAttribute('transform') ?? '';
+      for (const point of rawPoints(path.getAttribute('d') ?? '').map((p) => applyTransform(transform, p))) {
+        maxR = Math.max(maxR, Math.hypot(point[0] - center, point[1] - center));
+      }
+    }
+    const seat = el.querySelector('ellipse');
+    expect(seat).not.toBeNull();
+    const offset = Math.hypot(Number(seat!.getAttribute('cx')) - center, Number(seat!.getAttribute('cy')) - center);
+    maxR = Math.max(maxR, offset + Math.max(Number(seat!.getAttribute('rx')), Number(seat!.getAttribute('ry'))));
+    expect(maxR).toBeLessThanOrEqual(0.45 * width);
+    expect(maxR).toBeGreaterThanOrEqual(0.38 * width);
   });
 });
 
