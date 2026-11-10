@@ -621,12 +621,12 @@ function veinPath(el: Element, minSubpaths: number): Element | undefined {
 }
 
 describe('ArchSprite flower seat shadow', () => {
-  it('shares one soft rose-700 seat-shadow gradient fading from 18% to nothing', () => {
+  it('shares one soft rose-700 seat-shadow gradient fading from 28% to nothing', () => {
     const seat = gradient('flower-seat-shadow');
     expect(seat.tagName.toLowerCase()).toBe('radialgradient');
     const stops = Array.from(seat.querySelectorAll('stop'));
     for (const style of stopColors(seat)) expect(style).toMatch(/var\(--c-rose-700\)/);
-    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.18);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.28);
     expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
   });
 
