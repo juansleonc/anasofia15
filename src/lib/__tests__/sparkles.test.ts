@@ -314,18 +314,17 @@ describe('lowerGlitter', () => {
 
 describe('fallingConfetti', () => {
   function pieces(seed = 1515) {
-    return fallingConfetti({ ribbons: 12, glitter: 6, seed });
+    return fallingConfetti({ ribbons: 12, seed });
   }
 
-  it('returns the requested ribbons first, then the glitter specks', () => {
+  it('returns only ribbons — falling glitter moved to the drift set', () => {
     const confetti = pieces();
-    expect(confetti).toHaveLength(18);
-    expect(confetti.filter((piece) => piece.kind === 'ribbon')).toHaveLength(12);
-    expect(confetti.filter((piece) => piece.kind === 'glitter')).toHaveLength(6);
+    expect(confetti).toHaveLength(12);
+    expect(confetti.every((piece) => piece.kind === 'ribbon')).toBe(true);
   });
 
-  it('returns nothing for non-positive counts', () => {
-    expect(fallingConfetti({ ribbons: 0, glitter: -2, seed: 1 })).toHaveLength(0);
+  it('returns nothing for a non-positive count', () => {
+    expect(fallingConfetti({ ribbons: 0, seed: 1 })).toHaveLength(0);
   });
 
   it('falls gently: 9-15s per fall, already mid-fall at load', () => {

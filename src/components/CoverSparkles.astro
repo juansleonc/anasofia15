@@ -25,6 +25,13 @@ const sparkles = scatterSparkles({ count: SPARKLE_COUNT, seed: SPARKLE_SEED });
 const GLOW_TONES = ['--c-white', '--c-champagne-100'];
 const STAR_HALO_TONES = ['--c-champagne-200', '--c-champagne-100'];
 const BOKEH_TONES = ['--c-champagne-100', '--c-champagne-200'];
+
+// Round-5 light-budget pass: half of the glow dots free up a running-animation slot for the new
+// drift layer (see lib/sparkles.ts `driftingSparkles`) without losing any particle — they just
+// stop twinkling and sit as a calm, static point of light instead. Counted per-glow (not per
+// overall index) so exactly half of the glow kind turns static regardless of its position among
+// the stars/bokeh.
+let glowIndex = 0;
 ---
 
 <div class="cover-sparkles" data-testid="cover-sparkles" aria-hidden="true">
@@ -66,10 +73,13 @@ const BOKEH_TONES = ['--c-champagne-100', '--c-champagne-200'];
       }
 
       const tone = GLOW_TONES[index % GLOW_TONES.length];
+      const isStatic = glowIndex % 2 === 1;
+      glowIndex++;
       return (
         <span
           class="cover-sparkles__item cover-sparkles__glow"
           data-sparkle="glow"
+          data-sparkle-static={isStatic ? '' : undefined}
           style={`${vars}--sparkle-tone:var(${tone});`}
         />
       );
@@ -132,6 +142,12 @@ const BOKEH_TONES = ['--c-champagne-100', '--c-champagne-200'];
       color-mix(in srgb, var(--sparkle-tone) 70%, transparent) 0%,
       transparent 72%
     );
+  }
+
+  /* Half the glow dots stay static (a calm point of light, not a blinking one) to free a
+     running-animation slot for the garland-to-centre drift layer. */
+  .cover-sparkles__glow[data-sparkle-static] {
+    animation: none;
   }
 
   /* Out-of-focus light rather than a hard shape: a soft radial disc, no stroke/edge. Static, so

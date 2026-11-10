@@ -7,10 +7,9 @@
 import { fallingConfetti, RIBBON_WIDTH_PX } from '../lib/sparkles';
 
 const RIBBON_COUNT = 12;
-const GLITTER_COUNT = 6;
 const SEED = 1515;
 
-const pieces = fallingConfetti({ ribbons: RIBBON_COUNT, glitter: GLITTER_COUNT, seed: SEED });
+const pieces = fallingConfetti({ ribbons: RIBBON_COUNT, seed: SEED });
 
 // Soft static bokeh along the garland's lower edge and in the side gutters beside the text block,
 // clear of the lead, name and button at portrait and landscape: [x %, y %, diameter px, opacity].
@@ -103,19 +102,6 @@ function round(value: number): string {
       var(--c-champagne-300),
       var(--c-champagne-500) 55%,
       var(--c-champagne-700)
-    );
-  }
-
-  /* A soft speck of light, never a hard chip. */
-  .cover-confetti__glitter {
-    width: var(--confetti-length);
-    height: var(--confetti-length);
-    border-radius: 50%;
-    background-image: radial-gradient(
-      circle,
-      var(--c-white) 0%,
-      var(--c-champagne-300) 45%,
-      transparent 72%
     );
   }
 
