@@ -63,15 +63,6 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
     fadeStart: 340,
     clear: { x0: 38, x1: 362, top: 264, crown: 208 },
     items: [
-      { symbol: 'leaf-olive', x: 100, y: 40, size: 70, rotate: -30, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 18, y: 120, size: 90, rotate: -60, depth: 0 },
-      { symbol: 'leaf-olive', x: 22, y: 175, size: 80, rotate: -110, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 290, y: 10, size: 70, rotate: 25, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 384, y: 120, size: 90, rotate: 60, depth: 0 },
-      { symbol: 'leaf-olive', x: 380, y: 180, size: 80, rotate: 110, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 160.7, y: 56.3, size: 70, rotate: -60, depth: 0 },
-      { symbol: 'leaf-olive', x: 183.3, y: 64.3, size: 70, rotate: 60, depth: 0 },
-      { symbol: 'leaf-olive', x: 239.8, y: 53.6, size: 70, rotate: -15, depth: 0 },
       // laurel/eucalyptus clusters rooted inside the corner balloons (behind them, depth 0),
       // fanning outward; eucalyptus doubled up at each corner because the laurel cluster art
       // reads thin on its own
@@ -129,18 +120,6 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
     fadeStart: 560,
     clear: { x0: 360, x1: 1080, top: 324, crown: 230 },
     items: [
-      { symbol: 'leaf-eucalyptus', x: 41.5, y: 188, size: 149.6, rotate: -65, depth: 0 },
-      { symbol: 'leaf-olive', x: 57.1, y: 240, size: 132, rotate: -100, depth: 0 },
-      { symbol: 'leaf-olive', x: 435.8, y: 32, size: 96.8, rotate: 30, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 1421.4, y: 208, size: 140.8, rotate: 65, depth: 0 },
-      { symbol: 'leaf-olive', x: 1416.2, y: 256, size: 132, rotate: 100, depth: 0 },
-      { symbol: 'leaf-olive', x: 1073.8, y: 96, size: 88, rotate: 60, depth: 0 },
-      { symbol: 'leaf-olive', x: 798.9, y: 140, size: 79.2, rotate: -60, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 197.1, y: 32, size: 114.4, rotate: -35, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 1338.4, y: 48, size: 105.6, rotate: 40, depth: 0 },
-      { symbol: 'leaf-olive', x: 862.9, y: 35.2, size: 110, rotate: 60, depth: 0 },
-      { symbol: 'leaf-olive', x: 907.1, y: 35.2, size: 110, rotate: -60, depth: 0 },
-      { symbol: 'leaf-olive', x: 1110.7, y: 100.8, size: 130, rotate: 60, depth: 0 },
       // laurel/eucalyptus clusters rooted inside the corner balloons (behind them, depth 0),
       // fanning outward
       { symbol: 'leaf-eucalyptus-cluster', x: -68.47, y: 171.27, size: 260, rotate: -125, depth: 0 },
@@ -190,7 +169,6 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'balloon-champagne-satin', x: 1348.8, y: 432, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 150.4, y: 486.4, size: 68.2, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 1302.1, y: 172, size: 115.5, rotate: 0, depth: 4 },
-      { symbol: 'leaf-eucalyptus', x: 1343.6, y: 316, size: 79.2, rotate: 120, depth: 4 },
     ],
   },
 };

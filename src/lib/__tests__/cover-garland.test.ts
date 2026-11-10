@@ -30,8 +30,15 @@ function visBox(item: GarlandItem): Box {
     const r = (kind === 'balloon' ? 0.45 : 0.5) * item.size;
     return { l: item.x - r, r: item.x + r, t: item.y - r, b: item.y + r };
   }
+  if (isCluster(item)) {
+    // Rotation-invariant: every drawn point of a cluster lies within 0.5·size of its own centre
+    // (an ART-asserted footprint guarantee), so its conservative box is that disc's square, not a
+    // rotated size × size square's AABB.
+    const r = 0.5 * item.size;
+    return { l: item.x - r, r: item.x + r, t: item.y - r, b: item.y + r };
+  }
   const a = (item.rotate * Math.PI) / 180;
-  const w = isCluster(item) ? item.size : 0.45 * item.size;
+  const w = 0.45 * item.size;
   const h = item.size;
   const hw = (w * Math.abs(Math.cos(a)) + h * Math.abs(Math.sin(a))) / 2;
   const hh = (w * Math.abs(Math.sin(a)) + h * Math.abs(Math.cos(a))) / 2;
@@ -39,6 +46,21 @@ function visBox(item: GarlandItem): Box {
 }
 
 const label = (item: GarlandItem) => `${item.symbol}@${item.x},${item.y}`;
+
+describe('cluster footprint', () => {
+  it.each(LAYOUTS)('%s: a cluster box is the disc square [x ± 0.5·size] × [y ± 0.5·size]', (_name, layout) => {
+    const clusters = layout.items.filter(isCluster);
+    expect(clusters.length).toBeGreaterThan(0);
+    for (const cluster of clusters) {
+      expect(visBox(cluster)).toEqual({
+        l: cluster.x - 0.5 * cluster.size,
+        r: cluster.x + 0.5 * cluster.size,
+        t: cluster.y - 0.5 * cluster.size,
+        b: cluster.y + 0.5 * cluster.size,
+      });
+    }
+  });
+});
 
 /** The arch pocket's floor: high (crown) at the centre, parabolic out to `top` at the walls. */
 function pocketFloor(layout: GarlandLayout, x: number): number {
@@ -302,14 +324,21 @@ describe('north-star composition', () => {
     expect(floating.map(label)).toEqual([]);
   });
 
-  it.each(LAYOUTS)('%s: no sprig hangs down like a spike, and no gold sprig remains', (_name, layout) => {
+  it.each(LAYOUTS)('%s: foliage is clusters only: no single sprig of any kind', (_name, layout) => {
     const { leaves } = partsOf(layout);
+    const sprigs = leaves.filter((leaf) => !isCluster(leaf));
+    expect(sprigs.map(label)).toEqual([]);
+  });
 
-    const spikes = leaves.filter((leaf) => Math.cos((leaf.rotate * Math.PI) / 180) < -0.64);
-    expect(spikes.map(label)).toEqual([]);
-
-    const gold = leaves.filter((leaf) => leaf.symbol === 'leaf-gold');
-    expect(gold.map(label)).toEqual([]);
+  it.each(LAYOUTS)('%s: every cluster grows from a corner', (_name, layout) => {
+    const clusters = layout.items.filter(isCluster);
+    const { width } = layout;
+    expect(clusters.length).toBeGreaterThan(0);
+    const offCorner = clusters.filter((cluster) => {
+      const base = stemBase(cluster);
+      return base.x > 0.28 * width && base.x < 0.72 * width;
+    });
+    expect(offCorner.map(label)).toEqual([]);
   });
 
   it.each(LAYOUTS)(
@@ -354,17 +383,6 @@ describe('north-star composition', () => {
       }
     },
   );
-
-  it.each(LAYOUTS)('%s: at least six back sprigs peek up out of the crown', (_name, layout) => {
-    const { leaves } = partsOf(layout);
-    const { x0, x1, top } = layout.clear;
-    const peeking = leaves.filter((leaf) => {
-      const base = stemBase(leaf);
-      const pointsUp = Math.cos((leaf.rotate * Math.PI) / 180) > 0;
-      return leaf.depth === 0 && pointsUp && base.x >= x0 && base.x <= x1 && base.y >= 0 && base.y <= top;
-    });
-    expect(peeking.length).toBeGreaterThanOrEqual(6);
-  });
 
   it.each(LAYOUTS)('%s: edges bleed by at most half a balloon, and the sides balance', (_name, layout) => {
     const { balloons } = partsOf(layout);

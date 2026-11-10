@@ -94,7 +94,7 @@ test.describe('Balloon arch', () => {
     }
   });
 
-  test('the visible layout shows all three balloon finishes, both foliage clusters, and no gold sprig', async ({
+  test('the visible layout shows all three balloon finishes, both foliage clusters, and no single sprig', async ({
     page,
   }) => {
     for (const viewport of [PHONE, DESKTOP]) {
@@ -114,10 +114,12 @@ test.describe('Balloon arch', () => {
       expect(symbols).toEqual(
         expect.arrayContaining(['leaf-laurel-cluster', 'leaf-eucalyptus-cluster']),
       );
-      expect(symbols.some((symbol) => symbol === 'leaf-eucalyptus' || symbol === 'leaf-olive')).toBe(
-        true,
-      );
-      expect(symbols).not.toContain('leaf-gold');
+      expect(
+        symbols.some(
+          (symbol) =>
+            symbol === 'leaf-eucalyptus' || symbol === 'leaf-olive' || symbol === 'leaf-gold',
+        ),
+      ).toBe(false);
     }
   });
 
