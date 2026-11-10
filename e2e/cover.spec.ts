@@ -471,4 +471,34 @@ test.describe('Cover section', () => {
       expect(hitsName).toBe(true);
     });
   }
+
+  test('the cover stays within its render budget', async ({ page }) => {
+    await page.goto('./');
+
+    // All three figures are measured off the live cover, not the generator's planned inputs —
+    // the arch is seeded/deterministic but the DOM/animation counts depend on everything actually
+    // mounted under `.cover` (frame, light, glow, sparkles, button pulse, ...), so only a real
+    // render proves the combined budget. Both arch layouts (portrait + landscape) are in the DOM
+    // at once — only one is ever displayed — so the item-count budget covers both together.
+    const budget = await page.evaluate(() => {
+      const cover = document.querySelector('[data-testid="cover"]');
+      if (!cover) return null;
+
+      const coverElements = [cover, ...cover.querySelectorAll('*')];
+      const runningAnimations = coverElements.filter(
+        (el) => getComputedStyle(el).animationName !== 'none',
+      );
+
+      return {
+        archItemCount: document.querySelectorAll('[data-arch-item]').length,
+        coverElementCount: coverElements.length,
+        runningAnimationCount: runningAnimations.length,
+      };
+    });
+
+    expect(budget).not.toBeNull();
+    expect(budget!.archItemCount).toBeLessThanOrEqual(200);
+    expect(budget!.coverElementCount).toBeLessThanOrEqual(320);
+    expect(budget!.runningAnimationCount).toBeLessThanOrEqual(50);
+  });
 });
