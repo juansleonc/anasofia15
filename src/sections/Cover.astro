@@ -193,12 +193,21 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
   .cover__open-button {
     margin-top: 0.25rem;
     padding: 1rem 2.625rem;
-    border: var(--border-gold);
+    border: 2px solid var(--c-champagne-500);
     border-radius: 999px;
-    background: var(--gradient-button-wine);
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--c-champagne-100) 55%, transparent),
-      var(--shadow-button-wine);
+    /* Sheen first so it paints over the wine gradient underneath (both wine stops stay in the
+       computed `background-image`, just with a translucent highlight laid on top). */
+    background: var(--gradient-button-sheen), var(--gradient-button-wine);
+    /* Relief stack, named so the pulse keyframes below can reuse it instead of repeating it:
+       bevel highlight (top inset), inner shadow (bottom inset, gives the pill its "pressed-in"
+       depth), a gold outer ring (double rim with the solid border), a tight contact shadow, a
+       soft lift shadow, and the pre-existing long soft shadow token. */
+    --cover-button-shadow: inset 0 1px 0 color-mix(in srgb, var(--c-champagne-100) 60%, transparent),
+      inset 0 -3px 6px color-mix(in srgb, var(--c-wine-700) 75%, var(--c-ink)),
+      0 0 0 1px color-mix(in srgb, var(--c-champagne-300) 70%, transparent),
+      0 2px 3px color-mix(in srgb, var(--c-wine-700) 35%, transparent),
+      0 10px 22px -10px color-mix(in srgb, var(--c-wine-700) 45%, transparent), var(--shadow-button-wine);
+    box-shadow: var(--cover-button-shadow);
     color: var(--c-white);
     font-size: 1rem;
     font-weight: 700;
@@ -213,20 +222,27 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
     transform: translateY(-2px);
   }
 
+  /* The relief responds to touch: the pill presses in and its inner shadow deepens. */
+  .cover__open-button:active {
+    transform: translateY(1px);
+    --cover-button-shadow: inset 0 1px 0 color-mix(in srgb, var(--c-champagne-100) 60%, transparent),
+      inset 0 -5px 9px color-mix(in srgb, var(--c-wine-700) 85%, var(--c-ink)),
+      0 0 0 1px color-mix(in srgb, var(--c-champagne-300) 70%, transparent),
+      0 1px 2px color-mix(in srgb, var(--c-wine-700) 35%, transparent), var(--shadow-button-wine);
+  }
+
   /* Soft expanding champagne-gold ring, layered on top of the resting shadow so the shadow never
      blinks off. */
   @keyframes cover-pulse {
     0%,
     100% {
       box-shadow:
-        inset 0 1px 0 color-mix(in srgb, var(--c-champagne-100) 55%, transparent),
-        var(--shadow-button-wine),
+        var(--cover-button-shadow),
         0 0 0 0 color-mix(in srgb, var(--c-champagne-500) 45%, transparent);
     }
     70% {
       box-shadow:
-        inset 0 1px 0 color-mix(in srgb, var(--c-champagne-100) 55%, transparent),
-        var(--shadow-button-wine),
+        var(--cover-button-shadow),
         0 0 0 16px color-mix(in srgb, var(--c-champagne-500) 0%, transparent);
     }
   }

@@ -198,6 +198,51 @@ test.describe('Cover section', () => {
     expect(styles.boxShadow).not.toBe('none');
   });
 
+  test('the open button has relief', async ({ page }) => {
+    await page.goto('./');
+
+    const button = page.getByRole('button', { name: 'Abrir invitación' });
+    const styles = await button.evaluate((el) => {
+      const computed = getComputedStyle(el);
+      return {
+        backgroundImage: computed.backgroundImage,
+        boxShadow: computed.boxShadow,
+        borderTopWidth: parseFloat(computed.borderTopWidth),
+      };
+    });
+
+    const gradientCount = (styles.backgroundImage.match(/[a-z-]+-gradient\(/gi) ?? []).length;
+    expect(gradientCount).toBeGreaterThanOrEqual(2);
+    expect(styles.backgroundImage).toContain('rgb(154, 68, 98)');
+    expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
+
+    // Split the resolved `box-shadow` on top-level commas only — a layer's own colour may be an
+    // `rgba(...)` with internal commas, so a naive `.split(',')` would cut a layer in half.
+    const layers: string[] = [];
+    let depth = 0;
+    let current = '';
+    for (const char of styles.boxShadow) {
+      if (char === '(') depth += 1;
+      if (char === ')') depth -= 1;
+      if (char === ',' && depth === 0) {
+        layers.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    if (current.trim()) layers.push(current.trim());
+
+    // Computed `box-shadow` renders each layer as `<color> <offsets> [inset]` — the `inset`
+    // keyword trails the layer rather than leading it.
+    const insetLayers = layers.filter((layer) => layer.endsWith('inset'));
+    const outerLayers = layers.filter((layer) => !layer.endsWith('inset'));
+    expect(insetLayers.length).toBeGreaterThanOrEqual(2);
+    expect(outerLayers.length).toBeGreaterThanOrEqual(2);
+
+    expect(styles.borderTopWidth).toBeGreaterThanOrEqual(2);
+  });
+
   test('every cover animation freezes under prefers-reduced-motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./');

@@ -136,6 +136,31 @@ describe('palette discipline', () => {
     expect(contrastRatio('#ffffff', tokens['--c-wine-700'])).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('white stays at least 4.5:1 under the button sheen', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    const sheenAlphaMatch = tokensCss.match(/--button-sheen-alpha:\s*([\d.]+)%/);
+    expect(sheenAlphaMatch).not.toBeNull();
+    const sheenAlpha = parseFloat(sheenAlphaMatch![1]) / 100;
+
+    // The sheen is a white layer painted at `sheenAlpha` over the button's wine background, so the
+    // worst-case backdrop for the white label text is the wine tone composited with white at that
+    // alpha (source-over), not the bare wine tone.
+    const white = hexToRgb('#ffffff');
+    const wine = hexToRgb(tokens['--c-wine-500']);
+    const composite: [number, number, number] = [
+      white[0] * sheenAlpha + wine[0] * (1 - sheenAlpha),
+      white[1] * sheenAlpha + wine[1] * (1 - sheenAlpha),
+      white[2] * sheenAlpha + wine[2] * (1 - sheenAlpha),
+    ];
+    const compositeLuminance = relativeLuminance(composite);
+    const whiteLuminance = relativeLuminance(white);
+    const contrast = (whiteLuminance + 0.05) / (compositeLuminance + 0.05);
+
+    expect(contrast).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('the name stays readable on the warm glow', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
