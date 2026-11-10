@@ -328,8 +328,8 @@ test.describe('Cover section', () => {
     // (`"Playfair Display"` vs `Playfair Display`) — strip a leading quote before comparing.
     expect(labelStyles.fontFamily.replace(/^"/, '').startsWith('Playfair Display')).toBe(true);
     expect(labelStyles.fontWeight).toBeGreaterThanOrEqual(600);
-    // Round-3 feedback: the earlier >= 0.05em floor let tracking run wide enough to make the
-    // label look smaller; it is now a band so the tracking stays roomy but never loose.
+    // A band (not just a floor) so the tracking stays roomy but never loose enough to make the
+    // label look smaller.
     const letterSpacingEm = labelStyles.letterSpacing / labelStyles.fontSize;
     expect(letterSpacingEm).toBeGreaterThanOrEqual(0.04);
     expect(letterSpacingEm).toBeLessThanOrEqual(0.06);
@@ -501,9 +501,8 @@ test.describe('Cover section', () => {
     });
   }
 
-  // Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is getting airier
-  // in a parallel task, so the cover's own centre needed more presence: bigger type, a flourish,
-  // and a tight ring of extra sparkles (below), rather than more clutter.
+  // The cover's own centre needs enough presence — bigger type, a flourish, and a tight ring of
+  // extra sparkles (below) — to read as deliberate rather than empty.
   test('the celebrant name is large enough to fill the centre at 375 and 390 and grows further on desktop', async ({
     page,
   }) => {
@@ -636,8 +635,8 @@ test.describe('Cover section', () => {
     });
   }
 
-  // Nov 2026 fix-cover pass: the name used to wrap onto two lines ("Ana" / "Sofía") at narrow
-  // viewports because its font-size clamp grew independently of the room it had to fit in.
+  // Guards against the name wrapping onto two lines ("Ana" / "Sofía") at narrow viewports, which
+  // happens if its font-size clamp grows independently of the room it has to fit in.
   for (const viewport of [
     { width: 375, height: 667 },
     { width: 390, height: 844 },
@@ -745,17 +744,15 @@ test.describe('Cover section', () => {
       // line-height adds leading inside its own edges, which would hide exactly the whitespace
       // this test is meant to catch.
       //
-      // Nov 2026 user-feedback pass: widened from 0.2 to 0.25 for the slightly larger box-edge
-      // gap added below (the "breathe further apart" tests) — still well inside the title-cohesion
-      // ceiling of 0.35 × name font-size.
+      // 0.25 leaves room for the slightly larger box-edge gap added below (the "breathe further
+      // apart" tests) — still well inside the title-cohesion ceiling of 0.35 × name font-size.
       expect(gap / nameFontSize).toBeLessThanOrEqual(0.25);
       expect(gap).toBeGreaterThanOrEqual(0);
     });
   }
 
-  // Nov 2026 user-feedback pass: the block above reads as cohesive, but the user still wanted a
-  // touch more breathing room between the lead and the name (+12-16px over the box edges, not the
-  // glyph ink measured above).
+  // The block above reads as cohesive, but still wants a touch more breathing room between the
+  // lead and the name (+12-16px over the box edges, not the glyph ink measured above).
   for (const viewport of [
     { width: 375, height: 667 },
     { width: 390, height: 844 },

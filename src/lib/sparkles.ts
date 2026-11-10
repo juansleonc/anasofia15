@@ -4,10 +4,10 @@
 // reads as lightly dusted with sparkle rather than framed by it. Framework-free and seeded so the
 // layout is unit-testable without a DOM.
 //
-// Nov 2026 user-feedback pass: the old hard-edged gold "fleck" chip read as noise ("desordenado").
-// Replaced with three soft kinds only — `glow` (small round light dots), `star` (soft 4-point
-// stars with a blurred halo) and `bokeh` (large, very faint out-of-focus discs) — at a lower,
-// Poisson-spaced count so the scatter reads as calm, organized light rather than scattered grit.
+// Three soft kinds only, never a hard-edged chip — `glow` (small round light dots), `star` (soft
+// 4-point stars with a blurred halo) and `bokeh` (large, very faint out-of-focus discs) — at a
+// low, Poisson-spaced count so the scatter reads as calm, organized light rather than scattered
+// grit.
 
 export type SparkleKind = 'glow' | 'star' | 'bokeh';
 
@@ -119,9 +119,8 @@ function clampPct(value: number): number {
 /**
  * A small, tightly clustered ring of extra glow/star sparkles meant to sit layered directly
  * around the title block (see Cover.astro, which positions this absolutely over the celebrant's
- * name/lead) — distinct from `scatterSparkles`'s calm whole-cover dusting. Nov 2026 user-feedback
- * pass: "mucho espacio vacío en el centro" — the arch is getting airier in a parallel task, so the
- * centre needed its own subtle concentration of light to stay balanced, not just a bigger scatter.
+ * name/lead) — distinct from `scatterSparkles`'s calm whole-cover dusting. Gives the centre its
+ * own subtle concentration of light to stay balanced, not just a bigger scatter.
  */
 export function ringSparkles(options: RingSparklesOptions): Sparkle[] {
   const random = seededRandom(options.seed);
@@ -241,9 +240,8 @@ function placeLowerPosition(
 /**
  * The lower-half glitter band (see components/CoverLowerGlitter.astro): tiny twinkling light
  * flecks (`glow`, 2-5px) growing denser toward the bottom edge, plus a handful of larger, static,
- * blurred golden `bokeh` discs. Nov 2026 user-feedback pass: "la mitad inferior se siente
- * desaprovechada" — the empty lower half (below the button) gets its own calm dynamism instead of
- * staying a flat, unused gradient.
+ * blurred golden `bokeh` discs. Gives the lower half (below the button) its own calm dynamism
+ * instead of staying a flat, unused gradient.
  */
 export function lowerGlitter(options: LowerGlitterOptions): Sparkle[] {
   const random = seededRandom(options.seed);

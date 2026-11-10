@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-// Lower-half atmosphere, added by the Nov 2026 "la mitad inferior se siente desaprovechada"
-// feedback pass: a soft glitter band (twinkling light flecks + a few static bokeh discs), a faint
-// static dust texture, and a warm light pool — all below the button, purely decorative.
+// Lower-half atmosphere: a soft glitter band (twinkling light flecks + a few static bokeh
+// discs), a faint static dust texture, and a warm light pool — all below the button, purely
+// decorative.
 
 test.describe('Cover lower glitter', () => {
   test('is decorative and never intercepts clicks', async ({ page }) => {

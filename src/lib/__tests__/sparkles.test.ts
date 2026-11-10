@@ -130,9 +130,8 @@ describe('scatterSparkles', () => {
   });
 });
 
-// Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is being made
-// airier in a parallel task, so a small, tightly clustered ring of extra sparkles concentrates
-// around the title block to re-balance it, distinct from the whole-cover `scatterSparkles` layer.
+// A small, tightly clustered ring of extra sparkles concentrates around the title block,
+// distinct from the whole-cover `scatterSparkles` layer.
 describe('ringSparkles', () => {
   function ring(count: number, seed = 4015): Sparkle[] {
     return ringSparkles({ count, seed });
@@ -186,9 +185,8 @@ describe('ringSparkles', () => {
   });
 });
 
-// Nov 2026 user-feedback pass: "la mitad inferior se siente desaprovechada" — the lower half
-// (below the button) gets its own soft glitter band (tiny twinkling flecks plus a few larger,
-// blurred golden bokeh discs) instead of staying a flat, empty gradient.
+// The lower half (below the button) gets its own soft glitter band (tiny twinkling flecks plus a
+// few larger, blurred golden bokeh discs) instead of staying a flat, empty gradient.
 describe('lowerGlitter', () => {
   function glitter(flakeCount: number, bokehCount: number, seed = 7421): Sparkle[] {
     return lowerGlitter({ flakeCount, bokehCount, seed });
@@ -400,10 +398,9 @@ describe('fallingConfetti', () => {
   });
 });
 
-// Round-5 feedback: sparkle particles should drift from the garland toward the center, rather
-// than just falling straight down or twinkling in place.
-// Round-6 feedback: the drift set grows and reaches further toward the name, in visibly gold
-// tones (see CoverConfettiFall.astro for the gold rendering).
+// Sparkle particles drift from the garland toward the center and the name, rather than just
+// falling straight down or twinkling in place, in visibly gold tones (see CoverConfettiFall.astro
+// for the gold rendering).
 describe('driftingSparkles', () => {
   function drift(seed = 3344) {
     return driftingSparkles({ glitter: 12, stars: 6, bokeh: 4, seed });

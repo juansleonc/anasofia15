@@ -7,11 +7,10 @@
 // twinkle `opacity` only (compositor-only, no layout/paint cost beyond the first frame).
 // `animation: none` under reduced motion freezes every sparkle in place.
 //
-// Nov 2026 user-feedback pass: the old hard-edged gold "fleck" chip read as visual noise. Every
-// kind here is soft and round — `glow` is a small radial-gradient light dot, `star` is the
-// existing 4-point sparkle with a blurred radial-gradient halo behind it (no SVG filters), and
-// `bokeh` is a large, very faint out-of-focus disc. See src/lib/sparkles.ts for the Poisson-like
-// placement (denser near the arch/name, sparse at the bottom) and the lower, calmer count.
+// Every kind here is soft and round, never a hard-edged chip — `glow` is a small radial-gradient
+// light dot, `star` is the 4-point sparkle with a blurred radial-gradient halo behind it (no SVG
+// filters), and `bokeh` is a large, very faint out-of-focus disc. See src/lib/sparkles.ts for the
+// Poisson-like placement (denser near the arch/name, sparse at the bottom).
 import { scatterSparkles } from '../lib/sparkles';
 
 const SPARKLE_COUNT = 14;
@@ -26,11 +25,10 @@ const GLOW_TONES = ['--c-white', '--c-champagne-100'];
 const STAR_HALO_TONES = ['--c-champagne-200', '--c-champagne-100'];
 const BOKEH_TONES = ['--c-champagne-100', '--c-champagne-200'];
 
-// Round-5 light-budget pass: half of the glow dots free up a running-animation slot for the new
-// drift layer (see lib/sparkles.ts `driftingSparkles`) without losing any particle — they just
-// stop twinkling and sit as a calm, static point of light instead. Counted per-glow (not per
-// overall index) so exactly half of the glow kind turns static regardless of its position among
-// the stars/bokeh.
+// Half of the glow dots free up a running-animation slot for the drift layer (see
+// lib/sparkles.ts `driftingSparkles`) without losing any particle — they just stop twinkling and
+// sit as a calm, static point of light instead. Counted per-glow (not per overall index) so
+// exactly half of the glow kind turns static regardless of its position among the stars/bokeh.
 let glowIndex = 0;
 ---
 

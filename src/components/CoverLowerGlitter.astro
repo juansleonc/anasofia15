@@ -1,9 +1,6 @@
 ---
-// Lower-half atmosphere, added by the Nov 2026 "la mitad inferior se siente desaprovechada"
-// feedback pass: the gradient below the button read as empty, and the leaf/branch icons that used
-// to live down there are being removed by a parallel task — this is the "soft destellos y
-// confeti sutiles" the feedback asked for in their place. Three static-friendly pieces, all
-// aria-hidden/pointer-events:none and bounded to the cover itself:
+// Lower-half atmosphere: three static-friendly pieces, all aria-hidden/pointer-events:none and
+// bounded to the cover itself:
 //   1. a warm light pool anchored at the bottom centre (static radial-gradient)
 //   2. a very faint dust texture over the lower ~45% of the cover (static, <=6% opacity)
 //   3. a soft glitter band: tiny twinkling light flecks (glow) growing denser toward the bottom
@@ -12,12 +9,11 @@
 // SSR'd from the seeded generator, same pattern as CoverSparkles — no client script, no
 // layout/paint cost beyond the first frame.
 //
-// Follow-up pass: the band used to start at 88%, which only covered the strip already below the
-// button. It now starts around the cover's own midpoint (LOWER_REGION_START_PCT) so the whole
-// lower half reads alive — the name and button are kept clear with fixed keep-out rects instead,
-// since this component has no client script and can't measure their rendered boxes. The rects
-// below are tuned against the actual rendered layout at 375x667, 390x844 and 1440x800 (measured
-// name/button boxes, each padded a few percent beyond their largest measured box).
+// The band starts around the cover's own midpoint (LOWER_REGION_START_PCT) so the whole lower
+// half reads alive — the name and button are kept clear with fixed keep-out rects instead, since
+// this component has no client script and can't measure their rendered boxes. The rects below are
+// tuned against the actual rendered layout at 375x667, 390x844 and 1440x800 (measured name/button
+// boxes, each padded a few percent beyond their largest measured box).
 import { lowerGlitter, type KeepOutRect } from '../lib/sparkles';
 
 // Twinkling flecks are capped well under the e2e render-budget's running-animation allowance (see
@@ -43,9 +39,9 @@ const particles = lowerGlitter({
 const FLAKE_TONES = ['--c-white', '--c-champagne-100'];
 const BOKEH_TONES = ['--c-champagne-200', '--c-champagne-100'];
 
-// Round-5 light-budget pass: 2 of the 8 flecks free a running-animation slot for the new drift
-// layer (see lib/sparkles.ts `driftingSparkles`) by freezing as a calm, static point of light
-// instead of losing a particle — see the budget e2e for the resulting ≤ 6 running flakes.
+// 2 of the 8 flecks free a running-animation slot for the drift layer (see lib/sparkles.ts
+// `driftingSparkles`) by freezing as a calm, static point of light instead of losing a particle —
+// see the budget e2e for the resulting ≤ 6 running flakes.
 let flakeIndex = 0;
 ---
 

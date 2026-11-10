@@ -12,27 +12,24 @@ import { event } from '../data/event';
 import { garlandCoverVars } from '../lib/cover-garland';
 import { ringSparkles } from '../lib/sparkles';
 
-// Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is getting airier in
-// a parallel task, so the cover's own centre needed more presence (bigger type, a flourish and a
-// tight ring of sparkles around the title), not more clutter. This small ring is deliberately
-// separate from CoverSparkles's whole-cover `scatterSparkles` layer (see src/lib/sparkles.ts) —
-// it's positioned relative to the title block itself (see `.cover__title { position: relative }`
-// below), not scattered across the whole cover, so it reads as a halo around the name specifically.
+// Gives the cover's own centre more presence (bigger type, a flourish and a tight ring of
+// sparkles around the title), not more clutter. This small ring is deliberately separate from
+// CoverSparkles's whole-cover `scatterSparkles` layer (see src/lib/sparkles.ts) — it's positioned
+// relative to the title block itself (see `.cover__title { position: relative }` below), not
+// scattered across the whole cover, so it reads as a halo around the name specifically.
 const TITLE_RING_COUNT = 5;
 const TITLE_RING_SEED = 4015;
 const titleRingSparkles = ringSparkles({ count: TITLE_RING_COUNT, seed: TITLE_RING_SEED });
 
-// Nov 2026 user-feedback pass: the name must render on a single line at every viewport (see
-// `white-space: nowrap` on .cover__title-name below), never wrapping onto two lines the way a
-// plain vw clamp could. So its font-size can't be tuned independently of the space it has to
-// fit in — it has to be derived straight from the same clear-zone width as `.cover__title`'s own
-// max-width above. `NAME_WIDTH_PER_EM` is how wide one rendered px of `event.celebrantName`'s own
-// box (text plus its 0.2em-per-side horizontal padding, see .cover__title-name) is per 1px of
-// font-size — measured directly off the live Great Vibes render, so it's tied to this specific
-// string; re-measure it if the celebrant name ever changes. Round 5 re-verified this ratio against
-// the live render at two very different sizes (265.0px / 62.76px at 375 and 540.5px / 128px at
-// 1440 — both ≈ 4.223), confirming the existing constant rather than the lower value an earlier
-// draft measurement had suggested, so it is left as-is here. `NAME_FIT_SAFETY` keeps the computed
+// The name must render on a single line at every viewport (see `white-space: nowrap` on
+// .cover__title-name below), never wrapping onto two lines the way a plain vw clamp could. So
+// its font-size can't be tuned independently of the space it has to fit in — it has to be
+// derived straight from the same clear-zone width as `.cover__title`'s own max-width above.
+// `NAME_WIDTH_PER_EM` is how wide one rendered px of `event.celebrantName`'s own box (text plus
+// its 0.2em-per-side horizontal padding, see .cover__title-name) is per 1px of font-size —
+// measured directly off the live Great Vibes render at two very different sizes (265.0px /
+// 62.76px at 375 and 540.5px / 128px at 1440 — both ≈ 4.223), so it's tied to this specific
+// string; re-measure it if the celebrant name ever changes. `NAME_FIT_SAFETY` keeps the computed
 // size a little under the exact fit so antialiasing/sub-pixel rounding never tips it into
 // overflowing the clear zone.
 const NAME_WIDTH_PER_EM = 4.224;
@@ -214,14 +211,13 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Nov 2026 user-feedback pass: tightened from the previous clamp(1.25rem, 4vh, 2.25rem) so the
-       (now larger) lead/name/flourish/button read as one dense, centred block instead of a loose
-       stack with gaps sized for the old, smaller type. */
+    /* A tight gap so the lead/name/flourish/button read as one dense, centred block instead of a
+       loose stack. */
     gap: clamp(0.85rem, 2.5vh, 1.5rem);
   }
 
   /* Warm light cast directly behind the lead line, the name and the button — raises (never
-     lowers) text contrast rather than competing with it (D5). Sits in the content's own stacking
+     lowers) text contrast rather than competing with it. Sits in the content's own stacking
      context so it never leaks in front of or behind the arch/frame. */
   .cover__glow {
     position: absolute;
@@ -243,9 +239,8 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Nov 2026 user-feedback pass: +12-16px over the previous 0.15rem so the lead and the name
-       breathe a little further apart, while still reading as one cohesive block — the larger
-       name carries its own ascender room on top of this. */
+    /* Gives the lead and the name a little room to breathe apart, while still reading as one
+       cohesive block — the larger name carries its own ascender room on top of this. */
     gap: clamp(0.9rem, 0.75rem + 0.5vw, 1.15rem);
     margin: 0;
     /* Never wider than the garland's text clear zone (`--arch-clear-portrait` /
@@ -273,17 +268,17 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     font-style: italic;
     color: var(--c-wine-900);
     letter-spacing: 0.01em;
-    /* Nov 2026 user-feedback pass: lets the browser pick a more even line split (never a lone
-       trailing word) instead of the greedy default — see the "no orphan last line" e2e test. */
+    /* Lets the browser pick a more even line split (never a lone trailing word) instead of the
+       greedy default — see the "no orphan last line" e2e test. */
     text-wrap: balance;
   }
 
   .cover__title-name {
     display: inline-block;
-    /* Nov 2026 user-feedback pass: the name must always render on one line (never wrap, never
-       overlap the arch) — `nowrap` plus a font-size derived from the clear-zone width itself (see
-       `nameFitVar` above) instead of an independent vw clamp, which could (and did) size the name
-       wider than the room it had to fit in. */
+    /* The name must always render on one line (never wrap, never overlap the arch) — `nowrap`
+       plus a font-size derived from the clear-zone width itself (see `nameFitVar` above) instead
+       of an independent vw clamp, which could size the name wider than the room it had to fit
+       in. */
     white-space: nowrap;
     font-size: clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-portrait) * 100vw), 9.2rem);
     /* Tightened from 1.3 (and padding from 0.1em) together with .cover__title's smaller gap above,
@@ -420,8 +415,7 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     /* 1.25rem (20px) floor at a 375px viewport, growing toward 1.5rem on wider screens. */
     font-size: clamp(1.25rem, 4vw, 1.5rem);
     font-weight: 600;
-    /* Round-3 feedback: the earlier 0.08em tracking read as wide enough to make the label look
-       smaller; tightened into the roomier 0.04-0.06em band. */
+    /* 0.05em keeps the label legible without reading as smaller — much wider tracking does. */
     letter-spacing: 0.05em;
     font-family: var(--font-display);
     /* Engraved look: only darkens around the glyphs, never lightens them. */

@@ -542,14 +542,13 @@ describe('north-star composition', () => {
     // The design's own floors (2400 / 4000) assumed the shoulder could open up without touching
     // the crown's existing balloons; measured on the real layout, the corner's own balloons and
     // flowers are packed tightly enough that no on-screen, clearance-safe cluster placement
-    // reaches those numbers. Shrinking the once-oversized peony (G3) and the two corner blossoms
-    // into small rosebuds (G4's follow-up pass) uncovered more of the cluster mass behind them,
-    // raising the measured ceiling from 752 / 928 to 1120 / 912 units² (tall) and from 1344 / 1360
-    // to 1712 / 1344 units² (full) per side. The shoulder balloons at the u = ±0.9 envelope
-    // station were left alone: their margin there is under 1 unit, so shrinking either one drops
-    // the lower envelope below the arch pocket floor. These floors are that improved ceiling,
-    // rounded down, not the original design target (reported, not chased, as with the phone name
-    // floor in round 5).
+    // reaches those numbers. Shrinking the once-oversized peony and the two corner blossoms into
+    // small rosebuds uncovered more of the cluster mass behind them, raising the measured ceiling
+    // from 752 / 928 to 1120 / 912 units² (tall) and from 1344 / 1360 to 1712 / 1344 units²
+    // (full) per side. The shoulder balloons at the u = ±0.9 envelope station were left alone:
+    // their margin there is under 1 unit, so shrinking either one drops the lower envelope below
+    // the arch pocket floor. These floors are that improved ceiling, rounded down, not the
+    // original design target — reported, not chased.
     for (const [frameName, frame, floor] of [
       ['tall-frame', tallFrame, 900],
       ['full-frame', fullFrame, 1300],

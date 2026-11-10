@@ -230,11 +230,11 @@ test.describe('Balloon arch', () => {
   test('both upper corners show foliage on screen', async ({ page }) => {
     // Floors are the real-render ceiling measured on the current composition (minimum of all 4
     // viewports was 306px² on phones, 11142px² on landscape), rounded down. Shrinking the two
-    // corner blossoms into small rosebuds (G3/G4's flower rescale, plus the main-rose/peony
-    // shrink) uncovered more of the corner cluster mass than round 6's original design floors
-    // (1200 / 9000) assumed; those remain out of reach without also touching the shoulder
-    // balloons at the envelope's u = ±0.9 station, whose margin there is under 1 unit — shrinking
-    // either one drops the lower envelope below the arch pocket floor.
+    // corner blossoms into small rosebuds, plus the main-rose/peony shrink, uncovered more of the
+    // corner cluster mass than the original design floors (1200 / 9000) assumed; those remain out
+    // of reach without also touching the shoulder balloons at the envelope's u = ±0.9 station,
+    // whose margin there is under 1 unit — shrinking either one drops the lower envelope below
+    // the arch pocket floor.
     const cases = [
       { viewport: PHONE, floor: 300 },
       { viewport: TALL_PHONE, floor: 300 },
