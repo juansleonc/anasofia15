@@ -1,0 +1,3 @@
+# Kaizen Log — investigation
+
+> Append improvement entries here (date, what changed, why).

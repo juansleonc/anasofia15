@@ -1,0 +1,3 @@
+# Kaizen Log — commit
+
+> Append improvement entries here (date, what changed, why).

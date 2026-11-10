@@ -1,0 +1,17 @@
+# Project-owned — seeded once by install.sh if absent, never overwritten on --update
+# (same ownership idiom as .claude/skills/shared/stack.md). Framework-owned default is
+# `schema: dojo`; change it only if this project forks its own schema.
+schema: dojo
+
+# TODO (optional): project-wide context injected into every `openspec instructions`
+# call for this schema. Uncomment and fill in only if this project needs it — leave
+# commented out otherwise.
+# context: |
+#   <free-text project context>
+
+# TODO (optional): per-artifact rules injected alongside the schema's own instruction
+# for that artifact. Uncomment and fill in only if this project needs to add rules
+# beyond what openspec/schemas/dojo/schema.yaml already states.
+# rules:
+#   <artifact-id>:
+#     - "<rule text>"
