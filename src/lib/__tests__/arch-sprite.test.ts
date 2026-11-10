@@ -80,6 +80,13 @@ const SATIN_BALLOONS = ['balloon-rosegold-satin', 'balloon-champagne-satin'];
 const ALL_BALLOONS = ['balloon-pink', ...CHROME_BALLOONS, ...SATIN_BALLOONS];
 const PEARL_BALLOONS = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-champagne-satin'];
 
+const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'blossom'];
+
+/** The symbol's viewBox as numbers: [minX, minY, width, height]. */
+function viewBoxOf(el: Element): number[] {
+  return (el.getAttribute('viewBox') ?? '').split(/\s+/).map(Number);
+}
+
 // Each balloon's knot is tone-matched (a darker shade of its own body colour) rather than every
 // tone sharing one wine-coloured knot; chrome and satin siblings of the same tone share a gradient.
 const KNOT_GRADIENT_BY_BALLOON: Record<string, string> = {
@@ -335,6 +342,16 @@ describe('ArchSprite gloss', () => {
 // The garland's text clearance (cover-garland) sizes every item from these symbol extents, so the
 // art may change freely only while each symbol stays inside the footprint it promised.
 describe('footprint contract', () => {
+  it.each(FLOWER_IDS)('%s keeps its seat shadow inside the inscribed circle', (id) => {
+    const el = symbol(id);
+    const seat = el.querySelector('ellipse[fill="url(#flower-seat-shadow)"]');
+    expect(seat).not.toBeNull();
+    const [, , width] = viewBoxOf(el);
+    const offset = Math.hypot(Number(seat!.getAttribute('cx')) - width / 2, Number(seat!.getAttribute('cy')) - width / 2);
+    const reach = offset + Math.max(Number(seat!.getAttribute('rx')), Number(seat!.getAttribute('ry')));
+    expect(reach).toBeLessThanOrEqual(width / 2);
+  });
+
   it.each(ALL_BALLOONS)('%s keeps its visible body within the old 88 x 92 body box, give or take 2 units', (id) => {
     const el = symbol(id);
     expect(el.getAttribute('viewBox')).toBe('0 0 100 110');
@@ -487,6 +504,27 @@ function veinPath(el: Element, minSubpaths: number): Element | undefined {
     (path) => (path.getAttribute('d')?.match(/M/g) ?? []).length >= minSubpaths,
   );
 }
+
+describe('ArchSprite flower seat shadow', () => {
+  it('shares one soft rose-700 seat-shadow gradient fading from 18% to nothing', () => {
+    const seat = gradient('flower-seat-shadow');
+    expect(seat.tagName.toLowerCase()).toBe('radialgradient');
+    const stops = Array.from(seat.querySelectorAll('stop'));
+    for (const style of stopColors(seat)) expect(style).toMatch(/var\(--c-rose-700\)/);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.18);
+    expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
+  });
+
+  it.each(FLOWER_IDS)('%s starts with a seat-shadow ellipse offset down and right', (id) => {
+    const el = symbol(id);
+    const first = el.firstElementChild!;
+    expect(first.tagName.toLowerCase()).toBe('ellipse');
+    expect(first.getAttribute('fill')).toBe('url(#flower-seat-shadow)');
+    const [, , width, height] = viewBoxOf(el);
+    expect(Number(first.getAttribute('cx'))).toBeGreaterThan(width / 2);
+    expect(Number(first.getAttribute('cy'))).toBeGreaterThan(height / 2);
+  });
+});
 
 describe('ArchSprite roses', () => {
   it.each(ROSE_IDS)('%s has at least 12 petal paths drawn from 3 distinct ring gradients', (id) => {
