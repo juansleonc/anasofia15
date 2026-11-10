@@ -39,11 +39,16 @@ test.describe('Arch sprite', () => {
       const ids = [
         'balloon-pink',
         'balloon-rosegold',
+        'balloon-rosegold-satin',
         'balloon-champagne',
+        'balloon-champagne-satin',
         'balloon-gloss',
+        'rose-pink',
         'rose-cream',
+        'peony-blush',
         'blossom',
         'leaf-eucalyptus',
+        'leaf-olive',
         'leaf-gold',
         'sparkle-star',
       ];
@@ -55,11 +60,16 @@ test.describe('Arch sprite', () => {
     expect(idCounts).toEqual({
       'balloon-pink': 1,
       'balloon-rosegold': 1,
+      'balloon-rosegold-satin': 1,
       'balloon-champagne': 1,
+      'balloon-champagne-satin': 1,
       'balloon-gloss': 1,
+      'rose-pink': 1,
       'rose-cream': 1,
+      'peony-blush': 1,
       blossom: 1,
       'leaf-eucalyptus': 1,
+      'leaf-olive': 1,
       'leaf-gold': 1,
       'sparkle-star': 1,
     });
@@ -75,4 +85,58 @@ test.describe('Arch sprite', () => {
     expect(box?.width ?? -1).toBe(0);
     expect(box?.height ?? -1).toBe(0);
   });
+});
+
+// Real-geometry check of the arch roses, complementing the path-parsing unit tests: the symbol's
+// shapes are cloned into a visible probe <svg> so the browser can measure them with their actual
+// transforms and curves.
+test.describe('Arch roses render as round blooms', () => {
+  for (const id of ['rose-pink', 'rose-cream']) {
+    test(`${id} keeps its lip highlights on the petals and a near-circular outline`, async ({ page }) => {
+      await page.goto('./');
+
+      const result = await page.evaluate((symbolId) => {
+        const NS = 'http://www.w3.org/2000/svg';
+        const symbol = document.getElementById(symbolId)!;
+        const probe = document.createElementNS(NS, 'svg');
+        probe.setAttribute('viewBox', symbol.getAttribute('viewBox') ?? '0 0 64 64');
+        probe.setAttribute('width', '256');
+        probe.setAttribute('height', '256');
+        probe.style.cssText = 'position:fixed;left:0;top:0';
+        for (const child of Array.from(symbol.children)) probe.appendChild(child.cloneNode(true));
+        document.body.appendChild(probe);
+
+        const paths = Array.from(probe.querySelectorAll('path'));
+        const petals = paths.filter((path) => (path.getAttribute('fill') ?? '').startsWith(`url(#${symbolId}-`));
+        const highlight = paths.find(
+          (path) => path.getAttribute('fill') === 'none' && (path.getAttribute('stroke') ?? '').includes('--c-white'),
+        )!;
+
+        let offPetal = 0;
+        let sampled = 0;
+        const length = highlight.getTotalLength();
+        for (let at = 0; at <= length; at += 0.5) {
+          const point = highlight.getPointAtLength(at);
+          sampled += 1;
+          const onPetal = petals.some((petal) => {
+            const placed = petal.transform.baseVal.consolidate()?.matrix ?? probe.createSVGMatrix();
+            const local = new DOMPoint(point.x, point.y).matrixTransform(placed.inverse());
+            return petal.isPointInFill(local);
+          });
+          if (!onPetal) offPetal += 1;
+        }
+
+        const rects = petals.map((petal) => petal.getBoundingClientRect());
+        const width = Math.max(...rects.map((r) => r.right)) - Math.min(...rects.map((r) => r.left));
+        const height = Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top));
+        probe.remove();
+        return { sampled, offPetal, aspect: width / height };
+      }, id);
+
+      expect(result.sampled).toBeGreaterThan(10);
+      expect(result.offPetal).toBe(0);
+      expect(result.aspect).toBeGreaterThanOrEqual(0.85);
+      expect(result.aspect).toBeLessThanOrEqual(1.15);
+    });
+  }
 });
