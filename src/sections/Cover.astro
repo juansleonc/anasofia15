@@ -120,8 +120,9 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     padding: clamp(3.75rem, 14vh, 6rem) 1.25rem;
     /* Never let the title sit under the garland: clear at least as far down as the garland's
        clear top (see garlandCoverVars in cover-garland.ts), whichever is taller than the
-       cosmetic clamp above. */
-    padding-top: max(clamp(3.75rem, 14vh, 6rem), calc(var(--arch-band-portrait) * 100%));
+       cosmetic clamp above, or the 36vh tall-phone floor the portrait garland keeps (see
+       BalloonArch.astro). */
+    padding-top: max(clamp(3.75rem, 14vh, 6rem), calc(var(--arch-band-portrait) * 100%), 36vh);
     text-align: center;
     isolation: isolate;
     /* Depth behind the whole cover: a soft vignette (draws the eye to the centre) over a vertical

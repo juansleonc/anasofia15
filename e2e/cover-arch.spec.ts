@@ -7,6 +7,7 @@ import { GARLAND } from '../src/lib/cover-garland';
 // the page's real controls.
 
 const PHONE = { width: 375, height: 667 };
+const TALL_PHONE = { width: 390, height: 844 };
 const DESKTOP = { width: 1440, height: 800 };
 
 interface Rect {
@@ -137,7 +138,7 @@ test.describe('Balloon arch', () => {
   });
 
   test('no arch item overlaps the title or the button', async ({ page }) => {
-    for (const viewport of [PHONE, { width: 390, height: 844 }, DESKTOP]) {
+    for (const viewport of [PHONE, TALL_PHONE, { width: 1366, height: 768 }, DESKTOP]) {
       await page.setViewportSize(viewport);
       await page.goto('./');
       await page.evaluate(() => document.fonts.ready.then(() => undefined));
@@ -158,6 +159,35 @@ test.describe('Balloon arch', () => {
         }
       }
     }
+  });
+
+  test('the portrait garland fills at least a third of a tall phone', async ({ page }) => {
+    await page.setViewportSize(TALL_PHONE);
+    await page.goto('./');
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+    const svgRect = await page.locator('svg[data-arch-layout="portrait"]').boundingBox();
+    expect(svgRect).not.toBeNull();
+    const { width, clear } = GARLAND.portrait;
+    // The garland's own height on screen is its crown: the viewBox clear top at the rendered scale.
+    const crownBottom = svgRect!.y + clear.top * (svgRect!.width / width);
+    expect(crownBottom).toBeGreaterThanOrEqual(0.34 * TALL_PHONE.height);
+
+    const leadRect = await page.getByTestId('cover-title-lead').boundingBox();
+    const nameRect = await page.getByTestId('cover-celebrant-name').boundingBox();
+    const buttonRect = await page.getByRole('button', { name: 'Abrir invitación' }).boundingBox();
+    const targets = [leadRect, nameRect, buttonRect].filter((rect): rect is Rect => rect !== null);
+    expect(targets).toHaveLength(3);
+
+    const archRects = await visibleItemRects(page);
+    expect(archRects.length).toBeGreaterThan(0);
+    for (const archRect of archRects) {
+      for (const target of targets) {
+        expect(rectsIntersect(archRect, target)).toBe(false);
+      }
+    }
+
+    expect(leadRect!.y).toBeGreaterThanOrEqual(crownBottom);
   });
 
   test('the layout mask is opaque down to the fade start, then transparent', async ({ page }) => {
