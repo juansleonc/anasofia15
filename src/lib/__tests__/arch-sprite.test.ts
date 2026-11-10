@@ -170,6 +170,30 @@ describe('ArchSprite balloons', () => {
     expect(root.querySelectorAll('[id$="chrome-band"]').length).toBe(0);
   });
 
+  it('metallic gold has >= 7 stops from a champagne-100 core to a champagne-800 terminator, and a horizon reflection', () => {
+    const stops = Array.from(gradient('balloon-champagne-gradient').querySelectorAll('stop'));
+    expect(stops.length).toBeGreaterThanOrEqual(7);
+    expect(stops[0].getAttribute('style')).toMatch(/var\(--c-champagne-100\)/);
+    const terminator = stops.find((stop) => (stop.getAttribute('style') ?? '').includes('--c-champagne-800'));
+    expect(terminator).not.toBeUndefined();
+    const offset = parseFloat(terminator!.getAttribute('offset') ?? '');
+    expect(offset).toBeGreaterThanOrEqual(86);
+    expect(offset).toBeLessThanOrEqual(92);
+
+    const horizonGradient = gradient('balloon-champagne-horizon');
+    const horizonStops = Array.from(horizonGradient.querySelectorAll('stop'));
+    // Feathered to nothing at its edge, and never brighter than a soft sheen.
+    expect(horizonStops[horizonStops.length - 1].getAttribute('stop-opacity')).toBe('0');
+    expect(peakOpacity(horizonGradient)).toBeLessThanOrEqual(0.5);
+    const horizon = symbol('balloon-champagne').querySelector('path[fill="url(#balloon-champagne-horizon)"]');
+    expect(horizon).not.toBeNull();
+    // A soft, wide band, not a thin arc stripe.
+    expect(horizon!.getAttribute('d')).not.toMatch(/[Aa]/);
+    const box = boxOf(pathPoints(horizon!));
+    expect(box.maxX - box.minX).toBeGreaterThanOrEqual(50);
+    expect(box.maxY - box.minY).toBeGreaterThanOrEqual(10);
+  });
+
   it('balloon bodies stay within their element budget (8 own shapes + the shared gloss use)', () => {
     for (const id of ALL_BALLOONS) {
       const ownChildren = symbol(id).children.length;

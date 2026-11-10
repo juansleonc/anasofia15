@@ -49,13 +49,25 @@
       <stop offset="90%" style="stop-color: var(--c-rose-400)" />
       <stop offset="100%" style="stop-color: var(--c-rosegold-400)" />
     </radialGradient>
-    <radialGradient id="balloon-champagne-gradient" cx="30%" cy="26%" r="80%">
+    <!-- Metallic gold: a hot champagne-100 core, a fast fall through the champagne scale and a
+         deep champagne-800 terminator just inside the edge, then a lighter rim. The steep, late
+         dark band is what reads as polished foil rather than matte beige. -->
+    <radialGradient id="balloon-champagne-gradient" cx="32%" cy="26%" r="78%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
-      <stop offset="20%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="12%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="26%" style="stop-color: var(--c-champagne-200)" />
       <stop offset="42%" style="stop-color: var(--c-champagne-300)" />
-      <stop offset="64%" style="stop-color: var(--c-champagne-500)" />
-      <stop offset="88%" style="stop-color: var(--c-champagne-700)" />
-      <stop offset="100%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="58%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="75%" style="stop-color: var(--c-champagne-700)" />
+      <stop offset="89%" style="stop-color: var(--c-champagne-800)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
+    </radialGradient>
+    <!-- Gold only: a wide, soft "horizon" band of reflected light across the lower body,
+         feathered to nothing on every side. -->
+    <radialGradient id="balloon-champagne-horizon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.45" />
+      <stop offset="50%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.22" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-200)" stop-opacity="0" />
     </radialGradient>
     <radialGradient id="balloon-champagne-satin-gradient" cx="30%" cy="26%" r="80%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
@@ -252,6 +264,7 @@
     <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
     <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-champagne-gradient)" />
     <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
+    <path d="M8 56C30 48 70 48 92 56C90 68 84 78 78 84C64 76 36 76 22 84C16 78 10 68 8 56Z" fill="url(#balloon-champagne-horizon)" />
     <path
       d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
       fill="url(#balloon-champagne-knot)"
