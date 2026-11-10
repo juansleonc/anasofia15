@@ -480,7 +480,11 @@ test.describe('Cover section', () => {
     const nameFontSize375 = await page
       .getByTestId('cover-celebrant-name')
       .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    expect(nameFontSize375).toBeGreaterThanOrEqual(60);
+    // Nov 2026 fix-cover pass: floor lowered from 60 to 56 — the name must fit the clear zone on
+    // ONE line at 375 (see the "single line" test below), which means its font-size is now derived
+    // from the available width rather than an independent vw clamp; 56px is still a bold
+    // centrepiece size and leaves the one-line-fit test as the binding constraint instead.
+    expect(nameFontSize375).toBeGreaterThanOrEqual(56);
 
     await page.setViewportSize({ width: 1440, height: 800 });
     await page.reload();
@@ -510,6 +514,114 @@ test.describe('Cover section', () => {
       .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
     expect(leadFontSize1440).toBeGreaterThan(leadFontSize375);
   });
+
+  // Nov 2026 fix-cover pass: the name used to wrap onto two lines ("Ana" / "Sofía") at narrow
+  // viewports because its font-size clamp grew independently of the room it had to fit in.
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`the celebrant name always renders on one line at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const measurements = await page.evaluate(() => {
+        const name = document.querySelector('[data-testid="cover-celebrant-name"]') as HTMLElement;
+        const title = document.querySelector('.cover__title') as HTMLElement;
+        const range = document.createRange();
+        range.selectNodeContents(name);
+        return {
+          lineCount: range.getClientRects().length,
+          nameWidth: name.getBoundingClientRect().width,
+          titleWidth: title.getBoundingClientRect().width,
+        };
+      });
+
+      // A wrapped inline-block still reports a single getBoundingClientRect/getClientRects entry
+      // for *itself* (it's one box), so the line count has to come from a Range over its text
+      // instead — that fragments per visual line regardless of the element's own display type.
+      expect(measurements.lineCount).toBe(1);
+      expect(measurements.nameWidth).toBeLessThanOrEqual(measurements.titleWidth + 1);
+    });
+  }
+
+  // Nov 2026 fix-cover pass: the lead used to leave an orphan last word ("de" alone) at 1440, and
+  // could in principle leave one at 375 too — `text-wrap: balance` plus a width no longer capped
+  // below what the clear zone allows should keep it to one line at 1440 and a balanced split (no
+  // single-word line) at narrower viewports.
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`the lead line never leaves a one-word orphan at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const lineWordCounts = await page.evaluate(() => {
+        const lead = document.querySelector('[data-testid="cover-title-lead"]') as HTMLElement;
+        const textNode = lead.firstChild as Text;
+        const text = textNode.textContent ?? '';
+        const wordTops = new Map<number, number>();
+        for (const match of text.matchAll(/\S+/g)) {
+          const range = document.createRange();
+          range.setStart(textNode, match.index!);
+          range.setEnd(textNode, match.index! + match[0].length);
+          const top = Math.round(range.getBoundingClientRect().top);
+          wordTops.set(top, (wordTops.get(top) ?? 0) + 1);
+        }
+        return [...wordTops.values()];
+      });
+
+      expect(lineWordCounts.length).toBeLessThanOrEqual(viewport.width >= 1440 ? 1 : 2);
+      for (const wordsInLine of lineWordCounts) {
+        expect(wordsInLine).toBeGreaterThanOrEqual(2);
+      }
+    });
+  }
+
+  // Coordinator feedback: the lead and name used to read as two loosely related lines (a large
+  // empty band between them) rather than one cohesive block.
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`the lead sits close above the name as one cohesive block at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const { gap, nameFontSize } = await page.evaluate(() => {
+        const lead = document.querySelector('[data-testid="cover-title-lead"]') as HTMLElement;
+        const name = document.querySelector('[data-testid="cover-celebrant-name"]') as HTMLElement;
+        const leadRange = document.createRange();
+        leadRange.selectNodeContents(lead);
+        const nameRange = document.createRange();
+        nameRange.selectNodeContents(name);
+        const leadRects = leadRange.getClientRects();
+        const nameRects = nameRange.getClientRects();
+        const leadLastLine = leadRects[leadRects.length - 1];
+        const nameFirstLine = nameRects[0];
+        return {
+          gap: nameFirstLine.top - leadLastLine.bottom,
+          nameFontSize: parseFloat(getComputedStyle(name).fontSize),
+        };
+      });
+
+      // Measured off the actual text (Range), not the elements' own box edges — a box's
+      // line-height adds leading inside its own edges, which would hide exactly the whitespace
+      // this test is meant to catch.
+      expect(gap / nameFontSize).toBeLessThanOrEqual(0.2);
+      expect(gap).toBeGreaterThanOrEqual(0);
+    });
+  }
 
   test('a champagne flourish divider sits between the name and the button', async ({ page }) => {
     await page.goto('./');
