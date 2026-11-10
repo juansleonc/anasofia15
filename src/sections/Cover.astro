@@ -399,11 +399,11 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
 
   .cover__open-button {
     margin-top: 0.25rem;
-    /* Floor from the Nov 2026 design-review pass: the pill read as too small for its space and the
-       label was hard to read. The clamps grow both past the floor on wider viewports. */
-    min-width: 240px;
+    /* A slightly wide pill so it reads clearly as the one call to action; the clamps grow it past
+       the floor on wider viewports. */
+    min-width: 264px;
     min-height: 56px;
-    padding: clamp(1.1rem, 1vw + 0.85rem, 1.5rem) clamp(2.75rem, 6vw, 4rem);
+    padding: clamp(1.1rem, 1vw + 0.85rem, 1.5rem) clamp(3rem, 7vw, 4.5rem);
     border: 2px solid var(--c-champagne-500);
     border-radius: 999px;
     /* Sheen first so it paints over the wine/rose gradient underneath (every fill stop stays in

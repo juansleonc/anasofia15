@@ -275,7 +275,7 @@ test.describe('Cover section', () => {
     const button = page.getByRole('button', { name: 'Abrir invitación' });
     const box = await button.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.width).toBeGreaterThanOrEqual(240);
+    expect(box!.width).toBeGreaterThanOrEqual(264);
     // Roomy, but never wider than 80% of a narrow viewport.
     expect(box!.width).toBeLessThanOrEqual(0.8 * 375);
     expect(box!.height).toBeGreaterThanOrEqual(56);
@@ -284,7 +284,7 @@ test.describe('Cover section', () => {
     expect(fontSize).toBeGreaterThanOrEqual(20);
   });
 
-  test('the open button label grows larger and the pill taller on a wide desktop viewport', async ({
+  test('the open button label grows larger and the pill wider and taller on a wide desktop viewport', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
@@ -304,6 +304,7 @@ test.describe('Cover section', () => {
 
     const box = await button.boundingBox();
     expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(340);
     expect(box!.height).toBeGreaterThanOrEqual(60);
   });
 
