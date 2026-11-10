@@ -396,9 +396,14 @@ test.describe('Cover drifting light', () => {
     });
   }
 
-  test('freezes mid-path but stays visible under prefers-reduced-motion', async ({ page }) => {
+  test('freezes 40% of the way along its path, still visible, under prefers-reduced-motion', async ({
+    page,
+  }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./');
+
+    const coverBox = await page.getByTestId('cover').boundingBox();
+    expect(coverBox).not.toBeNull();
 
     const particles = await page.locator('[data-drift]').evaluateAll((elements) =>
       elements.map((el) => {
@@ -407,8 +412,12 @@ test.describe('Cover drifting light', () => {
         return {
           animationName: style.animationName,
           opacity: parseFloat(style.opacity),
-          width: box.width,
-          height: box.height,
+          xPct: parseFloat(style.getPropertyValue('--drift-x')),
+          yPct: parseFloat(style.getPropertyValue('--drift-y')),
+          dxPct: parseFloat(style.getPropertyValue('--drift-dx')),
+          dyPct: parseFloat(style.getPropertyValue('--drift-dy')),
+          centerX: box.x + box.width / 2,
+          centerY: box.y + box.height / 2,
         };
       }),
     );
@@ -416,8 +425,13 @@ test.describe('Cover drifting light', () => {
     for (const particle of particles) {
       expect(particle.animationName).toBe('none');
       expect(particle.opacity).toBeGreaterThan(0);
-      expect(particle.width).toBeGreaterThan(0);
-      expect(particle.height).toBeGreaterThan(0);
+
+      const spawnX = coverBox!.x + (particle.xPct / 100) * coverBox!.width;
+      const spawnY = coverBox!.y + (particle.yPct / 100) * coverBox!.height;
+      const expectedX = spawnX + 0.4 * (particle.dxPct / 100) * coverBox!.width;
+      const expectedY = spawnY + 0.4 * (particle.dyPct / 100) * coverBox!.height;
+      expect(Math.abs(particle.centerX - expectedX)).toBeLessThanOrEqual(1);
+      expect(Math.abs(particle.centerY - expectedY)).toBeLessThanOrEqual(1);
     }
   });
 });

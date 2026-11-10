@@ -342,12 +342,12 @@ function round(value: number): string {
       transform: translateY(var(--confetti-rest)) rotate(var(--confetti-spin));
     }
 
-    /* Freezes each drift particle 35% of the way along its path, still visible, instead of mid-
+    /* Freezes each drift particle 40% of the way along its path, still visible, instead of mid-
        flight animation. */
     .cover-confetti__drift {
       animation: none;
       transform: translate(-50%, -50%)
-        translate(calc(var(--drift-dx) * 0.35), calc(var(--drift-dy) * 0.35)) scale(0.74);
+        translate(calc(var(--drift-dx) * 0.4), calc(var(--drift-dy) * 0.4)) scale(0.74);
       opacity: calc(var(--drift-peak) * 0.8);
     }
   }
