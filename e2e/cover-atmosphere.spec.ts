@@ -126,3 +126,70 @@ test.describe('Cover falling confetti', () => {
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
   });
 });
+
+type Box = { x: number; y: number; width: number; height: number };
+
+function intersects(a: Box, b: Box): boolean {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
+
+async function textBoxes(page: import('@playwright/test').Page): Promise<Box[]> {
+  const boxes = await Promise.all(
+    ['cover-title-lead', 'cover-celebrant-name', 'open-invitation-button'].map((id) =>
+      page.getByTestId(id).boundingBox(),
+    ),
+  );
+  for (const box of boxes) expect(box).not.toBeNull();
+  return boxes as Box[];
+}
+
+const VIEWPORTS = [
+  { width: 375, height: 667 },
+  { width: 1440, height: 800 },
+];
+
+test.describe('Cover bokeh', () => {
+  test('at least 6 static round radial discs of 30-70px', async ({ page }) => {
+    await page.goto('./');
+
+    const discs = await page.locator('[data-bokeh]').evaluateAll((elements) =>
+      elements.map((el) => {
+        const style = getComputedStyle(el);
+        return {
+          width: parseFloat(style.width),
+          height: parseFloat(style.height),
+          borderRadius: style.borderRadius,
+          backgroundImage: style.backgroundImage,
+          animationName: style.animationName,
+        };
+      }),
+    );
+    expect(discs.length).toBeGreaterThanOrEqual(6);
+    for (const disc of discs) {
+      expect(disc.width).toBeGreaterThanOrEqual(30);
+      expect(disc.width).toBeLessThanOrEqual(70);
+      expect(disc.height).toBe(disc.width);
+      expect(disc.borderRadius).toBe('50%');
+      expect(disc.backgroundImage).toContain('radial-gradient');
+      expect(disc.animationName).toBe('none');
+    }
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`no bokeh disc covers the lead, name or button at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready);
+
+      const text = await textBoxes(page);
+      const discs = await page
+        .locator('[data-bokeh]')
+        .evaluateAll((elements) => elements.map((el) => el.getBoundingClientRect().toJSON()));
+      expect(discs.length).toBeGreaterThanOrEqual(6);
+      const overlapping = discs.filter((disc) => text.some((box) => intersects(disc, box)));
+      expect(overlapping).toEqual([]);
+    });
+  }
+});

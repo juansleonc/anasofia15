@@ -12,6 +12,17 @@ const SEED = 1515;
 
 const pieces = fallingConfetti({ ribbons: RIBBON_COUNT, glitter: GLITTER_COUNT, seed: SEED });
 
+// Soft static bokeh along the garland's lower edge and in the side gutters beside the text block,
+// clear of the lead, name and button at portrait and landscape: [x %, y %, diameter px, opacity].
+const BOKEH: readonly (readonly [number, number, number, number])[] = [
+  [8, 30, 46, 0.5],
+  [92, 33, 40, 0.45],
+  [64, 26, 30, 0.45],
+  [5, 60, 34, 0.4],
+  [95, 64, 38, 0.4],
+  [7, 90, 44, 0.35],
+];
+
 function round(value: number): string {
   return value.toFixed(2);
 }
@@ -36,6 +47,15 @@ function round(value: number): string {
         />
       );
     })
+  }
+  {
+    BOKEH.map(([xPct, yPct, sizePx, opacity]) => (
+      <span
+        class="cover-confetti__bokeh"
+        data-bokeh
+        style={`left:${xPct}%;top:${yPct}%;--bokeh-size:${sizePx}px;opacity:${opacity};`}
+      />
+    ))
   }
 </div>
 
@@ -78,6 +98,20 @@ function round(value: number): string {
       circle,
       var(--c-white) 0%,
       var(--c-champagne-300) 45%,
+      transparent 72%
+    );
+  }
+
+  .cover-confetti__bokeh {
+    position: absolute;
+    width: var(--bokeh-size);
+    height: var(--bokeh-size);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background-image: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--c-champagne-100) 70%, transparent) 0%,
+      color-mix(in srgb, var(--c-champagne-200) 35%, transparent) 55%,
       transparent 72%
     );
   }
