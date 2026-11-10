@@ -86,13 +86,19 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'balloon-pink', x: 152, y: 116, size: 132, rotate: -4, depth: 2 },
       { symbol: 'balloon-rosegold', x: 258, y: 128, size: 118, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: 356, y: 162, size: 128, rotate: 0, depth: 2 },
-      { symbol: 'balloon-rosegold-satin', x: 112, y: 176, size: 80, rotate: 0, depth: 2 },
+      { symbol: 'balloon-rosegold-satin', x: 103, y: 179, size: 80, rotate: 0, depth: 2 },
       // crown's centre row lifted & split into smaller balloons nested higher, so the pocket above
       // the text stays clear instead of the old flat band
       { symbol: 'balloon-champagne', x: 170, y: 160, size: 54, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: 230, y: 154, size: 50, rotate: 0, depth: 2 },
       { symbol: 'balloon-rosegold', x: 200, y: 182, size: 40, rotate: 0, depth: 2 },
-      { symbol: 'balloon-pink', x: 298, y: 176, size: 80, rotate: 0, depth: 2 },
+      { symbol: 'balloon-champagne', x: 156, y: 182, size: 52, rotate: 0, depth: 2 },
+      { symbol: 'balloon-pink', x: 244, y: 182, size: 52, rotate: 0, depth: 2 },
+      // additional shoulder balloons so the lower envelope keeps hugging the arc out to the walls
+      // and corners, instead of leaving a gap between the crown's lift and the shoulder
+      { symbol: 'balloon-rosegold', x: 54, y: 210, size: 60, rotate: 0, depth: 2 },
+      { symbol: 'balloon-champagne', x: 346, y: 210, size: 60, rotate: 0, depth: 2 },
+      { symbol: 'balloon-pink', x: 297, y: 179, size: 80, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: -2, y: 218, size: 88, rotate: 0, depth: 2 },
       { symbol: 'balloon-champagne-satin', x: 402, y: 218, size: 88, rotate: 0, depth: 2 },
       { symbol: 'balloon-rosegold', x: 4, y: 284, size: 60, rotate: 0, depth: 2 },
@@ -176,7 +182,8 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'rose-pink', x: 311.3, y: 56, size: 96, rotate: 0, depth: 3 },
       { symbol: 'balloon-rosegold-satin', x: 223.1, y: 209.6, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 658.8, y: 172, size: 121, rotate: 0, depth: 4 },
-      { symbol: 'balloon-champagne', x: 980.4, y: 192, size: 115.5, rotate: 0, depth: 4 },
+      // re-seated closer to the walls so the lower envelope keeps dropping toward them (R5-2)
+      { symbol: 'balloon-champagne', x: 950, y: 198, size: 120, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 1208.7, y: 324, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne-satin', x: 1348.8, y: 432, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 150.4, y: 486.4, size: 68.2, rotate: 0, depth: 4 },

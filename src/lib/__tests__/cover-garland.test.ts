@@ -34,6 +34,13 @@ function visBox(item: GarlandItem): Box {
 
 const label = (item: GarlandItem) => `${item.symbol}@${item.x},${item.y}`;
 
+/** The arch pocket's floor: high (crown) at the centre, parabolic out to `top` at the walls. */
+function pocketFloor(layout: GarlandLayout, x: number): number {
+  const { x0, x1, top, crown } = layout.clear;
+  const u = (x - layout.width / 2) / ((x1 - x0) / 2);
+  return crown + (top - crown) * u * u;
+}
+
 describe('text clearance', () => {
   it.each(LAYOUTS)('%s: no item reaches into the text zone', (_name, layout) => {
     const { x0, x1, top } = layout.clear;
@@ -90,13 +97,6 @@ describe('text clearance', () => {
       expect(clear.crown).toBeLessThanOrEqual(0.18 * width);
     }
   });
-
-  /** The arch pocket's floor: high (crown) at the centre, parabolic out to `top` at the walls. */
-  function pocketFloor(layout: GarlandLayout, x: number): number {
-    const { x0, x1, top, crown } = layout.clear;
-    const u = (x - layout.width / 2) / ((x1 - x0) / 2);
-    return crown + (top - crown) * u * u;
-  }
 
   it.each(LAYOUTS)('%s: no item enters the arch pocket above the text', (_name, layout) => {
     const { x0, x1 } = layout.clear;
@@ -169,13 +169,59 @@ function partsOf(layout: GarlandLayout) {
 const ROSE_AND_PEONY = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory'];
 const PEARL = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-champagne-satin'];
 
+/** Union body coverage of a 4-unit sample grid under the arch pocket's floor, column by column. */
+function pocketCoverage(solids: Solid[], layout: GarlandLayout): number {
+  const { x0, x1 } = layout.clear;
+  let samples = 0;
+  let covered = 0;
+  for (let x = x0 + 2; x < x1; x += 4) {
+    const yMax = 0.9 * pocketFloor(layout, x);
+    for (let y = 2; y < yMax; y += 4) {
+      samples++;
+      if (solids.some((s) => Math.hypot(s.x - x, s.y - y) < bodyRadius(s))) covered++;
+    }
+  }
+  return samples ? covered / samples : 1;
+}
+
+/** The solids' lower envelope at x: the lowest point of whichever body's disc reaches down there. */
+function envelope(solids: Solid[], x: number): number {
+  let lowest = -Infinity;
+  for (const s of solids) {
+    const r = bodyRadius(s);
+    const dx = x - s.x;
+    if (Math.abs(dx) >= r) continue;
+    const y = s.y + Math.sqrt(r * r - dx * dx);
+    if (y > lowest) lowest = y;
+  }
+  return lowest;
+}
+
 describe('north-star composition', () => {
   it.each(LAYOUTS)('%s: the crown and both upper corners are densely filled', (_name, layout) => {
     const { solids } = partsOf(layout);
     const { x0, x1, top } = layout.clear;
-    expect(coverage(solids, x0, x1, 0, 0.8 * top)).toBeGreaterThanOrEqual(0.75);
+    expect(pocketCoverage(solids, layout)).toBeGreaterThanOrEqual(0.8);
     expect(coverage(solids, 0, x0, 0, top)).toBeGreaterThanOrEqual(0.6);
     expect(coverage(solids, x1, layout.width, 0, top)).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it.each(LAYOUTS)('%s: the lower edge hugs the arch and drops into both corners', (_name, layout) => {
+    const { solids } = partsOf(layout);
+    const { x0, x1, top, crown } = layout.clear;
+    const width = layout.width;
+    const half = (x1 - x0) / 2;
+    const tol = layout === GARLAND.portrait ? 0.05 * width : 0.03 * width;
+    for (const u of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) {
+      const x = width / 2 + u * half;
+      expect(envelope(solids, x)).toBeGreaterThanOrEqual(pocketFloor(layout, x) - tol);
+    }
+    const eCenter = envelope(solids, width / 2);
+    const eRight = envelope(solids, width / 2 + 0.9 * half);
+    const eLeft = envelope(solids, width / 2 - 0.9 * half);
+    expect(Math.max(eLeft, eRight) - eCenter).toBeGreaterThanOrEqual(0.5 * (top - crown));
+    expect(envelope(solids, x0 / 2)).toBeGreaterThanOrEqual(top + 0.06 * width);
+    expect(envelope(solids, width - x0 / 2)).toBeGreaterThanOrEqual(top + 0.06 * width);
   });
 
   it.each(LAYOUTS)('%s: balloons overlap in layers of varied size', (_name, layout) => {
