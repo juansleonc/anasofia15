@@ -286,7 +286,7 @@ describe('smooth arch curve', () => {
   // a sharp corner, so balloons and flowers drop gradually toward the sides.
   const SPINE_STEPS = 400;
 
-  it('never turns more than 12° between consecutive spine samples', () => {
+  it('never turns more than 3° between consecutive spine samples', () => {
     for (const spec of SPECS) {
       const points = spineSamples(spec, SPINE_STEPS);
       let maxTurn = 0;
@@ -295,8 +295,17 @@ describe('smooth arch curve', () => {
         const after = Math.atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
         maxTurn = Math.max(maxTurn, Math.abs(wrapRadians(after - before)));
       }
-      expect((maxTurn * 180) / Math.PI).toBeLessThanOrEqual(12);
+      expect((maxTurn * 180) / Math.PI).toBeLessThanOrEqual(3);
     }
+  });
+
+  it('rounds the portrait corners wider, relative to the width, than the landscape ones', () => {
+    const portrait = ARCH_SPECS.portrait.cornerRadius / ARCH_SPECS.portrait.width;
+    const landscape = ARCH_SPECS.landscape.cornerRadius / ARCH_SPECS.landscape.width;
+    expect(portrait).toBeGreaterThanOrEqual(0.28);
+    expect(portrait).toBeLessThanOrEqual(0.38);
+    expect(landscape).toBeGreaterThanOrEqual(0.15);
+    expect(landscape).toBeLessThanOrEqual(0.25);
   });
 
   it('rounds each top corner over a long stretch of the spine', () => {
