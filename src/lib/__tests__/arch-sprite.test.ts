@@ -79,8 +79,36 @@ const CHROME_BALLOONS = ['balloon-rosegold', 'balloon-champagne'];
 const SATIN_BALLOONS = ['balloon-rosegold-satin', 'balloon-champagne-satin'];
 const ALL_BALLOONS = ['balloon-pink', ...CHROME_BALLOONS, ...SATIN_BALLOONS];
 
+// Each balloon's knot is tone-matched (a darker shade of its own body colour) rather than every
+// tone sharing one wine-coloured knot; chrome and satin siblings of the same tone share a gradient.
+const KNOT_GRADIENT_BY_BALLOON: Record<string, string> = {
+  'balloon-pink': 'balloon-pink-knot',
+  'balloon-rosegold': 'balloon-rosegold-knot',
+  'balloon-rosegold-satin': 'balloon-rosegold-knot',
+  'balloon-champagne': 'balloon-champagne-knot',
+  'balloon-champagne-satin': 'balloon-champagne-knot',
+};
+
 function stopColors(el: Element): string[] {
   return Array.from(el.querySelectorAll('stop')).map((stop) => stop.getAttribute('style') ?? '');
+}
+
+/** A loose bounding box for a simple `path` `d` string: every numeric token is treated as
+ *  alternating x/y coordinates (true for the M/L/H/V/C/S/Q/T/Z commands the sprite's small shapes
+ *  use), so control points slightly widen the box but it never under-reports a shape's extent —
+ *  good enough to check "this knot shrank" without a full path-geometry engine. */
+function pathBoundingBox(d: string): { width: number; height: number } {
+  const numbers = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (let i = 0; i + 1 < numbers.length; i += 2) {
+    xs.push(numbers[i]);
+    ys.push(numbers[i + 1]);
+  }
+  return {
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
+  };
 }
 
 describe('ArchSprite balloons', () => {
@@ -104,7 +132,7 @@ describe('ArchSprite balloons', () => {
     const el = symbol(id);
     expect(el.querySelector('[fill="url(#balloon-contact-shadow)"]')).not.toBeNull();
     expect(el.querySelector('[fill="url(#balloon-env-tint)"]')).not.toBeNull();
-    expect(el.querySelector('[fill="url(#balloon-knot)"]')).not.toBeNull();
+    expect(el.querySelector(`[fill="url(#${KNOT_GRADIENT_BY_BALLOON[id]})"]`)).not.toBeNull();
   });
 
   it.each(ALL_BALLOONS)('%s reuses the shared gloss via <use>', (id) => {
@@ -131,11 +159,88 @@ describe('ArchSprite balloons', () => {
       expect(ownChildren).toBeLessThanOrEqual(9); // 8 own shapes + the <use> pulling in the gloss
     }
   });
+
+  it.each(ALL_BALLOONS)("%s's knot is a small, rounded, tone-matched shape with a tiny highlight", (id) => {
+    const el = symbol(id);
+    const knotGradientId = KNOT_GRADIENT_BY_BALLOON[id];
+    const knotPath = el.querySelector(`path[fill="url(#${knotGradientId})"]`);
+    expect(knotPath).not.toBeNull();
+    // Rounded/pinched, not the old flat-edged triangle: expect a curve command, not just lines.
+    expect(knotPath!.getAttribute('d')).toMatch(/[cCqQ]/);
+    const bbox = pathBoundingBox(knotPath!.getAttribute('d') ?? '');
+    // The old knot ("M50 92l-6 10h12l-6-10Z") was 12 wide x 10 tall; ~60% of that is 7.2 x 6 —
+    // give a little slack for the rounding control points without losing the "smaller" intent.
+    expect(bbox.width).toBeLessThanOrEqual(8);
+    expect(bbox.height).toBeLessThanOrEqual(7);
+    // A tiny highlight sibling near the knot (not the knot shape itself, not the shared gloss).
+    const highlight = Array.from(el.querySelectorAll('ellipse, circle')).find(
+      (shape) => shape !== knotPath && Number(shape.getAttribute('cy') ?? '0') > 85,
+    );
+    expect(highlight).not.toBeUndefined();
+  });
+
+  it('no balloon uses the old one-size wine knot gradient', () => {
+    expect(root.querySelector('#balloon-knot')).toBeNull();
+    for (const id of ALL_BALLOONS) {
+      expect(symbol(id).querySelector('[fill="url(#balloon-knot)"]')).toBeNull();
+    }
+  });
+});
+
+describe('ArchSprite chrome reflection band', () => {
+  it.each(CHROME_BALLOONS)('%s band follows the sphere curvature with an elliptical arc', (id) => {
+    const el = symbol(id);
+    const band = el.querySelector(`[fill="url(#${id}-chrome-band)"]`);
+    expect(band).not.toBeNull();
+    expect(band!.getAttribute('d')).toMatch(/[Aa]/);
+  });
+
+  it.each(CHROME_BALLOONS)('%s band gradient feathers to 0 opacity at both ends', (id) => {
+    const bandGradient = gradient(`${id}-chrome-band`);
+    const stops = Array.from(bandGradient.querySelectorAll('stop'));
+    expect(stops.length).toBeGreaterThanOrEqual(3);
+    expect(stops[0].getAttribute('stop-opacity')).toBe('0');
+    expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
+  });
+
+  it.each(CHROME_BALLOONS)('%s band is lower-contrast than a hard liquid-line stripe', (id) => {
+    const bandGradient = gradient(`${id}-chrome-band`);
+    const stops = Array.from(bandGradient.querySelectorAll('stop'));
+    const innerOpacities = stops.slice(1, -1).map((stop) => Number(stop.getAttribute('stop-opacity')));
+    for (const opacity of innerOpacities) {
+      expect(opacity).toBeLessThanOrEqual(0.35);
+    }
+  });
+});
+
+describe('ArchSprite gloss', () => {
+  it('has a soft highlight, a specular hot spot, a secondary reflection and a stroked rim', () => {
+    const gloss = symbol('balloon-gloss');
+    expect(gloss.querySelector('[fill="url(#balloon-gloss-soft)"]')).not.toBeNull();
+    expect(gloss.querySelector('[fill="url(#balloon-gloss-spec)"]')).not.toBeNull();
+    expect(gloss.querySelector('[fill="url(#balloon-gloss-secondary)"]')).not.toBeNull();
+    const rim = Array.from(gloss.querySelectorAll('path')).find(
+      (path) => path.getAttribute('stroke') && path.getAttribute('stroke') !== 'none',
+    );
+    expect(rim).not.toBeUndefined();
+    expect(rim!.getAttribute('fill')).toBe('none');
+  });
+
+  it('stays within its element budget (4 shapes, up to 5)', () => {
+    const children = symbol('balloon-gloss').children.length;
+    expect(children).toBeGreaterThanOrEqual(4);
+    expect(children).toBeLessThanOrEqual(5);
+  });
 });
 
 describe('ArchSprite perf guard', () => {
   it('has no <filter> element anywhere in the sprite', () => {
     expect(root.querySelectorAll('filter').length).toBe(0);
+  });
+
+  it('stays within the sprite-wide gradient budget (<= 40 defs)', () => {
+    const count = root.querySelectorAll('linearGradient, radialGradient').length;
+    expect(count).toBeLessThanOrEqual(40);
   });
 });
 
