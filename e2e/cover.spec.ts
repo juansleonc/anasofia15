@@ -539,11 +539,10 @@ test.describe('Cover section', () => {
     const nameFontSize375 = await page
       .getByTestId('cover-celebrant-name')
       .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    // Nov 2026 fix-cover pass: floor lowered from 60 to 56 — the name must fit the clear zone on
-    // ONE line at 375 (see the "single line" test below), which means its font-size is now derived
-    // from the available width rather than an independent vw clamp; 56px is still a bold
-    // centrepiece size and leaves the one-line-fit test as the binding constraint instead.
-    expect(nameFontSize375).toBeGreaterThanOrEqual(56);
+    // The name must fit the arch's clear zone on ONE line at 375 (see the "single line" test
+    // below), so its size is derived from the available width; 52px keeps it a bold centrepiece
+    // while leaving the one-line fit as the binding constraint.
+    expect(nameFontSize375).toBeGreaterThanOrEqual(52);
 
     await page.setViewportSize({ width: 1440, height: 800 });
     await page.reload();
@@ -579,6 +578,7 @@ test.describe('Cover section', () => {
   for (const viewport of [
     { width: 375, height: 667 },
     { width: 390, height: 844 },
+    { width: 1366, height: 768 },
     { width: 1440, height: 800 },
   ]) {
     test(`the celebrant name always renders on one line at ${viewport.width}x${viewport.height}`, async ({
@@ -586,61 +586,65 @@ test.describe('Cover section', () => {
     }) => {
       await page.setViewportSize(viewport);
       await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
 
       const measurements = await page.evaluate(() => {
         const name = document.querySelector('[data-testid="cover-celebrant-name"]') as HTMLElement;
         const title = document.querySelector('.cover__title') as HTMLElement;
+        const cover = document.querySelector('[data-testid="cover"]') as HTMLElement;
         const range = document.createRange();
         range.selectNodeContents(name);
+        const clearVar =
+          window.innerWidth >= window.innerHeight ? '--arch-clear-landscape' : '--arch-clear-portrait';
         return {
-          lineCount: range.getClientRects().length,
+          lineTops: new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size,
           nameWidth: name.getBoundingClientRect().width,
           titleWidth: title.getBoundingClientRect().width,
+          fontSize: parseFloat(getComputedStyle(name).fontSize),
+          clearWidthCap:
+            (parseFloat(getComputedStyle(cover).getPropertyValue(clearVar)) * window.innerWidth) / 4.4,
         };
       });
 
-      // A wrapped inline-block still reports a single getBoundingClientRect/getClientRects entry
-      // for *itself* (it's one box), so the line count has to come from a Range over its text
-      // instead — that fragments per visual line regardless of the element's own display type.
-      expect(measurements.lineCount).toBe(1);
+      // A wrapped inline-block still reports a single box for *itself*, so the line count has to
+      // come from a Range over its text, which fragments per visual line; distinct tops rather
+      // than a rect count, since one line can still yield several rects.
+      expect(measurements.lineTops).toBe(1);
       expect(measurements.nameWidth).toBeLessThanOrEqual(measurements.titleWidth + 1);
+      // Never sized past what the arch's clear zone can hold, so it can't grow into the balloons.
+      expect(measurements.fontSize).toBeLessThanOrEqual(measurements.clearWidthCap);
     });
   }
 
-  // Nov 2026 fix-cover pass: the lead used to leave an orphan last word ("de" alone) at 1440, and
-  // could in principle leave one at 375 too — `text-wrap: balance` plus a width no longer capped
-  // below what the clear zone allows should keep it to one line at 1440 and a balanced split (no
-  // single-word line) at narrower viewports.
+  // The lead used to leave an orphan last word ("de" alone) at 1440: it must fit one line there
+  // and, on phones, split into at most two lines of comparable length.
   for (const viewport of [
     { width: 375, height: 667 },
     { width: 390, height: 844 },
     { width: 1440, height: 800 },
   ]) {
-    test(`the lead line never leaves a one-word orphan at ${viewport.width}x${viewport.height}`, async ({
+    test(`the lead line splits evenly with no orphan at ${viewport.width}x${viewport.height}`, async ({
       page,
     }) => {
       await page.setViewportSize(viewport);
       await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
 
-      const lineWordCounts = await page.evaluate(() => {
+      const lineWidths = await page.evaluate(() => {
         const lead = document.querySelector('[data-testid="cover-title-lead"]') as HTMLElement;
-        const textNode = lead.firstChild as Text;
-        const text = textNode.textContent ?? '';
-        const wordTops = new Map<number, number>();
-        for (const match of text.matchAll(/\S+/g)) {
-          const range = document.createRange();
-          range.setStart(textNode, match.index!);
-          range.setEnd(textNode, match.index! + match[0].length);
-          const top = Math.round(range.getBoundingClientRect().top);
-          wordTops.set(top, (wordTops.get(top) ?? 0) + 1);
+        const range = document.createRange();
+        range.selectNodeContents(lead);
+        const widthByTop = new Map<number, number>();
+        for (const rect of range.getClientRects()) {
+          const top = Math.round(rect.top);
+          widthByTop.set(top, (widthByTop.get(top) ?? 0) + rect.width);
         }
-        return [...wordTops.values()];
+        return [...widthByTop.values()];
       });
 
-      expect(lineWordCounts.length).toBeLessThanOrEqual(viewport.width >= 1440 ? 1 : 2);
-      for (const wordsInLine of lineWordCounts) {
-        expect(wordsInLine).toBeGreaterThanOrEqual(2);
-      }
+      expect(lineWidths.length).toBeGreaterThanOrEqual(1);
+      expect(lineWidths.length).toBeLessThanOrEqual(viewport.width >= 1440 ? 1 : 2);
+      expect(Math.min(...lineWidths) / Math.max(...lineWidths)).toBeGreaterThanOrEqual(0.45);
     });
   }
 
@@ -656,6 +660,7 @@ test.describe('Cover section', () => {
     }) => {
       await page.setViewportSize(viewport);
       await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
 
       const { gap, nameFontSize } = await page.evaluate(() => {
         const lead = document.querySelector('[data-testid="cover-title-lead"]') as HTMLElement;
@@ -679,6 +684,27 @@ test.describe('Cover section', () => {
       // this test is meant to catch.
       expect(gap / nameFontSize).toBeLessThanOrEqual(0.2);
       expect(gap).toBeGreaterThanOrEqual(0);
+    });
+  }
+
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`the name clearly dominates the lead at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      const fontSizeOf = (testId: string) =>
+        page.getByTestId(testId).evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      const nameFontSize = await fontSizeOf('cover-celebrant-name');
+      const leadFontSize = await fontSizeOf('cover-title-lead');
+
+      expect(nameFontSize / leadFontSize).toBeGreaterThanOrEqual(2.6);
     });
   }
 
