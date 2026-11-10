@@ -14,6 +14,7 @@ export type ArchSymbol =
   | 'rose-cream'
   | 'peony-blush'
   | 'peony-ivory'
+  | 'rosebud'
   | 'blossom'
   | 'leaf-eucalyptus'
   | 'leaf-olive'
@@ -23,7 +24,7 @@ export type ArchSymbol =
 
 export type GarlandKind = 'balloon' | 'flower' | 'leaf';
 
-/** 0 back foliage · 1 back balloons · 2 main balloons · 3 flowers · 4 front accents. */
+/** 0 back foliage · 1 back balloons · 2 main balloons · 3 flowers · 4 front accents (balloons and rosebuds). */
 export type GarlandDepth = 0 | 1 | 2 | 3 | 4;
 
 export interface GarlandItem {
@@ -63,24 +64,19 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
     fadeStart: 340,
     clear: { x0: 38, x1: 362, top: 264, crown: 208 },
     items: [
-      { symbol: 'leaf-olive', x: 100, y: 40, size: 70, rotate: -30, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 18, y: 120, size: 90, rotate: -60, depth: 0 },
-      { symbol: 'leaf-olive', x: 22, y: 175, size: 80, rotate: -110, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 290, y: 10, size: 70, rotate: 25, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 384, y: 120, size: 90, rotate: 60, depth: 0 },
-      { symbol: 'leaf-olive', x: 380, y: 180, size: 80, rotate: 110, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 160.7, y: 56.3, size: 70, rotate: -60, depth: 0 },
-      { symbol: 'leaf-olive', x: 183.3, y: 64.3, size: 70, rotate: 60, depth: 0 },
-      { symbol: 'leaf-olive', x: 239.8, y: 53.6, size: 70, rotate: -15, depth: 0 },
       // laurel/eucalyptus clusters rooted inside the corner balloons (behind them, depth 0),
-      // fanning outward; eucalyptus doubled up at each corner because the laurel cluster art
-      // reads thin on its own
-      { symbol: 'leaf-eucalyptus-cluster', x: -1.71, y: 73.48, size: 90, rotate: -125, depth: 0 },
-      { symbol: 'leaf-laurel-cluster', x: -36.83, y: 33.68, size: 130, rotate: -31, depth: 0 },
-      { symbol: 'leaf-eucalyptus-cluster', x: -37.43, y: 163.09, size: 130, rotate: -25, depth: 0 },
-      { symbol: 'leaf-eucalyptus-cluster', x: 410.25, y: 92.51, size: 120, rotate: 125, depth: 0 },
-      { symbol: 'leaf-laurel-cluster', x: 387.72, y: 163.17, size: 90, rotate: 25, depth: 0 },
-      { symbol: 'leaf-eucalyptus-cluster', x: 412.15, y: 289, size: 90, rotate: 91, depth: 0 },
+      // cascading outward and down. Positions are chosen (not just mirrored) around where the
+      // existing balloon/flower mass actually leaves a gap, since a cluster is only on-screen
+      // where nothing painted later covers it — see the visible-foliage measurement in
+      // cover-garland.test.ts.
+      { symbol: 'leaf-laurel-cluster', x: 24, y: 72, size: 120, rotate: -40, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 76, y: 136, size: 80, rotate: -110, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 84, y: 196, size: 56, rotate: -130, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: -40, y: 52, size: 64, rotate: -55, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 340, y: 24, size: 110, rotate: 60, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 316, y: 196, size: 56, rotate: 130, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 344, y: 128, size: 120, rotate: 50, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 316, y: 132, size: 56, rotate: 100, depth: 0 },
       { symbol: 'balloon-pink', x: 70, y: 28, size: 120, rotate: 0, depth: 1 },
       { symbol: 'balloon-champagne', x: 178, y: 6, size: 112, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 292, y: 22, size: 126, rotate: 0, depth: 1 },
@@ -107,20 +103,29 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'balloon-champagne-satin', x: 402, y: 218, size: 88, rotate: 0, depth: 2 },
       { symbol: 'balloon-rosegold', x: 4, y: 284, size: 60, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: 396, y: 284, size: 60, rotate: 0, depth: 2 },
-      { symbol: 'peony-blush', x: 100, y: 92, size: 94, rotate: 0, depth: 3 },
+      // two main roses lead; the once-oversized peony shrinks into the peony band and a second
+      // (ivory) peony joins it, with small rosebuds filling the seams and both corner zones
+      { symbol: 'peony-blush', x: 100, y: 92, size: 70, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 212, y: 86, size: 90, rotate: 8, depth: 3 },
       { symbol: 'rose-cream', x: 318, y: 98, size: 96, rotate: 0, depth: 3 },
-      { symbol: 'blossom', x: 52, y: 204, size: 58, rotate: -10, depth: 3 },
+      { symbol: 'peony-ivory', x: 260, y: 110, size: 60, rotate: 0, depth: 3 },
+      { symbol: 'rosebud', x: 52, y: 204, size: 36, rotate: -10, depth: 3 },
       { symbol: 'rose-cream', x: 378, y: 214, size: 70, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 22, y: 214, size: 70, rotate: 0, depth: 3 },
-      { symbol: 'blossom', x: 390, y: 258, size: 40, rotate: 0, depth: 3 },
-      // front accents re-seated to press against the enlarged roses, veiling part of each bloom
+      { symbol: 'rosebud', x: 390, y: 258, size: 32, rotate: 0, depth: 3 },
+      { symbol: 'rosebud', x: 50, y: 216, size: 24, rotate: -40, depth: 3 },
+      { symbol: 'rosebud', x: 350, y: 216, size: 24, rotate: 40, depth: 3 },
+      // front accents re-seated to press against the enlarged roses, veiling part of each bloom;
+      // each main rose's veiling balloon sits just past its heart so it never covers the centre,
+      // and two of the corner rosebuds move to the front, pressed against a back balloon
       { symbol: 'balloon-rosegold-satin', x: 124, y: 112, size: 50, rotate: 0, depth: 4 },
-      { symbol: 'balloon-rosegold-satin', x: 200, y: 112, size: 54, rotate: 0, depth: 4 },
-      { symbol: 'balloon-champagne', x: 340, y: 114, size: 50, rotate: 0, depth: 4 },
+      { symbol: 'balloon-rosegold-satin', x: 198, y: 117, size: 54, rotate: 0, depth: 4 },
+      { symbol: 'balloon-champagne', x: 344, y: 117, size: 50, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 258, y: 186, size: 52, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 60, y: 216, size: 46, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 340, y: 216, size: 46, rotate: 0, depth: 4 },
+      { symbol: 'rosebud', x: 90, y: 170, size: 28, rotate: -20, depth: 4 },
+      { symbol: 'rosebud', x: 310, y: 170, size: 29, rotate: 20, depth: 4 },
     ],
   },
   landscape: {
@@ -129,24 +134,19 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
     fadeStart: 560,
     clear: { x0: 360, x1: 1080, top: 324, crown: 230 },
     items: [
-      { symbol: 'leaf-eucalyptus', x: 41.5, y: 188, size: 149.6, rotate: -65, depth: 0 },
-      { symbol: 'leaf-olive', x: 57.1, y: 240, size: 132, rotate: -100, depth: 0 },
-      { symbol: 'leaf-olive', x: 435.8, y: 32, size: 96.8, rotate: 30, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 1421.4, y: 208, size: 140.8, rotate: 65, depth: 0 },
-      { symbol: 'leaf-olive', x: 1416.2, y: 256, size: 132, rotate: 100, depth: 0 },
-      { symbol: 'leaf-olive', x: 1073.8, y: 96, size: 88, rotate: 60, depth: 0 },
-      { symbol: 'leaf-olive', x: 798.9, y: 140, size: 79.2, rotate: -60, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 197.1, y: 32, size: 114.4, rotate: -35, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 1338.4, y: 48, size: 105.6, rotate: 40, depth: 0 },
-      { symbol: 'leaf-olive', x: 862.9, y: 35.2, size: 110, rotate: 60, depth: 0 },
-      { symbol: 'leaf-olive', x: 907.1, y: 35.2, size: 110, rotate: -60, depth: 0 },
-      { symbol: 'leaf-olive', x: 1110.7, y: 100.8, size: 130, rotate: 60, depth: 0 },
       // laurel/eucalyptus clusters rooted inside the corner balloons (behind them, depth 0),
-      // fanning outward
-      { symbol: 'leaf-eucalyptus-cluster', x: -68.47, y: 171.27, size: 260, rotate: -125, depth: 0 },
-      { symbol: 'leaf-laurel-cluster', x: -57.97, y: 174.16, size: 260, rotate: -27, depth: 0 },
-      { symbol: 'leaf-eucalyptus-cluster', x: 1410.67, y: 58.74, size: 180, rotate: 25, depth: 0 },
-      { symbol: 'leaf-laurel-cluster', x: 1378.5, y: 177.84, size: 180, rotate: 27, depth: 0 },
+      // cascading outward and down, placed on-canvas (unlike the old off-canvas corner sprigs) so
+      // they actually paint inside the viewBox
+      { symbol: 'leaf-laurel-cluster', x: 68, y: 96, size: 260, rotate: -60, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 212, y: 60, size: 260, rotate: -60, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 188, y: 348, size: 260, rotate: -130, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 56, y: 480, size: 260, rotate: -140, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 68, y: 264, size: 260, rotate: -140, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 1372, y: 96, size: 260, rotate: 60, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 1228, y: 60, size: 260, rotate: 60, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 1252, y: 348, size: 260, rotate: 130, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 1384, y: 480, size: 260, rotate: 140, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 1372, y: 264, size: 260, rotate: 140, depth: 0 },
       { symbol: 'balloon-pink', x: 402.6, y: 12, size: 187, rotate: 0, depth: 1 },
       { symbol: 'balloon-champagne', x: 596.6, y: 0, size: 165, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 1025.1, y: 48, size: 220, rotate: 0, depth: 1 },
@@ -174,23 +174,30 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'balloon-pink', x: 1258.5, y: 404, size: 187, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: 1156.8, y: 308, size: 154, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: 36.3, y: 462.4, size: 132, rotate: 0, depth: 2 },
-      { symbol: 'peony-blush', x: 508.4, y: 98, size: 190, rotate: 0, depth: 3 },
+      // two main roses lead; both peonies shrink into the peony band, the secondary roses and
+      // blossoms shrink to stay under the main roses, and small rosebuds fill both corner zones
+      { symbol: 'peony-blush', x: 508.4, y: 98, size: 130, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 617.3, y: 100, size: 182, rotate: 10, depth: 3 },
       { symbol: 'rose-cream', x: 897.4, y: 120, size: 220, rotate: 0, depth: 3 },
-      { symbol: 'peony-blush', x: 1021.9, y: 156, size: 150, rotate: 15, depth: 3 },
-      { symbol: 'blossom', x: 155.6, y: 256, size: 144, rotate: -10, depth: 3 },
-      { symbol: 'blossom', x: 1281.3, y: 264, size: 144, rotate: 20, depth: 3 },
-      { symbol: 'rose-cream', x: 1385.1, y: 360, size: 160, rotate: 0, depth: 3 },
-      { symbol: 'rose-pink', x: 311.3, y: 75, size: 140, rotate: 0, depth: 3 },
+      { symbol: 'peony-blush', x: 1021.9, y: 156, size: 115, rotate: 15, depth: 3 },
+      { symbol: 'blossom', x: 155.6, y: 256, size: 135, rotate: -10, depth: 3 },
+      { symbol: 'blossom', x: 1281.3, y: 264, size: 135, rotate: 20, depth: 3 },
+      { symbol: 'rose-cream', x: 1385.1, y: 360, size: 135, rotate: 0, depth: 3 },
+      { symbol: 'rose-pink', x: 311.3, y: 75, size: 135, rotate: 0, depth: 3 },
+      { symbol: 'rosebud', x: 70, y: 350, size: 50, rotate: -140, depth: 3 },
+      { symbol: 'rosebud', x: 1340, y: 135, size: 50, rotate: 140, depth: 3 },
       { symbol: 'balloon-rosegold-satin', x: 223.1, y: 209.6, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 658.8, y: 172, size: 121, rotate: 0, depth: 4 },
-      // re-seated closer to the walls so the lower envelope keeps dropping toward them (R5-2)
-      { symbol: 'balloon-champagne', x: 950, y: 198, size: 120, rotate: 0, depth: 4 },
+      // re-seated closer to the walls so the lower envelope keeps dropping toward them (R5-2);
+      // moved a touch further from the second peony's heart so it veils rather than covers it
+      { symbol: 'balloon-champagne', x: 957, y: 194, size: 120, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 1208.7, y: 324, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne-satin', x: 1348.8, y: 432, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 150.4, y: 486.4, size: 68.2, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 1302.1, y: 172, size: 115.5, rotate: 0, depth: 4 },
-      { symbol: 'leaf-eucalyptus', x: 1343.6, y: 316, size: 79.2, rotate: 120, depth: 4 },
+      // two corner rosebuds move to the front, pressed against a back balloon
+      { symbol: 'rosebud', x: 100, y: 110, size: 55, rotate: -20, depth: 4 },
+      { symbol: 'rosebud', x: 1300, y: 120, size: 55, rotate: 20, depth: 4 },
     ],
   },
 };

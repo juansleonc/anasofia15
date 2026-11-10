@@ -94,7 +94,7 @@ test.describe('Balloon arch', () => {
     }
   });
 
-  test('the visible layout shows all three balloon finishes, both foliage clusters, and no gold sprig', async ({
+  test('the visible layout shows all three balloon finishes, both foliage clusters, and no single sprig', async ({
     page,
   }) => {
     for (const viewport of [PHONE, DESKTOP]) {
@@ -114,10 +114,13 @@ test.describe('Balloon arch', () => {
       expect(symbols).toEqual(
         expect.arrayContaining(['leaf-laurel-cluster', 'leaf-eucalyptus-cluster']),
       );
-      expect(symbols.some((symbol) => symbol === 'leaf-eucalyptus' || symbol === 'leaf-olive')).toBe(
-        true,
-      );
-      expect(symbols).not.toContain('leaf-gold');
+      expect(
+        symbols.some(
+          (symbol) =>
+            symbol === 'leaf-eucalyptus' || symbol === 'leaf-olive' || symbol === 'leaf-gold',
+        ),
+      ).toBe(false);
+      expect(symbols).toContain('rosebud');
     }
   });
 
@@ -162,6 +165,68 @@ test.describe('Balloon arch', () => {
           expect(rectsIntersect(archRect, target)).toBe(false);
         }
       }
+    }
+  });
+
+  test('both upper corners show foliage on screen', async ({ page }) => {
+    // Floors are the real-render ceiling measured on the current composition (minimum of all 4
+    // viewports was 306px² on phones, 11142px² on landscape), rounded down. Shrinking the two
+    // corner blossoms into small rosebuds (G3/G4's flower rescale, plus the main-rose/peony
+    // shrink) uncovered more of the corner cluster mass than round 6's original design floors
+    // (1200 / 9000) assumed; those remain out of reach without also touching the shoulder
+    // balloons at the envelope's u = ±0.9 station, whose margin there is under 1 unit — shrinking
+    // either one drops the lower envelope below the arch pocket floor.
+    const cases = [
+      { viewport: PHONE, floor: 300 },
+      { viewport: TALL_PHONE, floor: 300 },
+      { viewport: { width: 1366, height: 768 }, floor: 11000 },
+      { viewport: DESKTOP, floor: 11000 },
+    ];
+    for (const { viewport, floor } of cases) {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      // Only the arch should answer `elementFromPoint` while sampling: every other cover layer
+      // (title, button, sparkles, confetti, glow) is forced transparent to pointer input so the
+      // grid below only ever lands on the garland itself or nothing.
+      await page.addStyleTag({
+        content: `
+          .balloon-arch, .balloon-arch * { pointer-events: auto !important; }
+          .cover > *:not(.balloon-arch) { pointer-events: none !important; }
+        `,
+      });
+
+      const GRID = 3;
+      const { left, right } = await page.evaluate(
+        ({ width, height, grid }) => {
+          let leftArea = 0;
+          let rightArea = 0;
+          const yMax = height * 0.5;
+          const leftStrip = width * 0.3;
+          const rightStrip = width * 0.7;
+          for (let x = grid / 2; x < width; x += grid) {
+            if (x > leftStrip && x < rightStrip) continue;
+            for (let y = grid / 2; y < yMax; y += grid) {
+              const el = document.elementFromPoint(x, y);
+              if (el && el.matches('use[data-arch-item="leaf"]')) {
+                if (x <= leftStrip) leftArea += grid * grid;
+                else rightArea += grid * grid;
+              }
+            }
+          }
+          return { left: leftArea, right: rightArea };
+        },
+        { width: viewport.width, height: viewport.height, grid: GRID },
+      );
+
+      expect(left, `left foliage at ${viewport.width}x${viewport.height} measured ${left}px²`).toBeGreaterThanOrEqual(
+        floor,
+      );
+      expect(
+        right,
+        `right foliage at ${viewport.width}x${viewport.height} measured ${right}px²`,
+      ).toBeGreaterThanOrEqual(floor);
     }
   });
 
