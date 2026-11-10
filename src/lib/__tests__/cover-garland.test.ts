@@ -270,19 +270,24 @@ describe('north-star composition', () => {
     expect(cut.map(label)).toEqual([]);
   });
 
-  it.each(LAYOUTS)('%s: sprigs grow out of the mass and cascade at both corners', (_name, layout) => {
+  it.each(LAYOUTS)('%s: every sprig grows out of the mass, with no floating leaf', (_name, layout) => {
     const { leaves, solids } = partsOf(layout);
-    const { x0, x1, top } = layout.clear;
 
     const floating = leaves.filter((leaf) => {
       const base = stemBase(leaf);
       return !solids.some((s) => Math.hypot(s.x - base.x, s.y - base.y) <= 1.05 * bodyRadius(s));
     });
     expect(floating.map(label)).toEqual([]);
+  });
 
-    expect(leaves.filter((l) => l.y > top && l.x < x0).length).toBeGreaterThanOrEqual(3);
-    expect(leaves.filter((l) => l.y > top && l.x > x1).length).toBeGreaterThanOrEqual(3);
-    expect(leaves.filter((l) => l.symbol === 'leaf-gold').length / leaves.length).toBeGreaterThanOrEqual(0.25);
+  it.each(LAYOUTS)('%s: no sprig hangs down like a spike, and no gold sprig remains', (_name, layout) => {
+    const { leaves } = partsOf(layout);
+
+    const spikes = leaves.filter((leaf) => Math.cos((leaf.rotate * Math.PI) / 180) < -0.64);
+    expect(spikes.map(label)).toEqual([]);
+
+    const gold = leaves.filter((leaf) => leaf.symbol === 'leaf-gold');
+    expect(gold.map(label)).toEqual([]);
   });
 
   it.each(LAYOUTS)('%s: at least six back sprigs peek up out of the crown', (_name, layout) => {
