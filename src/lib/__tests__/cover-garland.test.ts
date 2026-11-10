@@ -17,7 +17,13 @@ interface Box {
   b: number;
 }
 
-/** Conservative visible box: a disc for balloons and flowers, the rotated sprig rectangle's AABB for leaves. */
+const CLUSTER_IDS = ['leaf-laurel-cluster', 'leaf-eucalyptus-cluster'] as const;
+const isCluster = (item: GarlandItem) => (CLUSTER_IDS as readonly string[]).includes(item.symbol);
+
+/**
+ * Conservative visible box: a disc for balloons and flowers, the rotated sprig rectangle's AABB
+ * for single leaves, and a rotated size × size square's AABB for foliage clusters (aspect 1).
+ */
 function visBox(item: GarlandItem): Box {
   const kind = kindOf(item.symbol);
   if (kind !== 'leaf') {
@@ -25,7 +31,7 @@ function visBox(item: GarlandItem): Box {
     return { l: item.x - r, r: item.x + r, t: item.y - r, b: item.y + r };
   }
   const a = (item.rotate * Math.PI) / 180;
-  const w = 0.45 * item.size;
+  const w = isCluster(item) ? item.size : 0.45 * item.size;
   const h = item.size;
   const hw = (w * Math.abs(Math.cos(a)) + h * Math.abs(Math.sin(a))) / 2;
   const hh = (w * Math.abs(Math.sin(a)) + h * Math.abs(Math.cos(a))) / 2;
@@ -33,6 +39,13 @@ function visBox(item: GarlandItem): Box {
 }
 
 const label = (item: GarlandItem) => `${item.symbol}@${item.x},${item.y}`;
+
+/** The arch pocket's floor: high (crown) at the centre, parabolic out to `top` at the walls. */
+function pocketFloor(layout: GarlandLayout, x: number): number {
+  const { x0, x1, top, crown } = layout.clear;
+  const u = (x - layout.width / 2) / ((x1 - x0) / 2);
+  return crown + (top - crown) * u * u;
+}
 
 describe('text clearance', () => {
   it.each(LAYOUTS)('%s: no item reaches into the text zone', (_name, layout) => {
@@ -52,10 +65,10 @@ describe('text clearance', () => {
     expect(balloons.filter((b) => b.y > reach).map(label)).toEqual([]);
   });
 
-  it('the portrait clear zone spans the middle 76% below at most 0.68 of the width', () => {
+  it('the portrait clear zone spans the middle 81% below at most 0.68 of the width', () => {
     const { width, clear } = GARLAND.portrait;
-    expect(clear.x0).toBeCloseTo(0.12 * width, 6);
-    expect(clear.x1).toBeCloseTo(0.88 * width, 6);
+    expect(clear.x0).toBeCloseTo(0.095 * width, 6);
+    expect(clear.x1).toBeCloseTo(0.905 * width, 6);
     expect(clear.top).toBeLessThanOrEqual(0.68 * width);
   });
 
@@ -75,8 +88,34 @@ describe('text clearance', () => {
         `--arch-clear-portrait:${(p.clear.x1 - p.clear.x0) / p.width};` +
         `--arch-clear-landscape:${(l.clear.x1 - l.clear.x0) / l.width};`,
     );
-    expect(garlandCoverVars()).toContain('--arch-clear-portrait:0.76;');
+    expect(garlandCoverVars()).toContain('--arch-clear-portrait:0.81;');
     expect(garlandCoverVars()).toContain('--arch-clear-landscape:0.5;');
+  });
+
+  it.each(LAYOUTS)('%s: the arch pocket crown sits high at the centre, below top', (_name, layout) => {
+    const { width, clear } = layout;
+    expect(clear.crown).toBeLessThan(clear.top);
+    if (layout === GARLAND.portrait) {
+      expect(clear.crown).toBeGreaterThanOrEqual(0.5 * width);
+      expect(clear.crown).toBeLessThanOrEqual(0.56 * width);
+    } else {
+      expect(clear.crown).toBeGreaterThanOrEqual(0.15 * width);
+      expect(clear.crown).toBeLessThanOrEqual(0.18 * width);
+    }
+  });
+
+  it.each(LAYOUTS)('%s: no item enters the arch pocket above the text', (_name, layout) => {
+    const { x0, x1 } = layout.clear;
+    const mid = layout.width / 2;
+    const intruders = layout.items.filter((item) => {
+      const box = visBox(item);
+      const lo = Math.max(box.l, x0);
+      const hi = Math.min(box.r, x1);
+      if (lo >= hi) return false;
+      const nearestX = Math.min(Math.max(mid, lo), hi);
+      return box.b > pocketFloor(layout, nearestX);
+    });
+    expect(intruders.map(label)).toEqual([]);
   });
 
   it.each(LAYOUTS)('%s: paint order never steps back a depth', (_name, layout) => {
@@ -136,13 +175,59 @@ function partsOf(layout: GarlandLayout) {
 const ROSE_AND_PEONY = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory'];
 const PEARL = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-champagne-satin'];
 
+/** Union body coverage of a 4-unit sample grid under the arch pocket's floor, column by column. */
+function pocketCoverage(solids: Solid[], layout: GarlandLayout): number {
+  const { x0, x1 } = layout.clear;
+  let samples = 0;
+  let covered = 0;
+  for (let x = x0 + 2; x < x1; x += 4) {
+    const yMax = 0.9 * pocketFloor(layout, x);
+    for (let y = 2; y < yMax; y += 4) {
+      samples++;
+      if (solids.some((s) => Math.hypot(s.x - x, s.y - y) < bodyRadius(s))) covered++;
+    }
+  }
+  return samples ? covered / samples : 1;
+}
+
+/** The solids' lower envelope at x: the lowest point of whichever body's disc reaches down there. */
+function envelope(solids: Solid[], x: number): number {
+  let lowest = -Infinity;
+  for (const s of solids) {
+    const r = bodyRadius(s);
+    const dx = x - s.x;
+    if (Math.abs(dx) >= r) continue;
+    const y = s.y + Math.sqrt(r * r - dx * dx);
+    if (y > lowest) lowest = y;
+  }
+  return lowest;
+}
+
 describe('north-star composition', () => {
   it.each(LAYOUTS)('%s: the crown and both upper corners are densely filled', (_name, layout) => {
     const { solids } = partsOf(layout);
     const { x0, x1, top } = layout.clear;
-    expect(coverage(solids, x0, x1, 0, 0.8 * top)).toBeGreaterThanOrEqual(0.75);
+    expect(pocketCoverage(solids, layout)).toBeGreaterThanOrEqual(0.8);
     expect(coverage(solids, 0, x0, 0, top)).toBeGreaterThanOrEqual(0.6);
     expect(coverage(solids, x1, layout.width, 0, top)).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it.each(LAYOUTS)('%s: the lower edge hugs the arch and drops into both corners', (_name, layout) => {
+    const { solids } = partsOf(layout);
+    const { x0, x1, top, crown } = layout.clear;
+    const width = layout.width;
+    const half = (x1 - x0) / 2;
+    const tol = layout === GARLAND.portrait ? 0.05 * width : 0.03 * width;
+    for (const u of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) {
+      const x = width / 2 + u * half;
+      expect(envelope(solids, x)).toBeGreaterThanOrEqual(pocketFloor(layout, x) - tol);
+    }
+    const eCenter = envelope(solids, width / 2);
+    const eRight = envelope(solids, width / 2 + 0.9 * half);
+    const eLeft = envelope(solids, width / 2 - 0.9 * half);
+    expect(Math.max(eLeft, eRight) - eCenter).toBeGreaterThanOrEqual(0.5 * (top - crown));
+    expect(envelope(solids, x0 / 2)).toBeGreaterThanOrEqual(top + 0.06 * width);
+    expect(envelope(solids, width - x0 / 2)).toBeGreaterThanOrEqual(top + 0.06 * width);
   });
 
   it.each(LAYOUTS)('%s: balloons overlap in layers of varied size', (_name, layout) => {
@@ -191,20 +276,84 @@ describe('north-star composition', () => {
     expect(cut.map(label)).toEqual([]);
   });
 
-  it.each(LAYOUTS)('%s: sprigs grow out of the mass and cascade at both corners', (_name, layout) => {
+  it.each(LAYOUTS)('%s: the main roses and peonies are big, and veiled by a front balloon', (_name, layout) => {
+    const { balloons, flowers } = partsOf(layout);
+    const roseAndPeony = flowers.filter((f) => ROSE_AND_PEONY.includes(f.symbol));
+    const M = Math.max(...balloons.map((b) => b.size));
+
+    const undersized = roseAndPeony.filter((f) => f.size < 0.53 * M);
+    expect(undersized.map(label)).toEqual([]);
+
+    const mean = roseAndPeony.reduce((sum, f) => sum + f.size, 0) / roseAndPeony.length;
+    expect(mean).toBeGreaterThanOrEqual(0.6 * M);
+
+    const frontAccents = balloons.filter((b) => b.depth === 4);
+    const veiled = roseAndPeony.filter((f) => frontAccents.some((b) => pressedTogether(f, b)));
+    expect(veiled.length / roseAndPeony.length).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it.each(LAYOUTS)('%s: every sprig grows out of the mass, with no floating leaf', (_name, layout) => {
     const { leaves, solids } = partsOf(layout);
-    const { x0, x1, top } = layout.clear;
 
     const floating = leaves.filter((leaf) => {
       const base = stemBase(leaf);
       return !solids.some((s) => Math.hypot(s.x - base.x, s.y - base.y) <= 1.05 * bodyRadius(s));
     });
     expect(floating.map(label)).toEqual([]);
-
-    expect(leaves.filter((l) => l.y > top && l.x < x0).length).toBeGreaterThanOrEqual(3);
-    expect(leaves.filter((l) => l.y > top && l.x > x1).length).toBeGreaterThanOrEqual(3);
-    expect(leaves.filter((l) => l.symbol === 'leaf-gold').length / leaves.length).toBeGreaterThanOrEqual(0.25);
   });
+
+  it.each(LAYOUTS)('%s: no sprig hangs down like a spike, and no gold sprig remains', (_name, layout) => {
+    const { leaves } = partsOf(layout);
+
+    const spikes = leaves.filter((leaf) => Math.cos((leaf.rotate * Math.PI) / 180) < -0.64);
+    expect(spikes.map(label)).toEqual([]);
+
+    const gold = leaves.filter((leaf) => leaf.symbol === 'leaf-gold');
+    expect(gold.map(label)).toEqual([]);
+  });
+
+  it.each(LAYOUTS)(
+    '%s: each upper corner grows at least two clusters, laurel and eucalyptus, from behind a balloon, fanning outward',
+    (_name, layout) => {
+      const { balloons } = partsOf(layout);
+      const { x0, x1, top } = layout.clear;
+      const { width } = layout;
+      const clusters = layout.items.filter((item) => isCluster(item));
+      expect(clusters.length).toBeGreaterThan(0);
+
+      for (const cluster of clusters) {
+        expect(cluster.depth).toBe(0);
+        const base = stemBase(cluster);
+        const hostBalloon = balloons.find(
+          (b) => Math.hypot(b.x - base.x, b.y - base.y) <= 1.05 * bodyRadius(b),
+        );
+        expect(hostBalloon, `${label(cluster)} is not rooted in a balloon`).toBeDefined();
+        expect(base.y, `${label(cluster)} root is too low`).toBeLessThanOrEqual(top + 0.1 * width);
+      }
+
+      for (const side of ['left', 'right'] as const) {
+        const inStrip = (item: GarlandItem) => {
+          const base = stemBase(item);
+          return side === 'left' ? base.x < x0 : base.x > x1;
+        };
+        const cornerClusters = clusters.filter(inStrip);
+        expect(cornerClusters.length, `${side} corner has too few clusters`).toBeGreaterThanOrEqual(2);
+        expect(
+          cornerClusters.some((c) => c.symbol === 'leaf-laurel-cluster'),
+          `${side} corner has no laurel cluster`,
+        ).toBe(true);
+        expect(
+          cornerClusters.some((c) => c.symbol === 'leaf-eucalyptus-cluster'),
+          `${side} corner has no eucalyptus cluster`,
+        ).toBe(true);
+
+        const badFan = cornerClusters.filter((c) =>
+          side === 'left' ? c.rotate < -135 || c.rotate > -20 : c.rotate < 20 || c.rotate > 135,
+        );
+        expect(badFan.map(label), `${side} corner clusters fan the wrong way`).toEqual([]);
+      }
+    },
+  );
 
   it.each(LAYOUTS)('%s: at least six back sprigs peek up out of the crown', (_name, layout) => {
     const { leaves } = partsOf(layout);
