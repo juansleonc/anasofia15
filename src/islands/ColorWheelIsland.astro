@@ -240,7 +240,9 @@ const HUB_RADIUS = 20;
   const COUNT = dressColors.length;
 
   const rotor = document.querySelector('[data-testid="color-wheel-rotor"]') as HTMLElement | null;
-  const fieldset = document.querySelector('[data-testid="color-wheel-fieldset"]');
+  const fieldset = document.querySelector<HTMLFieldSetElement>(
+    '[data-testid="color-wheel-fieldset"]',
+  );
   const radios = Array.from(
     document.querySelectorAll<HTMLInputElement>('[data-testid="color-wheel-option"]'),
   );

@@ -1,17 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 // Page-composition fidelity: asserts the sections appear in the documented reading order (Cover
-// -> Hero -> Countdown -> Detalles -> ComoLlegar -> Trivia -> Rsvp -> Footer; Album is retired),
-// and that the scroll-reveal polish added on top of that composition is a true progressive
-// enhancement: a below-the-fold section stays hidden-then-fades-in on scroll by default, is shown
-// immediately (no motion) under `prefers-reduced-motion: reduce`, and — most importantly — is
-// never permanently hidden if JavaScript fails to run at all.
+// -> Hero -> Countdown -> Detalles -> ColorWheel -> ComoLlegar -> Trivia -> Rsvp -> Footer; Album
+// is retired), and that the scroll-reveal polish added on top of that composition is a true
+// progressive enhancement: a below-the-fold section stays hidden-then-fades-in on scroll by
+// default, is shown immediately (no motion) under `prefers-reduced-motion: reduce`, and — most
+// importantly — is never permanently hidden if JavaScript fails to run at all.
 
 const SECTION_ORDER = [
   'cover',
   'hero',
   'countdown',
   'detalles',
+  'rueda-colores',
   'como-llegar',
   'trivia',
   'rsvp',
