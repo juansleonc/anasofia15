@@ -25,16 +25,14 @@ test.describe('Cover falling confetti', () => {
     expect(Math.abs(confettiBox!.height - coverBox!.height)).toBeLessThanOrEqual(1);
   });
 
-  test('holds 12 foil ribbons and 6 glitter specks', async ({ page }) => {
+  test('holds 12 foil ribbons and no falling glitter specks', async ({ page }) => {
     await page.goto('./');
 
     await expect(page.locator('[data-confetti="ribbon"]')).toHaveCount(12);
-    await expect(page.locator('[data-confetti="glitter"]')).toHaveCount(6);
+    await expect(page.locator('[data-confetti="glitter"]')).toHaveCount(0);
   });
 
-  test('ribbons are champagne foil at least 3:1, glitter is a soft round radial', async ({
-    page,
-  }) => {
+  test('ribbons are champagne foil at least 3:1', async ({ page }) => {
     await page.goto('./');
 
     const ribbons = await page.locator('[data-confetti="ribbon"]').evaluateAll((elements) =>
@@ -54,18 +52,6 @@ test.describe('Cover falling confetti', () => {
       // champagne-300, champagne-500 and champagne-700, from tokens.css.
       expect(ribbon.backgroundImage).toContain('rgb(230, 201, 154)');
       expect(ribbon.backgroundImage).toContain('rgb(205, 168, 105)');
-    }
-
-    const glitter = await page.locator('[data-confetti="glitter"]').evaluateAll((elements) =>
-      elements.map((el) => {
-        const style = getComputedStyle(el);
-        return { borderRadius: style.borderRadius, backgroundImage: style.backgroundImage };
-      }),
-    );
-    expect(glitter).toHaveLength(6);
-    for (const speck of glitter) {
-      expect(speck.borderRadius).toBe('50%');
-      expect(speck.backgroundImage).toContain('radial-gradient');
     }
   });
 
@@ -107,7 +93,7 @@ test.describe('Cover falling confetti', () => {
         return { animationName: style.animationName, opacity: parseFloat(style.opacity) };
       }),
     );
-    expect(pieces).toHaveLength(18);
+    expect(pieces).toHaveLength(12);
     for (const piece of pieces) {
       expect(piece.animationName).toBe('none');
       expect(piece.opacity).toBeGreaterThan(0);
@@ -241,6 +227,144 @@ test.describe('Cover light flares', () => {
       }
     });
   }
+});
+
+test.describe('Cover drifting light', () => {
+  test('holds 6 glitter, 3 star and 3 bokeh drift particles, hidden via the layer', async ({
+    page,
+  }) => {
+    await page.goto('./');
+
+    await expect(page.locator('[data-drift="glitter"]')).toHaveCount(6);
+    await expect(page.locator('[data-drift="star"]')).toHaveCount(3);
+    await expect(page.locator('[data-drift="bokeh"]')).toHaveCount(3);
+
+    const hidden = await page
+      .locator('[data-drift]')
+      .evaluateAll((elements) => elements.map((el) => el.closest('[aria-hidden="true"]') !== null));
+    expect(hidden.every(Boolean)).toBe(true);
+  });
+
+  test('drifts by default, animating only transform and opacity', async ({ page }) => {
+    await page.goto('./');
+
+    const result = await page.locator('[data-drift]').evaluateAll((elements) => {
+      const running = elements.filter((el) => getComputedStyle(el).animationName !== 'none');
+      const properties = new Set<string>();
+      for (const el of running) {
+        for (const animation of el.getAnimations()) {
+          const effect = animation.effect as KeyframeEffect;
+          for (const keyframe of effect.getKeyframes()) {
+            for (const key of Object.keys(keyframe)) {
+              if (!['offset', 'easing', 'composite', 'computedOffset'].includes(key)) {
+                properties.add(key);
+              }
+            }
+          }
+        }
+      }
+      return { running: running.length, properties: [...properties].sort() };
+    });
+
+    expect(result.running).toBeGreaterThanOrEqual(1);
+    expect(result.properties.length).toBeGreaterThan(0);
+    for (const property of result.properties) {
+      expect(['opacity', 'transform']).toContain(property);
+    }
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`spawns along the garland arc, centred at y in [26%, 40%] of the cover at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const spawnYs = await page
+        .locator('[data-drift]')
+        .evaluateAll((elements) =>
+          elements.map((el) =>
+            parseFloat(getComputedStyle(el).getPropertyValue('--drift-y')),
+          ),
+        );
+      expect(spawnYs).toHaveLength(12);
+      for (const yPct of spawnYs) {
+        expect(yPct).toBeGreaterThanOrEqual(26);
+        expect(yPct).toBeLessThanOrEqual(40);
+      }
+    });
+  }
+
+  test('each drift vector points toward the centre of the text block', async ({ page }) => {
+    await page.goto('./');
+
+    const vectors = await page.locator('[data-drift]').evaluateAll((elements) =>
+      elements.map((el) => {
+        const style = getComputedStyle(el);
+        return {
+          xPct: parseFloat(style.getPropertyValue('--drift-x')),
+          dx: parseFloat(style.getPropertyValue('--drift-dx')),
+          dy: parseFloat(style.getPropertyValue('--drift-dy')),
+        };
+      }),
+    );
+    expect(vectors).toHaveLength(12);
+    for (const vector of vectors) {
+      expect(vector.dy).toBeGreaterThan(0);
+      if (vector.dx !== 0) {
+        expect(Math.sign(vector.dx)).toBe(Math.sign(50 - vector.xPct));
+      }
+    }
+  });
+
+  test('never uses a CSS filter', async ({ page }) => {
+    await page.goto('./');
+
+    const filters = await page
+      .locator('[data-drift]')
+      .evaluateAll((elements) => elements.map((el) => getComputedStyle(el).filter));
+    expect(filters).toHaveLength(12);
+    for (const filter of filters) {
+      expect(filter).toBe('none');
+    }
+  });
+
+  test('does not cause horizontal overflow at 375x667', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('./');
+
+    await expect(page.locator('[data-drift]').first()).toBeAttached();
+    const overflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
+  });
+
+  test('freezes mid-path but stays visible under prefers-reduced-motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('./');
+
+    const particles = await page.locator('[data-drift]').evaluateAll((elements) =>
+      elements.map((el) => {
+        const style = getComputedStyle(el);
+        const box = el.getBoundingClientRect();
+        return {
+          animationName: style.animationName,
+          opacity: parseFloat(style.opacity),
+          width: box.width,
+          height: box.height,
+        };
+      }),
+    );
+    expect(particles).toHaveLength(12);
+    for (const particle of particles) {
+      expect(particle.animationName).toBe('none');
+      expect(particle.opacity).toBeGreaterThan(0);
+      expect(particle.width).toBeGreaterThan(0);
+      expect(particle.height).toBeGreaterThan(0);
+    }
+  });
 });
 
 test.describe('Cover page edge', () => {

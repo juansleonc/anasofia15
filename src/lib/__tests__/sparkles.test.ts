@@ -4,6 +4,7 @@ import {
   ringSparkles,
   lowerGlitter,
   fallingConfetti,
+  driftingSparkles,
   RIBBON_WIDTH_PX,
   MAX_SPARKLES,
   MIN_DISTANCE_PCT,
@@ -314,18 +315,17 @@ describe('lowerGlitter', () => {
 
 describe('fallingConfetti', () => {
   function pieces(seed = 1515) {
-    return fallingConfetti({ ribbons: 12, glitter: 6, seed });
+    return fallingConfetti({ ribbons: 12, seed });
   }
 
-  it('returns the requested ribbons first, then the glitter specks', () => {
+  it('returns only ribbons — falling glitter moved to the drift set', () => {
     const confetti = pieces();
-    expect(confetti).toHaveLength(18);
-    expect(confetti.filter((piece) => piece.kind === 'ribbon')).toHaveLength(12);
-    expect(confetti.filter((piece) => piece.kind === 'glitter')).toHaveLength(6);
+    expect(confetti).toHaveLength(12);
+    expect(confetti.every((piece) => piece.kind === 'ribbon')).toBe(true);
   });
 
-  it('returns nothing for non-positive counts', () => {
-    expect(fallingConfetti({ ribbons: 0, glitter: -2, seed: 1 })).toHaveLength(0);
+  it('returns nothing for a non-positive count', () => {
+    expect(fallingConfetti({ ribbons: 0, seed: 1 })).toHaveLength(0);
   });
 
   it('falls gently: 9-15s per fall, already mid-fall at load', () => {
@@ -365,5 +365,84 @@ describe('fallingConfetti', () => {
   it('is deterministic for a seed and varies with it', () => {
     expect(pieces(1515)).toEqual(pieces(1515));
     expect(pieces(1515)).not.toEqual(pieces(42));
+  });
+});
+
+// Round-5 feedback: sparkle particles should drift from the garland toward the center, rather
+// than just falling straight down or twinkling in place.
+describe('driftingSparkles', () => {
+  function drift(seed = 3344) {
+    return driftingSparkles({ glitter: 6, stars: 3, bokeh: 3, seed });
+  }
+
+  const SIZE_RANGES = {
+    glitter: [4, 7] as [number, number],
+    star: [10, 16] as [number, number],
+    bokeh: [24, 44] as [number, number],
+  };
+
+  it('returns exactly the requested count per kind', () => {
+    const sparkles = drift();
+    expect(sparkles).toHaveLength(12);
+    expect(sparkles.filter((s) => s.kind === 'glitter')).toHaveLength(6);
+    expect(sparkles.filter((s) => s.kind === 'star')).toHaveLength(3);
+    expect(sparkles.filter((s) => s.kind === 'bokeh')).toHaveLength(3);
+  });
+
+  it('is deterministic for a given seed and varies with it', () => {
+    expect(drift(3344)).toEqual(drift(3344));
+    expect(drift(3344)).not.toEqual(drift(9));
+  });
+
+  it('spawns on the garland arc: x in [20, 80], y tracking the crown curve within 1.5', () => {
+    for (const sparkle of drift()) {
+      expect(sparkle.xPct).toBeGreaterThanOrEqual(20);
+      expect(sparkle.xPct).toBeLessThanOrEqual(80);
+      const expectedY = 29 + 9 * Math.pow((sparkle.xPct - 50) / 30, 2);
+      expect(Math.abs(sparkle.yPct - expectedY)).toBeLessThanOrEqual(1.5);
+    }
+  });
+
+  it('travels 50-80% of the way toward (50, 55), downward and toward the centre', () => {
+    for (const sparkle of drift()) {
+      const toCentreX = 50 - sparkle.xPct;
+      const toCentreY = 55 - sparkle.yPct;
+      expect(sparkle.dyPct).toBeGreaterThan(0);
+      if (sparkle.dxPct !== 0) {
+        expect(Math.sign(sparkle.dxPct)).toBe(Math.sign(toCentreX));
+      }
+      const travelled = Math.hypot(sparkle.dxPct, sparkle.dyPct);
+      const toCentre = Math.hypot(toCentreX, toCentreY);
+      const fraction = travelled / toCentre;
+      expect(fraction).toBeGreaterThanOrEqual(0.5);
+      expect(fraction).toBeLessThanOrEqual(0.8);
+    }
+  });
+
+  it('times each piece 8-13s with a negative delay already mid-flight', () => {
+    for (const sparkle of drift()) {
+      expect(sparkle.durationMs).toBeGreaterThanOrEqual(8000);
+      expect(sparkle.durationMs).toBeLessThanOrEqual(13000);
+      expect(sparkle.delayMs).toBeLessThanOrEqual(0);
+      expect(sparkle.delayMs).toBeGreaterThanOrEqual(-sparkle.durationMs);
+    }
+  });
+
+  it('sizes and peak-opacities each kind within its own range', () => {
+    for (const sparkle of drift()) {
+      const [min, max] = SIZE_RANGES[sparkle.kind];
+      expect(sparkle.sizePx).toBeGreaterThanOrEqual(min);
+      expect(sparkle.sizePx).toBeLessThanOrEqual(max);
+      if (sparkle.kind === 'bokeh') {
+        expect(sparkle.peakOpacity).toBeLessThanOrEqual(0.35);
+      }
+      expect(sparkle.peakOpacity).toBeGreaterThan(0);
+      expect(sparkle.peakOpacity).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('returns no particles for non-positive counts', () => {
+    expect(driftingSparkles({ glitter: 0, stars: 0, bokeh: 0, seed: 1 })).toHaveLength(0);
+    expect(driftingSparkles({ glitter: -2, stars: -1, bokeh: -1, seed: 1 })).toHaveLength(0);
   });
 });

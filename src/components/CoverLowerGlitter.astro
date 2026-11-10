@@ -42,6 +42,11 @@ const particles = lowerGlitter({
 
 const FLAKE_TONES = ['--c-white', '--c-champagne-100'];
 const BOKEH_TONES = ['--c-champagne-200', '--c-champagne-100'];
+
+// Round-5 light-budget pass: 2 of the 8 flecks free a running-animation slot for the new drift
+// layer (see lib/sparkles.ts `driftingSparkles`) by freezing as a calm, static point of light
+// instead of losing a particle — see the budget e2e for the resulting ≤ 6 running flakes.
+let flakeIndex = 0;
 ---
 
 <div class="cover-lower-atmosphere" data-testid="cover-lower-atmosphere" aria-hidden="true">
@@ -69,10 +74,13 @@ const BOKEH_TONES = ['--c-champagne-200', '--c-champagne-100'];
         }
 
         const tone = FLAKE_TONES[index % FLAKE_TONES.length];
+        const isStatic = flakeIndex % 4 === 3;
+        flakeIndex++;
         return (
           <span
             class="cover-lower-glitter__item cover-lower-glitter__flake"
             data-lower-sparkle="flake"
+            data-lower-sparkle-static={isStatic ? '' : undefined}
             style={`${vars}--sparkle-tone:var(${tone});`}
           />
         );
@@ -156,6 +164,12 @@ const BOKEH_TONES = ['--c-champagne-200', '--c-champagne-100'];
     animation-iteration-count: infinite;
     animation-delay: var(--sparkle-delay);
     animation-duration: var(--sparkle-duration);
+  }
+
+  /* 2 of the 8 flecks stay static (a calm point of light, not a blinking one) to free a
+     running-animation slot for the garland-to-centre drift layer. */
+  .cover-lower-glitter__flake[data-lower-sparkle-static] {
+    animation: none;
   }
 
   /* Larger, out-of-focus golden disc — static (no twinkle) so it reads as ambient bokeh light

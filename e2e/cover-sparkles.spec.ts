@@ -94,7 +94,9 @@ test.describe('Cover sparkles', () => {
     expect(count).toBeLessThanOrEqual(14);
   });
 
-  test('bokeh discs are static while glow and star twinkle', async ({ page }) => {
+  test('exactly 4 glows and 4 stars run; the bokeh and the other glows are static', async ({
+    page,
+  }) => {
     await page.goto('./');
 
     const bokehAnimations = await page
@@ -105,12 +107,20 @@ test.describe('Cover sparkles', () => {
       expect(name).toBe('none');
     }
 
-    const twinkling = await page
-      .locator('[data-sparkle="glow"], [data-sparkle="star"]')
-      .evaluateAll(
-        (elements) => elements.filter((el) => getComputedStyle(el).animationName !== 'none').length,
-      );
-    expect(twinkling).toBeGreaterThanOrEqual(1);
+    const glowAnimations = await page
+      .locator('[data-sparkle="glow"]')
+      .evaluateAll((elements) => elements.map((el) => getComputedStyle(el).animationName));
+    expect(glowAnimations).toHaveLength(8);
+    expect(glowAnimations.filter((name) => name !== 'none')).toHaveLength(4);
+    expect(glowAnimations.filter((name) => name === 'none')).toHaveLength(4);
+
+    const starAnimations = await page
+      .locator('[data-sparkle="star"]')
+      .evaluateAll((elements) => elements.map((el) => getComputedStyle(el).animationName));
+    expect(starAnimations).toHaveLength(4);
+    for (const name of starAnimations) {
+      expect(name).not.toBe('none');
+    }
   });
 
   test('sparkles twinkle by default and freeze under prefers-reduced-motion', async ({ page }) => {

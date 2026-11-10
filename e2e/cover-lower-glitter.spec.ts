@@ -42,14 +42,17 @@ test.describe('Cover lower glitter', () => {
     });
   }
 
-  test('keeps the particle count at or under budget for the twinkling-element cap', async ({
+  test('keeps running flakes at or under budget for the twinkling-element cap', async ({
     page,
   }) => {
     await page.goto('./');
 
-    const flakeCount = await page.locator('[data-lower-sparkle="flake"]').count();
-    expect(flakeCount).toBeGreaterThan(0);
-    expect(flakeCount).toBeLessThanOrEqual(8);
+    const flakeAnimations = await page
+      .locator('[data-lower-sparkle="flake"]')
+      .evaluateAll((elements) => elements.map((el) => getComputedStyle(el).animationName));
+    expect(flakeAnimations.length).toBeGreaterThan(0);
+    const running = flakeAnimations.filter((name) => name !== 'none').length;
+    expect(running).toBeLessThanOrEqual(6);
   });
 
   for (const viewport of [

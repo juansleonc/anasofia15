@@ -4,13 +4,18 @@
 // script. The layer is a size container, so the one shared keyframe can move every piece in `cqh`
 // (a share of the cover's height) using transform and opacity only. Under reduced motion each
 // piece stops at its own seeded resting height instead, so the cover still reads as festive.
-import { fallingConfetti, RIBBON_WIDTH_PX } from '../lib/sparkles';
+import { fallingConfetti, driftingSparkles, RIBBON_WIDTH_PX } from '../lib/sparkles';
 
 const RIBBON_COUNT = 12;
-const GLITTER_COUNT = 6;
 const SEED = 1515;
 
-const pieces = fallingConfetti({ ribbons: RIBBON_COUNT, glitter: GLITTER_COUNT, seed: SEED });
+const pieces = fallingConfetti({ ribbons: RIBBON_COUNT, seed: SEED });
+
+// Round-5 feedback: light should drift from the garland toward the centre, not just fall or
+// twinkle in place. Lives in this layer (not a new mount) because it is already the cover-sized
+// `container-type: size` layer below `.cover__content` — see lib/sparkles.ts `driftingSparkles`.
+const DRIFT_SEED = 3344;
+const drift = driftingSparkles({ glitter: 6, stars: 3, bokeh: 3, seed: DRIFT_SEED });
 
 // Soft static bokeh along the garland's lower edge and in the side gutters beside the text block,
 // clear of the lead, name and button at portrait and landscape: [x %, y %, diameter px, opacity].
@@ -74,6 +79,30 @@ function round(value: number): string {
       />
     ))
   }
+  {
+    drift.map((particle, index) => {
+      // Alternating sideways sway so the drift reads as organic motion rather than every piece
+      // swinging the same way at the midpoint of its path.
+      const swayPx = index % 2 === 0 ? 12 : -12;
+      const vars =
+        `--drift-x:${round(particle.xPct)}%;` +
+        `--drift-y:${round(particle.yPct)}%;` +
+        `--drift-dx:${round(particle.dxPct)}cqw;` +
+        `--drift-dy:${round(particle.dyPct)}cqh;` +
+        `--drift-sway:${swayPx}px;` +
+        `--drift-size:${round(particle.sizePx)}px;` +
+        `--drift-peak:${particle.peakOpacity};` +
+        `--drift-duration:${Math.round(particle.durationMs)}ms;` +
+        `--drift-delay:${Math.round(particle.delayMs)}ms;`;
+      return (
+        <span
+          class={`cover-confetti__drift cover-confetti__drift-${particle.kind}`}
+          data-drift={particle.kind}
+          style={vars}
+        />
+      );
+    })
+  }
 </div>
 
 <style define:vars={{ ribbonWidth: `${RIBBON_WIDTH_PX}px` }}>
@@ -103,19 +132,6 @@ function round(value: number): string {
       var(--c-champagne-300),
       var(--c-champagne-500) 55%,
       var(--c-champagne-700)
-    );
-  }
-
-  /* A soft speck of light, never a hard chip. */
-  .cover-confetti__glitter {
-    width: var(--confetti-length);
-    height: var(--confetti-length);
-    border-radius: 50%;
-    background-image: radial-gradient(
-      circle,
-      var(--c-white) 0%,
-      var(--c-champagne-300) 45%,
-      transparent 72%
     );
   }
 
@@ -162,6 +178,88 @@ function round(value: number): string {
         center / 2px 70% no-repeat;
   }
 
+  /* Shared by all three drift kinds: spawns at its garland position, scaled down and invisible,
+     drifts toward the text block's centre while growing to full scale, and fades back out. */
+  .cover-confetti__drift {
+    position: absolute;
+    left: var(--drift-x);
+    top: var(--drift-y);
+    width: var(--drift-size);
+    height: var(--drift-size);
+    opacity: 0;
+    animation: cover-sparkle-drift var(--drift-duration) ease-in-out var(--drift-delay) infinite;
+  }
+
+  /* A soft speck of light, never a hard chip. */
+  .cover-confetti__drift-glitter {
+    border-radius: 50%;
+    background-image: radial-gradient(
+      circle,
+      var(--c-white) 0%,
+      var(--c-champagne-300) 45%,
+      transparent 72%
+    );
+  }
+
+  /* A soft 4-point star: a radial core plus two crossing, soft-edged gradient bars — the "blur"
+     comes from the gradient falloff, never a CSS filter. */
+  .cover-confetti__drift-star {
+    background:
+      radial-gradient(
+          circle,
+          var(--c-white) 0%,
+          color-mix(in srgb, var(--c-champagne-200) 70%, transparent) 12%,
+          transparent 40%
+        ),
+      linear-gradient(
+          90deg,
+          transparent 0%,
+          color-mix(in srgb, var(--c-white) 85%, transparent) 50%,
+          transparent 100%
+        )
+        center / 100% 2px no-repeat,
+      linear-gradient(
+          0deg,
+          transparent 0%,
+          color-mix(in srgb, var(--c-white) 85%, transparent) 50%,
+          transparent 100%
+        )
+        center / 2px 70% no-repeat;
+  }
+
+  /* A faint, large out-of-focus disc. */
+  .cover-confetti__drift-bokeh {
+    border-radius: 50%;
+    background-image: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--c-champagne-100) 70%, transparent) 0%,
+      color-mix(in srgb, var(--c-champagne-200) 35%, transparent) 55%,
+      transparent 72%
+    );
+  }
+
+  @keyframes cover-sparkle-drift {
+    0% {
+      transform: translate(-50%, -50%) translate(0, 0) scale(0.6);
+      opacity: 0;
+    }
+    15% {
+      opacity: var(--drift-peak);
+    }
+    50% {
+      transform: translate(-50%, -50%)
+        translate(calc(var(--drift-dx) * 0.5 + var(--drift-sway)), calc(var(--drift-dy) * 0.5))
+        scale(0.8);
+    }
+    70% {
+      opacity: calc(var(--drift-peak) * 0.8);
+    }
+    100% {
+      transform: translate(-50%, -50%) translate(var(--drift-dx), var(--drift-dy)) scale(1);
+      opacity: 0;
+    }
+  }
+
   @keyframes cover-confetti-fall {
     0% {
       transform: translate(0, 22cqh) rotate(0deg);
@@ -184,6 +282,15 @@ function round(value: number): string {
       animation: none;
       opacity: 0.7;
       transform: translateY(var(--confetti-rest)) rotate(var(--confetti-spin));
+    }
+
+    /* Freezes each drift particle 35% of the way along its path, still visible, instead of mid-
+       flight animation. */
+    .cover-confetti__drift {
+      animation: none;
+      transform: translate(-50%, -50%)
+        translate(calc(var(--drift-dx) * 0.35), calc(var(--drift-dy) * 0.35)) scale(0.74);
+      opacity: calc(var(--drift-peak) * 0.8);
     }
   }
 </style>
