@@ -389,7 +389,7 @@ function fitsAmong(candidate: ArchItem, placed: ArchItem[]): boolean {
 
 /**
  * Takes the first candidate that fits among `placed` together with its mirrored twin (when it has
- * one), falling back to the first candidate so counts always stay exact.
+ * one), or nothing when none fits — so counts are exact only when the spec fits its canvas.
  */
 function pickFitting(
   candidates: ArchItem[],
@@ -408,9 +408,7 @@ function pickFitting(
       return [candidate, twin];
     }
   }
-  const fallback = candidates[0];
-  const twin = twinOf(fallback);
-  return twin === null ? [fallback] : [fallback, twin];
+  return [];
 }
 
 /** Share of the crown's balloon area the two outer quarters aim for: a gentle corner emphasis. */
@@ -437,6 +435,10 @@ function steerCorners(candidates: ArchItem[], balloons: ArchItem[], spec: ArchSp
 
 /** Spine steps across the left half where a balloon may be centered. */
 const BALLOON_SPINE_STEPS = 80;
+/** Normal offsets (fractions of balloon size; negative = outward) a balloon may sit at. */
+const SPINE_OFFSETS = [-0.45, 0.45];
+/** The axis balloon may also ride further out, above a flower cluster sitting on the axis. */
+const AXIS_OFFSETS = [...SPINE_OFFSETS, -0.9, -1.2];
 
 /**
  * Spreads balloons along the left half of the spine one at a time, each into the open spot with
@@ -490,13 +492,13 @@ function placeBalloons(spec: ArchSpec, spine: Spine, flowers: ArchItem[], rng: (
    */
   const rankedCandidates = (isBack: boolean, tone: ArchTone, ts: number[], placed: ArchItem[]): ArchItem[] => {
     const rotate = (rng() - 0.5) * 20;
-    return [1, 0.7, 0.5].flatMap((scale) => {
+    return [1, 0.7, 0.5, 0.35].flatMap((scale) => {
       const scored: { item: ArchItem; score: number }[] = [];
       for (const t of ts) {
         if (sampleSpine(spine, t).y > lowest) {
           continue;
         }
-        for (const offset of [-0.45, 0.45]) {
+        for (const offset of t === 0.5 ? AXIS_OFFSETS : SPINE_OFFSETS) {
           const item = balloonAt(t, isBack, tone, offset, rotate, scale);
           const room = clearance(item, placed) - item.size / 2;
           scored.push({ item, score: room + preference(t) + rng() * 0.05 * item.size });
@@ -630,6 +632,11 @@ function placeFillers(spec: ArchSpec, spine: Spine, solids: ArchItem[], rng: () 
     };
     const picked = pickFitting(candidates, placed, twinOf);
     leftCount += 1;
+    if (picked.length === 0) {
+      // Nothing fits this slot: drop it so the loop still ends.
+      remaining -= onAxis ? 1 : 2;
+      continue;
+    }
     rightCount += picked.length - 1;
     remaining -= picked.length;
     items.push(...picked);

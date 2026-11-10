@@ -480,6 +480,59 @@ describe('mirror balance', () => {
   });
 });
 
+// Specs asking for more than the canvas holds: placement must skip what doesn't fit rather than
+// stack it on top of what is already there.
+describe('crowded specs', () => {
+  const crowdedPortrait: ArchSpec = {
+    ...ARCH_SPECS.portrait,
+    width: 400,
+    height: 560,
+    gutter: 48,
+    sideDepth: 545,
+    fadeStart: 380,
+    counts: { balloons: 22, fillers: 6, flowers: 12, leaves: 30 },
+    sizeRange: [26, 92],
+  };
+  const crowdedLandscape: ArchSpec = {
+    ...ARCH_SPECS.landscape,
+    width: 1440,
+    height: 620,
+    band: 200,
+    gutter: 300,
+    sideDepth: 600,
+    fadeStart: 430,
+    counts: { balloons: 34, fillers: 8, flowers: 18, leaves: 40 },
+    sizeRange: [48, 170],
+  };
+  const crowded: ArchSpec[] = [crowdedPortrait, crowdedLandscape].flatMap((spec) => [
+    spec,
+    ...EXTRA_SEEDS.map((seed) => ({ ...spec, seed })),
+  ]);
+
+  it('never buries a balloon or flower more than 40% under the items in front of it', () => {
+    for (const spec of crowded) {
+      const solids = buildArch(spec).items.filter((item) => item.kind !== 'leaf');
+      expect(solids.length).toBeGreaterThan(0);
+      solids.forEach((item, index) => {
+        const where = `${spec.width}x${spec.height} seed ${spec.seed}: ${item.kind} at (${item.x.toFixed(1)}, ${item.y.toFixed(1)})`;
+        expect(coveredFraction(item, solids.slice(index + 1)), where).toBeLessThanOrEqual(0.4);
+      });
+    }
+  });
+
+  it('never places more balloons or flowers than the spec requests', () => {
+    for (const spec of crowded) {
+      const { items } = buildArch(spec);
+      const balloons = items.filter((item) => item.kind === 'balloon').length;
+      const flowers = items.filter((item) => item.kind === 'flower').length;
+      expect(balloons).toBeGreaterThan(0);
+      expect(balloons).toBeLessThanOrEqual(spec.counts.balloons + spec.counts.fillers);
+      expect(flowers).toBeGreaterThan(0);
+      expect(flowers).toBeLessThanOrEqual(spec.counts.flowers);
+    }
+  });
+});
+
 describe('ARCH_SPECS restraint', () => {
   // Fewer, better-spaced items than the earlier packed garland (30+12 / 46+16 balloons, 74 / 109
   // items in all), so the arch's shape can breathe.
