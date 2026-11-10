@@ -78,6 +78,7 @@
 
 body {
   position: relative;
+  margin: 0;
   background-color: var(--c-bg);
   color: var(--c-ink);
   font-family: var(--font-body);

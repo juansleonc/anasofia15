@@ -242,3 +242,16 @@ test.describe('Cover light flares', () => {
     });
   }
 });
+
+test.describe('Cover page edge', () => {
+  test('the cover reaches the screen edges at 1440x800', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await page.goto('./');
+
+    const coverBox = await page.getByTestId('cover').boundingBox();
+    expect(coverBox).not.toBeNull();
+    expect(coverBox!.x).toBe(0);
+    expect(coverBox!.y).toBe(0);
+    expect(coverBox!.width).toBe(1440);
+  });
+});
