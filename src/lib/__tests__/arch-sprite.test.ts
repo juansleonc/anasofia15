@@ -33,6 +33,23 @@ function loadSpriteRoot(): Element {
 
 const root = loadSpriteRoot();
 
+const TOKEN_HEXES: Record<string, string> = Object.fromEntries(
+  Array.from(
+    readFileSync(join(TEST_DIR, '..', '..', 'styles', 'tokens.css'), 'utf-8').matchAll(/(--c-[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g),
+    (match) => [match[1], match[2]],
+  ),
+);
+
+/** WCAG relative luminance of the token a gradient stop paints with. */
+function tokenLuminance(stop: Element): number {
+  const token = (stop.getAttribute('style') ?? '').match(/var\((--c-[\w-]+)\)/)?.[1] ?? '';
+  const hex = TOKEN_HEXES[token];
+  if (!hex) throw new Error(`stop paints with unknown token "${token}"`);
+  const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16) / 255);
+  const linear = (c: number): number => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+}
+
 /** A `<symbol id="…">` from the sprite, or a thrown error naming the missing id. */
 function symbol(id: string): Element {
   const el = root.querySelector(`symbol#${id}`);
@@ -78,6 +95,40 @@ function countDeep(el: Element, selector: string, seen: Set<Element> = new Set()
 const CHROME_BALLOONS = ['balloon-rosegold', 'balloon-champagne'];
 const SATIN_BALLOONS = ['balloon-rosegold-satin', 'balloon-champagne-satin'];
 const ALL_BALLOONS = ['balloon-pink', ...CHROME_BALLOONS, ...SATIN_BALLOONS];
+const PEARL_BALLOONS = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-champagne-satin'];
+
+const BRANCH_IDS = ['leaf-olive', 'leaf-gold'];
+const BRANCH_LEAF_GRADIENT: Record<string, string> = { 'leaf-olive': 'leaf-olive-gradient', 'leaf-gold': 'leaf-gold-metal' };
+const LEAF_IDS = ['leaf-eucalyptus', 'leaf-olive', 'leaf-gold'];
+const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom'];
+
+/** Both ends of a single stem path drawn with M plus absolute C or relative c curves. */
+function stemEnds(d: string): Point[] {
+  const tokens = d.match(/[A-Za-z]|-?\d*\.?\d+/g) ?? [];
+  let pen: Point = [0, 0];
+  let start: Point = [0, 0];
+  let cmd = '';
+  for (let i = 0; i < tokens.length; ) {
+    if (/[A-Za-z]/.test(tokens[i])) cmd = tokens[i++];
+    const take = (): number => Number(tokens[i++]);
+    if (cmd === 'M') {
+      pen = [take(), take()];
+      start = pen;
+    } else if (cmd === 'C' || cmd === 'c') {
+      i += 4;
+      const to: Point = [take(), take()];
+      pen = cmd === 'C' ? to : [pen[0] + to[0], pen[1] + to[1]];
+    } else {
+      throw new Error(`unsupported stem command "${cmd}" in "${d}"`);
+    }
+  }
+  return [start, pen];
+}
+
+/** The symbol's viewBox as numbers: [minX, minY, width, height]. */
+function viewBoxOf(el: Element): number[] {
+  return (el.getAttribute('viewBox') ?? '').split(/\s+/).map(Number);
+}
 
 // Each balloon's knot is tone-matched (a darker shade of its own body colour) rather than every
 // tone sharing one wine-coloured knot; chrome and satin siblings of the same tone share a gradient.
@@ -140,17 +191,106 @@ describe('ArchSprite balloons', () => {
     expect(el.querySelector('use[href="#balloon-gloss"]')).not.toBeNull();
   });
 
-  it.each(CHROME_BALLOONS)('%s (chrome) carries a reflection band', (id) => {
+  it.each(ALL_BALLOONS)('%s draws its body as one teardrop path, not an ellipse', (id) => {
     const el = symbol(id);
-    expect(el.querySelector(`[fill="url(#${id}-chrome-band)"]`)).not.toBeNull();
+    expect(el.querySelector(`ellipse[fill="url(#${id}-gradient)"]`)).toBeNull();
+    const body = el.querySelector(`path[fill="url(#${id}-gradient)"]`);
+    expect(body).not.toBeNull();
+    // Narrower toward the knot: the widest row sits above the body's vertical middle.
+    const points = pathPoints(body!);
+    const box = boxOf(points);
+    const widest = points.reduce((best, point) => (point[0] > best[0] ? point : best));
+    expect(widest[1]).toBeLessThan((box.minY + box.maxY) / 2);
   });
 
-  it.each(SATIN_BALLOONS)('%s (satin) has no reflection band', (id) => {
-    const el = symbol(id);
-    const bandFill = Array.from(el.querySelectorAll('[fill]')).find((node) =>
-      (node.getAttribute('fill') ?? '').includes('chrome-band'),
+  it('every balloon tone shares the same teardrop outline', () => {
+    const outlines = new Set(
+      ALL_BALLOONS.map((id) => symbol(id).querySelector(`path[fill="url(#${id}-gradient)"]`)?.getAttribute('d')),
     );
-    expect(bandFill).toBeUndefined();
+    expect(outlines.size).toBe(1);
+    expect([...outlines][0]).toBeTruthy();
+  });
+
+  it('no balloon carries the old arc reflection band', () => {
+    const balloonPaths = ALL_BALLOONS.flatMap((id) => Array.from(symbol(id).querySelectorAll('path')));
+    expect(balloonPaths.length).toBeGreaterThanOrEqual(ALL_BALLOONS.length * 2);
+    for (const path of balloonPaths) {
+      expect(path.getAttribute('d') ?? '').not.toMatch(/A40 46/);
+      expect(path.getAttribute('fill') ?? '').not.toContain('chrome-band');
+    }
+    expect(root.querySelectorAll('[id$="chrome-band"]').length).toBe(0);
+  });
+
+  it('metallic gold has >= 7 stops from a champagne-100 core to a champagne-800 terminator, and a horizon reflection', () => {
+    const stops = Array.from(gradient('balloon-champagne-gradient').querySelectorAll('stop'));
+    expect(stops.length).toBeGreaterThanOrEqual(7);
+    expect(stops[0].getAttribute('style')).toMatch(/var\(--c-champagne-100\)/);
+    const terminator = stops.find((stop) => (stop.getAttribute('style') ?? '').includes('--c-champagne-800'));
+    expect(terminator).not.toBeUndefined();
+    const offset = parseFloat(terminator!.getAttribute('offset') ?? '');
+    expect(offset).toBeGreaterThanOrEqual(86);
+    expect(offset).toBeLessThanOrEqual(92);
+
+    const horizonGradient = gradient('balloon-champagne-horizon');
+    const horizonStops = Array.from(horizonGradient.querySelectorAll('stop'));
+    // Feathered to nothing at its edge, and never brighter than a soft sheen.
+    expect(horizonStops[horizonStops.length - 1].getAttribute('stop-opacity')).toBe('0');
+    expect(peakOpacity(horizonGradient)).toBeLessThanOrEqual(0.5);
+    const horizon = symbol('balloon-champagne').querySelector('path[fill="url(#balloon-champagne-horizon)"]');
+    expect(horizon).not.toBeNull();
+    // A soft, wide band, not a thin arc stripe.
+    expect(horizon!.getAttribute('d')).not.toMatch(/[Aa]/);
+    const box = boxOf(pathPoints(horizon!));
+    expect(box.maxX - box.minX).toBeGreaterThanOrEqual(50);
+    expect(box.maxY - box.minY).toBeGreaterThanOrEqual(10);
+  });
+
+  it.each(PEARL_BALLOONS)('%s (pearl) carries a nacre overlay over its body and a soft specular', (id) => {
+    const el = symbol(id);
+    const children = Array.from(el.children);
+    const bodyIndex = children.findIndex((child) => child.getAttribute('fill') === `url(#${id}-gradient)`);
+    const nacreIndex = children.findIndex((child) => /^url\(#[\w-]+-nacre\)$/.test(child.getAttribute('fill') ?? ''));
+    expect(bodyIndex).toBeGreaterThanOrEqual(0);
+    expect(nacreIndex).toBeGreaterThan(bodyIndex);
+
+    const nacreId = (children[nacreIndex].getAttribute('fill') ?? '').slice(5, -1);
+    const stops = Array.from(gradient(nacreId).querySelectorAll('stop'));
+    expect(stops[0].getAttribute('style')).toMatch(/var\(--c-champagne-100\)/);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.45);
+    const rose = stops.find((stop) => (stop.getAttribute('style') ?? '').includes('--c-rose-200'));
+    expect(Number(rose?.getAttribute('stop-opacity'))).toBeCloseTo(0.25);
+    expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
+
+    const glossUse = el.querySelector('use[href="#balloon-gloss"]');
+    const specStrength = Number((glossUse?.getAttribute('style') ?? '').match(/--balloon-spec:\s*([\d.]+)/)?.[1]);
+    expect(specStrength).toBeLessThanOrEqual(0.6);
+  });
+
+  it('the shared specular spot takes its strength from the balloon that uses it, full by default', () => {
+    const spot = symbol('balloon-gloss').querySelector('[fill="url(#balloon-gloss-spec)"]');
+    expect(spot?.getAttribute('style') ?? '').toMatch(/opacity:\s*var\(--balloon-spec,\s*1\)/);
+    expect(symbol('balloon-champagne').querySelector('use[href="#balloon-gloss"]')?.getAttribute('style') ?? '').not.toContain('--balloon-spec');
+  });
+
+  it('pastel pink keeps a rose-400 terminator and >= 6 stops, from a rose-100 core to a rose-300 rim', () => {
+    const stops = Array.from(gradient('balloon-pink-gradient').querySelectorAll('stop'));
+    const tokenAt = (k: number): string => (stops[k].getAttribute('style') ?? '').match(/--c-[\w-]+/)?.[0] ?? '';
+    expect(stops.length).toBeGreaterThanOrEqual(6);
+    expect(tokenAt(0)).toBe('--c-rose-100');
+    expect(tokenAt(stops.length - 1)).toBe('--c-rose-300');
+    expect(tokenAt(stops.length - 2)).toBe('--c-rose-400');
+    const terminatorOffset = parseFloat(stops[stops.length - 2].getAttribute('offset') ?? '');
+    expect(terminatorOffset).toBeGreaterThanOrEqual(80);
+    expect(terminatorOffset).toBeLessThanOrEqual(92);
+    expect(stops.slice(1, -2).some((_, k) => tokenAt(k + 1) === '--c-rose-300')).toBe(true);
+  });
+
+  it('pastel pink shows the softbox at full strength with a moderate specular', () => {
+    const style = symbol('balloon-pink').querySelector('use[href="#balloon-gloss"]')?.getAttribute('style') ?? '';
+    expect(style).not.toContain('--balloon-window');
+    const spec = Number(style.match(/--balloon-spec:\s*([\d.]+)/)?.[1]);
+    expect(spec).toBeGreaterThan(0.6);
+    expect(spec).toBeLessThan(1);
   });
 
   it('balloon bodies stay within their element budget (8 own shapes + the shared gloss use)', () => {
@@ -187,49 +327,107 @@ describe('ArchSprite balloons', () => {
   });
 });
 
-describe('ArchSprite chrome reflection band', () => {
-  it.each(CHROME_BALLOONS)('%s band follows the sphere curvature with an elliptical arc', (id) => {
-    const el = symbol(id);
-    const band = el.querySelector(`[fill="url(#${id}-chrome-band)"]`);
-    expect(band).not.toBeNull();
-    expect(band!.getAttribute('d')).toMatch(/[Aa]/);
-  });
-
-  it.each(CHROME_BALLOONS)('%s band gradient feathers to 0 opacity at both ends', (id) => {
-    const bandGradient = gradient(`${id}-chrome-band`);
-    const stops = Array.from(bandGradient.querySelectorAll('stop'));
-    expect(stops.length).toBeGreaterThanOrEqual(3);
-    expect(stops[0].getAttribute('stop-opacity')).toBe('0');
-    expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
-  });
-
-  it.each(CHROME_BALLOONS)('%s band is lower-contrast than a hard liquid-line stripe', (id) => {
-    const bandGradient = gradient(`${id}-chrome-band`);
-    const stops = Array.from(bandGradient.querySelectorAll('stop'));
-    const innerOpacities = stops.slice(1, -1).map((stop) => Number(stop.getAttribute('stop-opacity')));
-    for (const opacity of innerOpacities) {
-      expect(opacity).toBeLessThanOrEqual(0.35);
-    }
-  });
-});
+/** Highest `stop-opacity` in a gradient (a missing attribute counts as fully opaque). */
+function peakOpacity(gradientEl: Element): number {
+  return Math.max(...Array.from(gradientEl.querySelectorAll('stop')).map((stop) => Number(stop.getAttribute('stop-opacity') ?? '1')));
+}
 
 describe('ArchSprite gloss', () => {
-  it('has a soft highlight, a specular hot spot, a secondary reflection and a stroked rim', () => {
-    const gloss = symbol('balloon-gloss');
-    expect(gloss.querySelector('[fill="url(#balloon-gloss-soft)"]')).not.toBeNull();
-    expect(gloss.querySelector('[fill="url(#balloon-gloss-spec)"]')).not.toBeNull();
-    expect(gloss.querySelector('[fill="url(#balloon-gloss-secondary)"]')).not.toBeNull();
-    const rim = Array.from(gloss.querySelectorAll('path')).find(
-      (path) => path.getAttribute('stroke') && path.getAttribute('stroke') !== 'none',
-    );
-    expect(rim).not.toBeUndefined();
-    expect(rim!.getAttribute('fill')).toBe('none');
+  it('has a softbox window highlight: a curved quad under a white 70% to 0 linear gradient', () => {
+    const windowGradient = gradient('balloon-gloss-window');
+    expect(windowGradient.tagName.toLowerCase()).toBe('lineargradient');
+    const stops = Array.from(windowGradient.querySelectorAll('stop'));
+    expect(stops[0].getAttribute('style')).toMatch(/var\(--c-white\)/);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.7);
+    expect(Number(stops[stops.length - 1].getAttribute('stop-opacity'))).toBe(0);
+    const shape = symbol('balloon-gloss').querySelector('path[fill="url(#balloon-gloss-window)"]');
+    expect(shape).not.toBeNull();
+    const [outline] = cubicSubpaths(shape!.getAttribute('d') ?? '');
+    expect(outline.closed).toBe(true);
+    expect(outline.segments.length).toBe(4);
+  });
+
+  it('keeps a small specular hot spot', () => {
+    const spot = symbol('balloon-gloss').querySelector('[fill="url(#balloon-gloss-spec)"]');
+    expect(spot).not.toBeNull();
+    expect(Number(spot!.getAttribute('rx'))).toBeLessThanOrEqual(8);
+  });
+
+  it('has a champagne rim-light crescent on the lower right at 35-50%', () => {
+    const rimGradient = gradient('balloon-gloss-rim');
+    for (const style of stopColors(rimGradient)) expect(style).toMatch(/var\(--c-champagne-100\)/);
+    expect(peakOpacity(rimGradient)).toBeGreaterThanOrEqual(0.35);
+    expect(peakOpacity(rimGradient)).toBeLessThanOrEqual(0.5);
+    const rim = symbol('balloon-gloss').querySelector('path[fill="url(#balloon-gloss-rim)"]');
+    expect(rim).not.toBeNull();
+    const box = boxOf(pathPoints(rim!));
+    expect(box.minX).toBeGreaterThan(50);
+    expect(box.minY).toBeGreaterThan(30);
+  });
+
+  it('has an ambient-occlusion crescent inside the bottom edge at 25-35%', () => {
+    const aoGradient = gradient('balloon-gloss-ao');
+    expect(peakOpacity(aoGradient)).toBeGreaterThanOrEqual(0.25);
+    expect(peakOpacity(aoGradient)).toBeLessThanOrEqual(0.35);
+    const ao = symbol('balloon-gloss').querySelector('path[fill="url(#balloon-gloss-ao)"]');
+    expect(ao).not.toBeNull();
+    const box = boxOf(pathPoints(ao!));
+    expect(box.minY).toBeGreaterThan(55);
   });
 
   it('stays within its element budget (4 shapes, up to 5)', () => {
     const children = symbol('balloon-gloss').children.length;
     expect(children).toBeGreaterThanOrEqual(4);
     expect(children).toBeLessThanOrEqual(5);
+  });
+});
+
+// The garland's text clearance (cover-garland) sizes every item from these symbol extents, so the
+// art may change freely only while each symbol stays inside the footprint it promised.
+describe('footprint contract', () => {
+  it.each(LEAF_IDS)('%s is a slender sprig with its stem base at the bottom centre', (id) => {
+    const el = symbol(id);
+    const [, , width, height] = viewBoxOf(el);
+    expect(width / height).toBeLessThanOrEqual(0.45);
+    const stem = Array.from(el.querySelectorAll('path[fill="none"]')).find((path) => (path.getAttribute('d')?.match(/M/g) ?? []).length === 1);
+    expect(stem).not.toBeUndefined();
+    const base = stemEnds(stem!.getAttribute('d') ?? '').reduce((lower, end) => (end[1] > lower[1] ? end : lower));
+    expect(Math.abs(base[0] - width / 2)).toBeLessThanOrEqual(0.04 * height);
+    expect(Math.abs(base[1] - height)).toBeLessThanOrEqual(0.04 * height);
+  });
+
+  it.each(['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory'])('%s keeps every petal inside the inscribed circle', (id) => {
+    const el = symbol(id);
+    const [, , width] = viewBoxOf(el);
+    const shapes = Array.from(el.querySelectorAll('path[fill^="url(#"]'));
+    expect(shapes.length).toBeGreaterThanOrEqual(12);
+    for (const shape of shapes) {
+      for (const point of pathPoints(shape).map((p) => transformPoint(shape, p))) {
+        expect(Math.hypot(point[0] - width / 2, point[1] - width / 2)).toBeLessThanOrEqual(width / 2);
+      }
+    }
+  });
+
+  it.each(FLOWER_IDS)('%s keeps its seat shadow inside the inscribed circle', (id) => {
+    const el = symbol(id);
+    const seat = el.querySelector('ellipse[fill="url(#flower-seat-shadow)"]');
+    expect(seat).not.toBeNull();
+    const [, , width] = viewBoxOf(el);
+    const offset = Math.hypot(Number(seat!.getAttribute('cx')) - width / 2, Number(seat!.getAttribute('cy')) - width / 2);
+    const reach = offset + Math.max(Number(seat!.getAttribute('rx')), Number(seat!.getAttribute('ry')));
+    expect(reach).toBeLessThanOrEqual(width / 2);
+  });
+
+  it.each(ALL_BALLOONS)('%s keeps its visible body within the old 88 x 92 body box, give or take 2 units', (id) => {
+    const el = symbol(id);
+    expect(el.getAttribute('viewBox')).toBe('0 0 100 110');
+    const body = el.querySelector(`path[fill="url(#${id}-gradient)"]`);
+    expect(body).not.toBeNull();
+    const box = boxOf(pathPoints(body!));
+    expect(Math.abs(box.minX - 6)).toBeLessThanOrEqual(2);
+    expect(Math.abs(box.maxX - 94)).toBeLessThanOrEqual(2);
+    expect(Math.abs(box.minY - 2)).toBeLessThanOrEqual(2);
+    expect(Math.abs(box.maxY - 94)).toBeLessThanOrEqual(2);
   });
 });
 
@@ -248,8 +446,11 @@ describe('ArchSprite perf guard', () => {
 // "petal path" is any path filled from one of those ring gradients — as opposed to the center bud
 // or the lip-highlight stroke, which are not counted as petals.
 const ROSE_IDS = ['rose-pink', 'rose-cream'];
+const GARDEN_ROSE_IDS = ['rose-pink', 'rose-cream'];
 const roseRingGradientIds = (id: string): string[] => [`${id}-outer`, `${id}-mid`, `${id}-inner`];
 const PEONY_RING_IDS = ['peony-blush-outer', 'peony-blush-mid', 'peony-blush-inner'];
+const PEONY_IDS = ['peony-blush', 'peony-ivory'];
+const peonyRingGradientIds = (id: string): string[] => [`${id}-outer`, `${id}-mid`, `${id}-inner`];
 
 function petalPaths(el: Element, ringGradientIds: string[]): Element[] {
   return Array.from(el.querySelectorAll('path')).filter((path) =>
@@ -328,16 +529,6 @@ function petalPolygon(el: Element): Point[] {
   return segments.map(({ to }) => transformPoint(el, to));
 }
 
-function insidePolygon([x, y]: Point, polygon: Point[]): boolean {
-  let inside = false;
-  for (let a = 0, b = polygon.length - 1; a < polygon.length; b = a++) {
-    const [xa, ya] = polygon[a];
-    const [xb, yb] = polygon[b];
-    if (ya > y !== yb > y && x < ((xb - xa) * (y - ya)) / (yb - ya) + xa) inside = !inside;
-  }
-  return inside;
-}
-
 /** Largest change of direction (degrees) where two consecutive cubic segments meet, including the
  *  closing joint of a closed outline — a sharp corner (a pointy petal tip or a V notch) shows up as
  *  a large turn, a smoothly rounded outline stays small everywhere. */
@@ -358,12 +549,6 @@ function sharpestJoint(d: string): number {
   return worst;
 }
 
-function highlightPath(el: Element): Element | undefined {
-  return Array.from(el.querySelectorAll('path')).find(
-    (path) => path.getAttribute('fill') === 'none' && (path.getAttribute('stroke') ?? '').includes('var(--c-white)'),
-  );
-}
-
 /** The first unstroked `fill="none"` path in `el` whose `d` has at least `minSubpaths` `M`
  *  commands — picks out a multi-leaf/multi-crease vein path without depending on which token
  *  colours its stroke, and without confusing it with a single-subpath stem outline. */
@@ -372,6 +557,27 @@ function veinPath(el: Element, minSubpaths: number): Element | undefined {
     (path) => (path.getAttribute('d')?.match(/M/g) ?? []).length >= minSubpaths,
   );
 }
+
+describe('ArchSprite flower seat shadow', () => {
+  it('shares one soft rose-700 seat-shadow gradient fading from 18% to nothing', () => {
+    const seat = gradient('flower-seat-shadow');
+    expect(seat.tagName.toLowerCase()).toBe('radialgradient');
+    const stops = Array.from(seat.querySelectorAll('stop'));
+    for (const style of stopColors(seat)) expect(style).toMatch(/var\(--c-rose-700\)/);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.18);
+    expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
+  });
+
+  it.each(FLOWER_IDS)('%s starts with a seat-shadow ellipse offset down and right', (id) => {
+    const el = symbol(id);
+    const first = el.firstElementChild!;
+    expect(first.tagName.toLowerCase()).toBe('ellipse');
+    expect(first.getAttribute('fill')).toBe('url(#flower-seat-shadow)');
+    const [, , width, height] = viewBoxOf(el);
+    expect(Number(first.getAttribute('cx'))).toBeGreaterThan(width / 2);
+    expect(Number(first.getAttribute('cy'))).toBeGreaterThan(height / 2);
+  });
+});
 
 describe('ArchSprite roses', () => {
   it.each(ROSE_IDS)('%s has at least 12 petal paths drawn from 3 distinct ring gradients', (id) => {
@@ -424,21 +630,41 @@ describe('ArchSprite roses', () => {
     expect(pink.length === cream.length && pink.every((petal, k) => petal === cream[k])).toBe(false);
   });
 
-  it.each(ROSE_IDS)('%s has a multi-subpath lip highlight stroke', (id) => {
-    const highlight = highlightPath(symbol(id));
-    expect(highlight).not.toBeUndefined();
-    expect(cubicSubpaths(highlight!.getAttribute('d') ?? '').length).toBeGreaterThanOrEqual(2);
+  it.each(GARDEN_ROSE_IDS)('%s has >= 15 petals in 3 cupped rings, a >= 4-crescent centre and no white outline stroke', (id) => {
+    const el = symbol(id);
+    const petals = petalPaths(el, roseRingGradientIds(id));
+    expect(petals.length).toBeGreaterThanOrEqual(15);
+    for (const ringId of roseRingGradientIds(id)) {
+      expect(petals.filter((petal) => petal.getAttribute('fill') === `url(#${ringId})`).length).toBeGreaterThanOrEqual(3);
+      // Each petal's own gradient carries the shading: a light lip (first stop) over a darker base.
+      const stops = Array.from(gradient(ringId).querySelectorAll('stop'));
+      expect(tokenLuminance(stops[0])).toBeGreaterThan(tokenLuminance(stops[stops.length - 1]));
+    }
+
+    const crescents = Array.from(el.querySelectorAll(`path[fill="url(#${id}-heart)"]`));
+    expect(crescents.length).toBeGreaterThanOrEqual(4);
+    const [, , width] = viewBoxOf(el);
+    const reaches = crescents.map((crescent) =>
+      Math.max(...pathPoints(crescent).map(([x, y]) => Math.hypot(x - width / 2, y - width / 2))),
+    );
+    for (const reach of reaches) expect(reach).toBeLessThanOrEqual(width * 0.2);
+    expect(new Set(reaches.map((reach) => reach.toFixed(1))).size).toBeGreaterThanOrEqual(4);
+
+    const shapes = Array.from(el.querySelectorAll('path, ellipse, circle'));
+    expect(shapes.length).toBeGreaterThan(petals.length);
+    for (const shape of shapes) {
+      expect(shape.getAttribute('stroke') ?? 'none').toBe('none');
+    }
   });
 
-  it.each(ROSE_IDS)('%s lip highlights sit on the petals, never floating outside the flower', (id) => {
-    const el = symbol(id);
-    const polygons = petalPaths(el, roseRingGradientIds(id)).map((petal) => petalPolygon(petal));
-    const highlight = highlightPath(el)!;
-    for (const { segments } of cubicSubpaths(highlight.getAttribute('d') ?? '')) {
-      for (const point of [segments[0].from, ...segments.map(({ to }) => to)]) {
-        expect(polygons.some((polygon) => insidePolygon(point, polygon)), `highlight point ${point} is off-petal`).toBe(true);
-      }
-    }
+  it('rose-cream is ivory: champagne lips shaded with rose-gold, and no glassy white in its heart', () => {
+    const ringStops = roseRingGradientIds('rose-cream').flatMap((ringId) => stopColors(gradient(ringId)));
+    const heartStops = stopColors(gradient('rose-cream-heart'));
+    expect(ringStops.length).toBeGreaterThanOrEqual(9);
+    expect(stopColors(gradient('rose-cream-outer'))[0]).toMatch(/--c-champagne-(100|200)/);
+    expect(ringStops.some((style) => style.includes('--c-rosegold-200'))).toBe(true);
+    expect(heartStops.length).toBeGreaterThanOrEqual(3);
+    for (const style of [...ringStops, ...heartStops]) expect(style).not.toContain('--c-white');
   });
 
   it.each(ROSE_IDS)('%s shows a darker spiral bud furled at its center', (id) => {
@@ -476,12 +702,42 @@ describe('ArchSprite peony', () => {
     }
   });
 
-  it('peony-blush shows a few champagne stamen hints peeking from its center', () => {
-    const el = symbol('peony-blush');
-    const stamens = Array.from(el.querySelectorAll('circle, ellipse')).filter(
-      (shape) => shape.getAttribute('fill') === 'var(--c-champagne-300)',
+  it.each(PEONY_IDS)('%s has >= 18 ruffled petals and >= 5 gold stamens', (id) => {
+    const el = symbol(id);
+    const petals = petalPaths(el, peonyRingGradientIds(id));
+    expect(petals.length).toBeGreaterThanOrEqual(18);
+    for (const petal of petals) {
+      // A ruffled lip: walking the outline, the distance from the petal's base swings out and
+      // back several times instead of rising once to a smooth dome and falling again.
+      const [{ segments }] = cubicSubpaths(petal.getAttribute('d') ?? '');
+      const base = segments[0].from;
+      const reach = segments.map(({ to }) => Math.hypot(to[0] - base[0], to[1] - base[1]));
+      let turns = 0;
+      for (let k = 2; k < reach.length; k++) {
+        if (Math.sign(reach[k] - reach[k - 1]) !== Math.sign(reach[k - 1] - reach[k - 2])) turns += 1;
+      }
+      expect(turns).toBeGreaterThanOrEqual(4);
+    }
+    const stamens = Array.from(el.querySelectorAll('circle, ellipse')).filter((shape) =>
+      /^var\(--c-champagne-(300|500|700)\)$/.test(shape.getAttribute('fill') ?? ''),
     );
-    expect(stamens.length).toBeGreaterThanOrEqual(3);
+    expect(stamens.length).toBeGreaterThanOrEqual(5);
+    // Stamens peek out of the heart of the bloom, not from its petals' edges.
+    const [, , width] = viewBoxOf(el);
+    for (const stamen of stamens) {
+      const offset = Math.hypot(Number(stamen.getAttribute('cx')) - width / 2, Number(stamen.getAttribute('cy')) - width / 2);
+      expect(offset).toBeLessThanOrEqual(width * 0.12);
+    }
+  });
+
+  it('peony-ivory reuses the blush petal outlines, painted only from ivory tokens', () => {
+    const outline = (id: string): string[] =>
+      petalPaths(symbol(id), peonyRingGradientIds(id)).map((petal) => `${petal.getAttribute('d')}|${petal.getAttribute('transform')}`);
+    expect(outline('peony-ivory').length).toBeGreaterThanOrEqual(18);
+    expect(outline('peony-ivory')).toEqual(outline('peony-blush'));
+    const ivoryStops = peonyRingGradientIds('peony-ivory').flatMap((ringId) => stopColors(gradient(ringId)));
+    expect(ivoryStops.length).toBeGreaterThanOrEqual(9);
+    for (const style of ivoryStops) expect(style).toMatch(/var\(--c-(champagne|rosegold)-\d+\)/);
   });
 });
 
@@ -606,6 +862,14 @@ describe('ArchSprite foliage', () => {
     expect(leaves.length).toBeGreaterThanOrEqual(7);
   });
 
+  it('leaf-eucalyptus carries 1-2 gilt leaf edges', () => {
+    const leaves = symbol('leaf-eucalyptus').querySelectorAll('[fill="url(#leaf-eucalyptus-gradient)"]');
+    const gilt = Array.from(leaves).filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
+    expect(leaves.length).toBeGreaterThanOrEqual(7);
+    expect(gilt.length).toBeGreaterThanOrEqual(1);
+    expect(gilt.length).toBeLessThanOrEqual(2);
+  });
+
   it('leaf-eucalyptus has one multi-subpath midrib vein path, one per leaf', () => {
     const vein = veinPath(symbol('leaf-eucalyptus'), 7);
     expect(vein).not.toBeUndefined();
@@ -616,15 +880,41 @@ describe('ArchSprite foliage', () => {
     expect(symbol('leaf-eucalyptus').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(12);
   });
 
-  it('leaf-olive has at least 9 lanceolate leaves in opposite pairs, lit by a linear gradient', () => {
-    const el = symbol('leaf-olive');
-    const leafGradient = gradient('leaf-olive-gradient');
-    expect(leafGradient.tagName.toLowerCase()).toBe('lineargradient');
-    const stops = stopColors(leafGradient);
-    expect(stops.length).toBeGreaterThanOrEqual(2);
-    for (const style of stops) expect(style).toMatch(/stop-color:\s*var\(--c-/);
-    const leaves = el.querySelectorAll('[fill="url(#leaf-olive-gradient)"]');
+  it.each(BRANCH_IDS)('%s is a gently curved branch of >= 9 alternating leaves, each with a midrib', (id) => {
+    const el = symbol(id);
+    const leafFill = `url(#${BRANCH_LEAF_GRADIENT[id]})`;
+    const leaves = Array.from(el.querySelectorAll(`[fill="${leafFill}"]`));
     expect(leaves.length).toBeGreaterThanOrEqual(9);
+    expect(leaves.length).toBeLessThanOrEqual(11);
+    // Alternating: consecutive side leaves lean to opposite sides of the stem.
+    const leans = leaves.map((leaf) => Number((leaf.getAttribute('transform') ?? '').match(/rotate\((-?[\d.]+)/)?.[1] ?? 0));
+    const sideLeans = leans.filter((lean) => Math.abs(lean) > 10);
+    expect(sideLeans.length).toBeGreaterThanOrEqual(8);
+    for (let k = 1; k < sideLeans.length; k++) expect(Math.sign(sideLeans[k])).not.toBe(Math.sign(sideLeans[k - 1]));
+
+    const stem = Array.from(el.querySelectorAll('path[fill="none"]')).find((path) => (path.getAttribute('d')?.match(/M/g) ?? []).length === 1);
+    expect(stem).not.toBeUndefined();
+    const [{ segments }] = cubicSubpaths(stem!.getAttribute('d') ?? '');
+    const bend = Math.max(
+      ...segments.flatMap(({ from, c1, c2, to }) => {
+        const length = Math.hypot(to[0] - from[0], to[1] - from[1]) || 1;
+        return [c1, c2].map(([x, y]) => Math.abs((x - from[0]) * (to[1] - from[1]) - (y - from[1]) * (to[0] - from[0])) / length);
+      }),
+    );
+    expect(bend).toBeGreaterThan(1.5);
+
+    expect(veinPath(el, leaves.length)).not.toBeUndefined();
+  });
+
+  it('leaf-olive leaves are two-tone sage, from leaf-deep at the base to leaf at the tip', () => {
+    const stops = stopColors(gradient('leaf-olive-gradient'));
+    expect(stops[0]).toMatch(/var\(--c-leaf-deep\)/);
+    expect(stops[stops.length - 1]).toMatch(/var\(--c-leaf\)/);
+  });
+
+  it('leaf-olive carries >= 2 gilt leaf edges', () => {
+    const gilt = symbol('leaf-olive').querySelectorAll('[fill="url(#leaf-olive-gradient)"][stroke="var(--c-champagne-500)"]');
+    expect(gilt.length).toBeGreaterThanOrEqual(2);
   });
 
   it('leaf-olive has one multi-subpath midrib vein path, one per leaf', () => {
@@ -637,7 +927,7 @@ describe('ArchSprite foliage', () => {
     expect(symbol('leaf-olive').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(14);
   });
 
-  it('leaf-gold is a cluster of at least 7 filled almond leaves, no lone outline', () => {
+  it('leaf-gold is made of filled foil leaves, no lone outline', () => {
     const el = symbol('leaf-gold');
     const metalGradient = gradient('leaf-gold-metal');
     const stops = stopColors(metalGradient);
