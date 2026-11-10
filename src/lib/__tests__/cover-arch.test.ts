@@ -68,6 +68,38 @@ describe('buildArch', () => {
     expect(tones.sort()).toEqual(['balloon-champagne', 'balloon-pink', 'balloon-rosegold']);
   });
 
+  it('places exactly the spec-requested number of flowers, using all three flower symbols', () => {
+    for (const spec of SPECS) {
+      const { items } = buildArch(spec);
+      const flowers = items.filter((item) => item.kind === 'flower');
+      expect(flowers).toHaveLength(spec.counts.flowers);
+      const symbols = new Set(flowers.map((item) => item.symbol));
+      expect(symbols).toEqual(new Set(['rose-bloom', 'rose-cream', 'blossom']));
+    }
+  });
+
+  it('places exactly the spec-requested number of leaves, using both leaf symbols', () => {
+    for (const spec of SPECS) {
+      const { items } = buildArch(spec);
+      const leaves = items.filter((item) => item.kind === 'leaf');
+      expect(leaves).toHaveLength(spec.counts.leaves);
+      const symbols = new Set(leaves.map((item) => item.symbol));
+      expect(symbols).toEqual(new Set(['leaf-eucalyptus', 'leaf-gold']));
+    }
+  });
+
+  it('paints flowers on layer 2 and leaves on layer 0', () => {
+    for (const spec of SPECS) {
+      const { items } = buildArch(spec);
+      for (const item of items.filter((i) => i.kind === 'flower')) {
+        expect(item.layer).toBe(2);
+      }
+      for (const item of items.filter((i) => i.kind === 'leaf')) {
+        expect(item.layer).toBe(0);
+      }
+    }
+  });
+
   it('keeps every item center within the viewBox, allowing bleed up to its max size', () => {
     for (const spec of SPECS) {
       const { items } = buildArch(spec);

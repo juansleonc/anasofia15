@@ -3,8 +3,8 @@
 // it always returns the same positioned items, so the geometry is unit-testable without a DOM.
 //
 // Items are placed along a single ∩-shaped "spine" polyline: up the left side column, over the
-// crown, down the right side column. This module spreads balloons along it; flowers, leaves, and
-// a clear-zone clamp for the title/button join in later work.
+// crown, down the right side column. This module spreads balloons, flowers and leaves along it;
+// a clear-zone clamp for the title/button joins in later work.
 
 export type ArchItemKind = 'balloon' | 'flower' | 'leaf';
 
@@ -75,6 +75,8 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
 };
 
 const BALLOON_SYMBOLS: readonly ArchSymbol[] = ['balloon-pink', 'balloon-rosegold', 'balloon-champagne'];
+const FLOWER_SYMBOLS: readonly ArchSymbol[] = ['rose-bloom', 'rose-cream', 'blossom'];
+const LEAF_SYMBOLS: readonly ArchSymbol[] = ['leaf-eucalyptus', 'leaf-gold'];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -216,10 +218,91 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
   return items;
 }
 
+/** The balloon size the taper would give at `t`, before any per-item scaling. */
+function taperedBalloonSize(spec: ArchSpec, t: number): number {
+  return spec.sizeRange[0] + (spec.sizeRange[1] - spec.sizeRange[0]) * taper(t);
+}
+
+/**
+ * Scatters flowers along the spine, nestled between the balloons (round-robin over the three
+ * flower symbols, so a spec with at least 3 flowers uses all of them), each a fraction of the
+ * local balloon size.
+ */
+function placeFlowers(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
+  const count = spec.counts.flowers;
+  const maxSize = spec.sizeRange[1];
+  const items: ArchItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const base = count <= 1 ? 0.5 : i / (count - 1);
+    // Half-step phase shift so flowers land between balloon slots, not on top of them.
+    const phase = 0.5 / Math.max(count, 1);
+    const jitter = (rng() - 0.5) * (0.4 / Math.max(count, 1));
+    const t = clamp(base + phase + jitter, 0, 1);
+
+    const sample = sampleSpine(points, t);
+    const size = taperedBalloonSize(spec, t) * (0.5 + rng() * 0.3);
+    const side = rng() < 0.5 ? -1 : 1;
+    const offset = side * 0.2 * size;
+
+    items.push({
+      symbol: FLOWER_SYMBOLS[i % FLOWER_SYMBOLS.length],
+      kind: 'flower',
+      x: clamp(sample.x + sample.nx * offset, -maxSize, spec.width + maxSize),
+      y: clamp(sample.y + sample.ny * offset, -maxSize, spec.height),
+      size,
+      rotate: (rng() - 0.5) * 20,
+      layer: 2,
+    });
+  }
+
+  return items;
+}
+
+/**
+ * Scatters leaves behind the balloons, offset further outward from the spine than any other
+ * item so they fan out past the arch's edge (round-robin over the two leaf symbols, so a spec
+ * with at least 2 leaves uses both).
+ */
+function placeLeaves(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
+  const count = spec.counts.leaves;
+  const maxSize = spec.sizeRange[1];
+  const items: ArchItem[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const base = count <= 1 ? 0.5 : i / (count - 1);
+    const jitter = (rng() - 0.5) * (0.5 / Math.max(count, 1));
+    const t = clamp(base + jitter, 0, 1);
+
+    const sample = sampleSpine(points, t);
+    const size = taperedBalloonSize(spec, t) * (0.4 + rng() * 0.3);
+    // Outward = away from the arch's interior: left half of the spine fans left, right half
+    // fans right, so the leaves read as sprigs trailing past the balloons, not tucked inside.
+    const outwardSide = t < 0.5 ? -1 : 1;
+    const offset = outwardSide * (0.5 + rng() * 0.3) * size;
+
+    items.push({
+      symbol: LEAF_SYMBOLS[i % LEAF_SYMBOLS.length],
+      kind: 'leaf',
+      x: clamp(sample.x + sample.nx * offset, -maxSize, spec.width + maxSize),
+      y: clamp(sample.y + sample.ny * offset, -maxSize, spec.height),
+      size,
+      rotate: (rng() - 0.5) * 30,
+      layer: 0,
+    });
+  }
+
+  return items;
+}
+
 export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
   const points = spinePoints(spec);
-  const items = placeBalloons(spec, points, rng).sort((a, b) => a.layer - b.layer || a.y - b.y);
+  const items = [
+    ...placeLeaves(spec, points, rng),
+    ...placeBalloons(spec, points, rng),
+    ...placeFlowers(spec, points, rng),
+  ].sort((a, b) => a.layer - b.layer || a.y - b.y);
 
   return { width: spec.width, height: spec.height, items };
 }
