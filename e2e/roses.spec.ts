@@ -39,7 +39,9 @@ test.describe('Arch sprite', () => {
       const ids = [
         'balloon-pink',
         'balloon-rosegold',
+        'balloon-rosegold-satin',
         'balloon-champagne',
+        'balloon-champagne-satin',
         'balloon-gloss',
         'rose-cream',
         'blossom',
@@ -55,7 +57,9 @@ test.describe('Arch sprite', () => {
     expect(idCounts).toEqual({
       'balloon-pink': 1,
       'balloon-rosegold': 1,
+      'balloon-rosegold-satin': 1,
       'balloon-champagne': 1,
+      'balloon-champagne-satin': 1,
       'balloon-gloss': 1,
       'rose-cream': 1,
       blossom: 1,

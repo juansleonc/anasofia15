@@ -20,24 +20,87 @@
   style="position:absolute;width:0;height:0;overflow:hidden"
 >
   <defs>
-    <radialGradient id="balloon-pink-gradient" cx="32%" cy="28%" r="78%">
-      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+    <!-- Balloon body gradients: every tone is >= 6 stops — hot core, light, mid body, body,
+         terminator (darkest, ~85-90%) then a lighter rim stop at 100% — the terminator/rim pair
+         is what reads as a lit sphere instead of a flat shaded disc. Chrome tones (rose-gold,
+         champagne) keep a sharp, late terminator; their satin siblings widen the stop spacing and
+         soften the terminator (no hard rose-600/champagne-700 edge) for a duller, non-mirror finish. -->
+    <radialGradient id="balloon-pink-gradient" cx="30%" cy="26%" r="80%">
+      <stop offset="0%" style="stop-color: var(--c-white)" />
+      <stop offset="22%" style="stop-color: var(--c-rose-100)" />
       <stop offset="45%" style="stop-color: var(--c-rose-200)" />
-      <stop offset="78%" style="stop-color: var(--c-rose-300)" />
-      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="68%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="88%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-300)" />
     </radialGradient>
-    <radialGradient id="balloon-rosegold-gradient" cx="32%" cy="28%" r="78%">
+    <radialGradient id="balloon-rosegold-gradient" cx="30%" cy="26%" r="80%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
-      <stop offset="45%" style="stop-color: var(--c-rosegold-200)" />
-      <stop offset="78%" style="stop-color: var(--c-rosegold-400)" />
-      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="22%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="40%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="58%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="85%" style="stop-color: var(--c-rose-600)" />
+      <stop offset="100%" style="stop-color: var(--c-rosegold-400)" />
     </radialGradient>
-    <radialGradient id="balloon-champagne-gradient" cx="32%" cy="28%" r="78%">
+    <radialGradient id="balloon-rosegold-satin-gradient" cx="30%" cy="26%" r="80%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
-      <stop offset="45%" style="stop-color: var(--c-champagne-300)" />
-      <stop offset="78%" style="stop-color: var(--c-champagne-500)" />
-      <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
+      <stop offset="28%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="50%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="72%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="90%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rosegold-400)" />
     </radialGradient>
+    <radialGradient id="balloon-champagne-gradient" cx="30%" cy="26%" r="80%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="20%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="42%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="64%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="88%" style="stop-color: var(--c-champagne-700)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-300)" />
+    </radialGradient>
+    <radialGradient id="balloon-champagne-satin-gradient" cx="30%" cy="26%" r="80%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="24%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="48%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="70%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="90%" style="stop-color: var(--c-champagne-700)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
+    </radialGradient>
+
+    <!-- Shared across every tone: a soft contact shadow dropped below-right of the body (depth
+         where balloons overlap each other), a warm bottom-up environment tint (floor light
+         bouncing into the lower half) and the knot. One def each keeps the gradient budget low;
+         nothing about these three reads as tone-specific. -->
+    <radialGradient id="balloon-contact-shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color: var(--c-rose-700)" stop-opacity="0.28" />
+      <stop offset="100%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="balloon-env-tint" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-200)" stop-opacity="0.35" />
+      <stop offset="45%" style="stop-color: var(--c-champagne-200)" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="balloon-knot" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-rose-600)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-700)" />
+    </linearGradient>
+
+    <!-- Chrome-only reflection band: a horizon-shaped light/dark/light sweep across the body's
+         lower-middle. Mirror finishes reflect a horizon line; satin balloons skip this entirely —
+         it is the one element that visibly tells chrome and satin apart. -->
+    <linearGradient id="balloon-rosegold-chrome-band" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color: var(--c-rosegold-200)" stop-opacity="0" />
+      <stop offset="18%" style="stop-color: var(--c-rosegold-200)" stop-opacity="0.6" />
+      <stop offset="50%" style="stop-color: var(--c-rose-600)" stop-opacity="0.45" />
+      <stop offset="82%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.6" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="balloon-champagne-chrome-band" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
+      <stop offset="18%" style="stop-color: var(--c-champagne-200)" stop-opacity="0.6" />
+      <stop offset="50%" style="stop-color: var(--c-champagne-700)" stop-opacity="0.45" />
+      <stop offset="82%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.6" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
+    </linearGradient>
+
     <radialGradient id="balloon-gloss-highlight" cx="50%" cy="50%" r="50%">
       <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="0.85" />
       <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0" />
@@ -73,23 +136,67 @@
   </symbol>
 
   <symbol id="balloon-pink" viewBox="0 0 100 110">
-    <ellipse cx="54" cy="86" rx="14" ry="5" fill="var(--c-rose-400)" fill-opacity="0.22" />
-    <circle cx="50" cy="48" r="44" fill="url(#balloon-pink-gradient)" />
-    <path d="M50 92l-6 10h12l-6-10Z" fill="var(--c-rose-400)" />
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-pink-gradient)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
+    <path d="M50 92l-6 10h12l-6-10Z" fill="url(#balloon-knot)" />
+    <path d="M44 94q6 5 12 0" fill="none" stroke="var(--c-rose-700)" stroke-width="1" stroke-opacity="0.5" />
     <use href="#balloon-gloss" />
   </symbol>
 
   <symbol id="balloon-rosegold" viewBox="0 0 100 110">
-    <ellipse cx="54" cy="86" rx="14" ry="5" fill="var(--c-rosegold-400)" fill-opacity="0.22" />
-    <circle cx="50" cy="48" r="44" fill="url(#balloon-rosegold-gradient)" />
-    <path d="M50 92l-6 10h12l-6-10Z" fill="var(--c-rosegold-400)" />
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-rosegold-gradient)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
+    <path
+      d="M10 62c14 20 66 20 80 0c-12 24-30 34-40 34s-28-10-40-34Z"
+      fill="url(#balloon-rosegold-chrome-band)"
+    />
+    <path d="M50 92l-6 10h12l-6-10Z" fill="url(#balloon-knot)" />
+    <path d="M44 94q6 5 12 0" fill="none" stroke="var(--c-rose-700)" stroke-width="1" stroke-opacity="0.5" />
+    <use href="#balloon-gloss" />
+  </symbol>
+
+  <symbol id="balloon-rosegold-satin" viewBox="0 0 100 110">
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-rosegold-satin-gradient)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
+    <path d="M50 92l-6 10h12l-6-10Z" fill="url(#balloon-knot)" />
+    <path d="M44 94q6 5 12 0" fill="none" stroke="var(--c-rose-700)" stroke-width="1" stroke-opacity="0.5" />
     <use href="#balloon-gloss" />
   </symbol>
 
   <symbol id="balloon-champagne" viewBox="0 0 100 110">
-    <ellipse cx="54" cy="86" rx="14" ry="5" fill="var(--c-champagne-700)" fill-opacity="0.22" />
-    <circle cx="50" cy="48" r="44" fill="url(#balloon-champagne-gradient)" />
-    <path d="M50 92l-6 10h12l-6-10Z" fill="var(--c-champagne-700)" />
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-champagne-gradient)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
+    <path
+      d="M10 62c14 20 66 20 80 0c-12 24-30 34-40 34s-28-10-40-34Z"
+      fill="url(#balloon-champagne-chrome-band)"
+    />
+    <path d="M50 92l-6 10h12l-6-10Z" fill="url(#balloon-knot)" />
+    <path
+      d="M44 94q6 5 12 0"
+      fill="none"
+      stroke="var(--c-champagne-700)"
+      stroke-width="1"
+      stroke-opacity="0.5"
+    />
+    <use href="#balloon-gloss" />
+  </symbol>
+
+  <symbol id="balloon-champagne-satin" viewBox="0 0 100 110">
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-champagne-satin-gradient)" />
+    <ellipse cx="50" cy="48" rx="44" ry="46" fill="url(#balloon-env-tint)" />
+    <path d="M50 92l-6 10h12l-6-10Z" fill="url(#balloon-knot)" />
+    <path
+      d="M44 94q6 5 12 0"
+      fill="none"
+      stroke="var(--c-champagne-700)"
+      stroke-width="1"
+      stroke-opacity="0.5"
+    />
     <use href="#balloon-gloss" />
   </symbol>
 
