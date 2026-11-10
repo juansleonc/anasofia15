@@ -92,7 +92,7 @@ test.describe('Arch sprite', () => {
 // transforms and curves.
 test.describe('Arch roses render as round blooms', () => {
   for (const id of ['rose-pink', 'rose-cream']) {
-    test(`${id} keeps its lip highlights on the petals and a near-circular outline`, async ({ page }) => {
+    test(`${id} has a near-circular outline`, async ({ page }) => {
       await page.goto('./');
 
       const result = await page.evaluate((symbolId) => {
@@ -106,35 +106,15 @@ test.describe('Arch roses render as round blooms', () => {
         for (const child of Array.from(symbol.children)) probe.appendChild(child.cloneNode(true));
         document.body.appendChild(probe);
 
-        const paths = Array.from(probe.querySelectorAll('path'));
-        const petals = paths.filter((path) => (path.getAttribute('fill') ?? '').startsWith(`url(#${symbolId}-`));
-        const highlight = paths.find(
-          (path) => path.getAttribute('fill') === 'none' && (path.getAttribute('stroke') ?? '').includes('--c-white'),
-        )!;
-
-        let offPetal = 0;
-        let sampled = 0;
-        const length = highlight.getTotalLength();
-        for (let at = 0; at <= length; at += 0.5) {
-          const point = highlight.getPointAtLength(at);
-          sampled += 1;
-          const onPetal = petals.some((petal) => {
-            const placed = petal.transform.baseVal.consolidate()?.matrix ?? probe.createSVGMatrix();
-            const local = new DOMPoint(point.x, point.y).matrixTransform(placed.inverse());
-            return petal.isPointInFill(local);
-          });
-          if (!onPetal) offPetal += 1;
-        }
-
+        const petals = Array.from(probe.querySelectorAll('path')).filter((path) => (path.getAttribute('fill') ?? '').startsWith(`url(#${symbolId}-`));
         const rects = petals.map((petal) => petal.getBoundingClientRect());
         const width = Math.max(...rects.map((r) => r.right)) - Math.min(...rects.map((r) => r.left));
         const height = Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top));
         probe.remove();
-        return { sampled, offPetal, aspect: width / height };
+        return { petals: petals.length, aspect: width / height };
       }, id);
 
-      expect(result.sampled).toBeGreaterThan(10);
-      expect(result.offPetal).toBe(0);
+      expect(result.petals).toBeGreaterThanOrEqual(12);
       expect(result.aspect).toBeGreaterThanOrEqual(0.85);
       expect(result.aspect).toBeLessThanOrEqual(1.15);
     });

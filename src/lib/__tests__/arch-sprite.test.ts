@@ -33,6 +33,23 @@ function loadSpriteRoot(): Element {
 
 const root = loadSpriteRoot();
 
+const TOKEN_HEXES: Record<string, string> = Object.fromEntries(
+  Array.from(
+    readFileSync(join(TEST_DIR, '..', '..', 'styles', 'tokens.css'), 'utf-8').matchAll(/(--c-[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g),
+    (match) => [match[1], match[2]],
+  ),
+);
+
+/** WCAG relative luminance of the token a gradient stop paints with. */
+function tokenLuminance(stop: Element): number {
+  const token = (stop.getAttribute('style') ?? '').match(/var\((--c-[\w-]+)\)/)?.[1] ?? '';
+  const hex = TOKEN_HEXES[token];
+  if (!hex) throw new Error(`stop paints with unknown token "${token}"`);
+  const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16) / 255);
+  const linear = (c: number): number => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+}
+
 /** A `<symbol id="…">` from the sprite, or a thrown error naming the missing id. */
 function symbol(id: string): Element {
   const el = root.querySelector(`symbol#${id}`);
@@ -342,6 +359,18 @@ describe('ArchSprite gloss', () => {
 // The garland's text clearance (cover-garland) sizes every item from these symbol extents, so the
 // art may change freely only while each symbol stays inside the footprint it promised.
 describe('footprint contract', () => {
+  it.each(['rose-pink', 'rose-cream', 'peony-blush'])('%s keeps every petal inside the inscribed circle', (id) => {
+    const el = symbol(id);
+    const [, , width] = viewBoxOf(el);
+    const shapes = Array.from(el.querySelectorAll('path[fill^="url(#"]'));
+    expect(shapes.length).toBeGreaterThanOrEqual(12);
+    for (const shape of shapes) {
+      for (const point of pathPoints(shape).map((p) => transformPoint(shape, p))) {
+        expect(Math.hypot(point[0] - width / 2, point[1] - width / 2)).toBeLessThanOrEqual(width / 2);
+      }
+    }
+  });
+
   it.each(FLOWER_IDS)('%s keeps its seat shadow inside the inscribed circle', (id) => {
     const el = symbol(id);
     const seat = el.querySelector('ellipse[fill="url(#flower-seat-shadow)"]');
@@ -380,6 +409,7 @@ describe('ArchSprite perf guard', () => {
 // "petal path" is any path filled from one of those ring gradients — as opposed to the center bud
 // or the lip-highlight stroke, which are not counted as petals.
 const ROSE_IDS = ['rose-pink', 'rose-cream'];
+const GARDEN_ROSE_IDS = ['rose-pink'];
 const roseRingGradientIds = (id: string): string[] => [`${id}-outer`, `${id}-mid`, `${id}-inner`];
 const PEONY_RING_IDS = ['peony-blush-outer', 'peony-blush-mid', 'peony-blush-inner'];
 
@@ -460,16 +490,6 @@ function petalPolygon(el: Element): Point[] {
   return segments.map(({ to }) => transformPoint(el, to));
 }
 
-function insidePolygon([x, y]: Point, polygon: Point[]): boolean {
-  let inside = false;
-  for (let a = 0, b = polygon.length - 1; a < polygon.length; b = a++) {
-    const [xa, ya] = polygon[a];
-    const [xb, yb] = polygon[b];
-    if (ya > y !== yb > y && x < ((xb - xa) * (y - ya)) / (yb - ya) + xa) inside = !inside;
-  }
-  return inside;
-}
-
 /** Largest change of direction (degrees) where two consecutive cubic segments meet, including the
  *  closing joint of a closed outline — a sharp corner (a pointy petal tip or a V notch) shows up as
  *  a large turn, a smoothly rounded outline stays small everywhere. */
@@ -488,12 +508,6 @@ function sharpestJoint(d: string): number {
     }
   }
   return worst;
-}
-
-function highlightPath(el: Element): Element | undefined {
-  return Array.from(el.querySelectorAll('path')).find(
-    (path) => path.getAttribute('fill') === 'none' && (path.getAttribute('stroke') ?? '').includes('var(--c-white)'),
-  );
 }
 
 /** The first unstroked `fill="none"` path in `el` whose `d` has at least `minSubpaths` `M`
@@ -577,20 +591,30 @@ describe('ArchSprite roses', () => {
     expect(pink.length === cream.length && pink.every((petal, k) => petal === cream[k])).toBe(false);
   });
 
-  it.each(ROSE_IDS)('%s has a multi-subpath lip highlight stroke', (id) => {
-    const highlight = highlightPath(symbol(id));
-    expect(highlight).not.toBeUndefined();
-    expect(cubicSubpaths(highlight!.getAttribute('d') ?? '').length).toBeGreaterThanOrEqual(2);
-  });
-
-  it.each(ROSE_IDS)('%s lip highlights sit on the petals, never floating outside the flower', (id) => {
+  it.each(GARDEN_ROSE_IDS)('%s has >= 15 petals in 3 cupped rings, a >= 4-crescent centre and no white outline stroke', (id) => {
     const el = symbol(id);
-    const polygons = petalPaths(el, roseRingGradientIds(id)).map((petal) => petalPolygon(petal));
-    const highlight = highlightPath(el)!;
-    for (const { segments } of cubicSubpaths(highlight.getAttribute('d') ?? '')) {
-      for (const point of [segments[0].from, ...segments.map(({ to }) => to)]) {
-        expect(polygons.some((polygon) => insidePolygon(point, polygon)), `highlight point ${point} is off-petal`).toBe(true);
-      }
+    const petals = petalPaths(el, roseRingGradientIds(id));
+    expect(petals.length).toBeGreaterThanOrEqual(15);
+    for (const ringId of roseRingGradientIds(id)) {
+      expect(petals.filter((petal) => petal.getAttribute('fill') === `url(#${ringId})`).length).toBeGreaterThanOrEqual(3);
+      // Each petal's own gradient carries the shading: a light lip (first stop) over a darker base.
+      const stops = Array.from(gradient(ringId).querySelectorAll('stop'));
+      expect(tokenLuminance(stops[0])).toBeGreaterThan(tokenLuminance(stops[stops.length - 1]));
+    }
+
+    const crescents = Array.from(el.querySelectorAll(`path[fill="url(#${id}-heart)"]`));
+    expect(crescents.length).toBeGreaterThanOrEqual(4);
+    const [, , width] = viewBoxOf(el);
+    const reaches = crescents.map((crescent) =>
+      Math.max(...pathPoints(crescent).map(([x, y]) => Math.hypot(x - width / 2, y - width / 2))),
+    );
+    for (const reach of reaches) expect(reach).toBeLessThanOrEqual(width * 0.2);
+    expect(new Set(reaches.map((reach) => reach.toFixed(1))).size).toBeGreaterThanOrEqual(4);
+
+    const shapes = Array.from(el.querySelectorAll('path, ellipse, circle'));
+    expect(shapes.length).toBeGreaterThan(petals.length);
+    for (const shape of shapes) {
+      expect(shape.getAttribute('stroke') ?? 'none').toBe('none');
     }
   });
 
