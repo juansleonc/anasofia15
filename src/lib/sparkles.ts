@@ -402,23 +402,24 @@ export interface DriftingSparklesOptions {
 }
 
 const DRIFT_SIZE_RANGES: Record<DriftKind, [number, number]> = {
-  glitter: [4, 7],
-  star: [10, 16],
-  bokeh: [24, 44],
+  glitter: [3, 6],
+  star: [14, 22],
+  bokeh: [16, 30],
 };
 
-/** A fixed peak opacity per kind (not a range) — glitter reads brightest, bokeh stays faint. */
+/** A fixed peak opacity per kind (not a range) — the star (4-point flare) reads brightest, glitter
+ *  close behind, bokeh stays faint by design. */
 const DRIFT_PEAK_OPACITY: Record<DriftKind, number> = {
-  glitter: 0.85,
-  star: 0.75,
-  bokeh: 0.3,
+  glitter: 0.9,
+  star: 0.95,
+  bokeh: 0.32,
 };
 
-/** The point the drift travels toward, in cover percent — the centre of the text block, not the
- *  geometric centre of the cover (see design: R5-5). */
-const DRIFT_TARGET = { xPct: 50, yPct: 55 };
+/** The point the drift travels toward, in cover percent — the centre of the text block, lowered
+ *  from 55 to 57 so pieces reach the name rather than dying above it. */
+const DRIFT_TARGET = { xPct: 50, yPct: 57 };
 
-/** Tracks the R5-2 arch pocket's crown curve: high (29%) at the centre, rising toward the walls
+/** Tracks the arch pocket's crown curve: high (29%) at the centre, rising toward the walls
  *  (up to 38%) — a constant in cover-percent space, not an import from the garland data, so the
  *  two lanes stay decoupled. */
 function driftSpawnYPct(xPct: number): number {
@@ -446,12 +447,12 @@ export function driftingSparkles(options: DriftingSparklesOptions): DriftSparkle
       const xPct = 20 + random() * 60;
       const yPct = driftSpawnYPct(xPct) + (random() - 0.5) * 3;
 
-      const travel = 0.5 + random() * 0.3;
+      const travel = 0.75 + random() * 0.25;
       const dxPct = (DRIFT_TARGET.xPct - xPct) * travel;
       const dyPct = (DRIFT_TARGET.yPct - yPct) * travel;
 
       const [min, max] = DRIFT_SIZE_RANGES[kind];
-      const durationMs = 8000 + random() * 5000;
+      const durationMs = 9000 + random() * 5000;
 
       sparkles.push({
         kind,

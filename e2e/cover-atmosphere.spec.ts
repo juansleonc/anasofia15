@@ -25,10 +25,10 @@ test.describe('Cover falling confetti', () => {
     expect(Math.abs(confettiBox!.height - coverBox!.height)).toBeLessThanOrEqual(1);
   });
 
-  test('holds 12 foil ribbons and no falling glitter specks', async ({ page }) => {
+  test('holds 8 foil ribbons and no falling glitter specks', async ({ page }) => {
     await page.goto('./');
 
-    await expect(page.locator('[data-confetti="ribbon"]')).toHaveCount(12);
+    await expect(page.locator('[data-confetti="ribbon"]')).toHaveCount(8);
     await expect(page.locator('[data-confetti="glitter"]')).toHaveCount(0);
   });
 
@@ -45,7 +45,7 @@ test.describe('Cover falling confetti', () => {
         };
       }),
     );
-    expect(ribbons).toHaveLength(12);
+    expect(ribbons).toHaveLength(8);
     for (const ribbon of ribbons) {
       expect(ribbon.height / ribbon.width).toBeGreaterThanOrEqual(3);
       expect(ribbon.backgroundImage).toContain('linear-gradient');
@@ -93,7 +93,7 @@ test.describe('Cover falling confetti', () => {
         return { animationName: style.animationName, opacity: parseFloat(style.opacity) };
       }),
     );
-    expect(pieces).toHaveLength(12);
+    expect(pieces).toHaveLength(8);
     for (const piece of pieces) {
       expect(piece.animationName).toBe('none');
       expect(piece.opacity).toBeGreaterThan(0);
@@ -181,17 +181,19 @@ test.describe('Cover bokeh', () => {
 });
 
 test.describe('Cover light flares', () => {
-  test('three static, hidden 4-point flares of 44-70px', async ({ page }) => {
+  test('three static, hidden 4-point flares of 26-40px with a gold body', async ({ page }) => {
     await page.goto('./');
 
     const flares = await page.locator('[data-flare]').evaluateAll((elements) =>
       elements.map((el) => {
         const style = getComputedStyle(el);
+        const body = getComputedStyle(el, '::after');
         return {
           hidden: el.closest('[aria-hidden="true"]') !== null,
           width: parseFloat(style.width),
           animationName: style.animationName,
-          gradients: style.backgroundImage.match(/[a-z-]+-gradient\(/g) ?? [],
+          clipPath: body.clipPath,
+          bodyImage: body.backgroundImage,
         };
       }),
     );
@@ -199,9 +201,12 @@ test.describe('Cover light flares', () => {
     for (const flare of flares) {
       expect(flare.hidden).toBe(true);
       expect(flare.animationName).toBe('none');
-      expect(flare.width).toBeGreaterThanOrEqual(44);
-      expect(flare.width).toBeLessThanOrEqual(70);
-      expect(flare.gradients).toEqual(['radial-gradient(', 'linear-gradient(', 'linear-gradient(']);
+      expect(flare.width).toBeGreaterThanOrEqual(26);
+      expect(flare.width).toBeLessThanOrEqual(40);
+      expect(flare.clipPath).toContain('polygon(');
+      const gold =
+        flare.bodyImage.includes('rgb(205, 168, 105)') || flare.bodyImage.includes('rgb(160, 126, 70)');
+      expect(gold).toBe(true);
     }
   });
 
@@ -230,14 +235,14 @@ test.describe('Cover light flares', () => {
 });
 
 test.describe('Cover drifting light', () => {
-  test('holds 6 glitter, 3 star and 3 bokeh drift particles, hidden via the layer', async ({
+  test('holds 12 glitter, 6 star and 4 bokeh drift particles, hidden via the layer', async ({
     page,
   }) => {
     await page.goto('./');
 
-    await expect(page.locator('[data-drift="glitter"]')).toHaveCount(6);
-    await expect(page.locator('[data-drift="star"]')).toHaveCount(3);
-    await expect(page.locator('[data-drift="bokeh"]')).toHaveCount(3);
+    await expect(page.locator('[data-drift="glitter"]')).toHaveCount(12);
+    await expect(page.locator('[data-drift="star"]')).toHaveCount(6);
+    await expect(page.locator('[data-drift="bokeh"]')).toHaveCount(4);
 
     const hidden = await page
       .locator('[data-drift]')
@@ -287,7 +292,7 @@ test.describe('Cover drifting light', () => {
             parseFloat(getComputedStyle(el).getPropertyValue('--drift-y')),
           ),
         );
-      expect(spawnYs).toHaveLength(12);
+      expect(spawnYs).toHaveLength(22);
       for (const yPct of spawnYs) {
         expect(yPct).toBeGreaterThanOrEqual(26);
         expect(yPct).toBeLessThanOrEqual(40);
@@ -308,7 +313,7 @@ test.describe('Cover drifting light', () => {
         };
       }),
     );
-    expect(vectors).toHaveLength(12);
+    expect(vectors).toHaveLength(22);
     for (const vector of vectors) {
       expect(vector.dy).toBeGreaterThan(0);
       if (vector.dx !== 0) {
@@ -323,7 +328,7 @@ test.describe('Cover drifting light', () => {
     const filters = await page
       .locator('[data-drift]')
       .evaluateAll((elements) => elements.map((el) => getComputedStyle(el).filter));
-    expect(filters).toHaveLength(12);
+    expect(filters).toHaveLength(22);
     for (const filter of filters) {
       expect(filter).toBe('none');
     }
@@ -341,9 +346,64 @@ test.describe('Cover drifting light', () => {
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
   });
 
-  test('freezes mid-path but stays visible under prefers-reduced-motion', async ({ page }) => {
+  for (const viewport of VIEWPORTS) {
+    test(`drifting light is clearly visible at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.waitForTimeout(1500);
+
+      const coverBox = await page.getByTestId('cover').boundingBox();
+      expect(coverBox).not.toBeNull();
+
+      const particles = await page.locator('[data-drift]').evaluateAll((elements) =>
+        elements.map((el) => ({
+          opacity: parseFloat(getComputedStyle(el).opacity),
+          rect: el.getBoundingClientRect().toJSON() as Box,
+        })),
+      );
+      const visible = particles.filter((p) => p.opacity >= 0.4 && intersects(p.rect, coverBox!));
+      expect(visible.length).toBeGreaterThanOrEqual(10);
+
+      const starWidths = await page
+        .locator('[data-drift="star"]')
+        .evaluateAll((elements) => elements.map((el) => parseFloat(getComputedStyle(el).width)));
+      for (const width of starWidths) {
+        expect(width).toBeGreaterThanOrEqual(14);
+      }
+
+      const goldGlitter = await page
+        .locator('[data-drift="glitter"]')
+        .evaluateAll((elements) => elements.map((el) => getComputedStyle(el).backgroundImage));
+      const goldStarBodies = await page
+        .locator('[data-drift="star"]')
+        .evaluateAll((elements) =>
+          elements.map((el) => ({
+            backgroundImage: getComputedStyle(el, '::after').backgroundImage,
+            clipPath: getComputedStyle(el, '::after').clipPath,
+          })),
+        );
+      const isGold = (image: string) =>
+        image.includes('rgb(205, 168, 105)') || image.includes('rgb(160, 126, 70)');
+      for (const image of goldGlitter) {
+        expect(isGold(image)).toBe(true);
+      }
+      for (const star of goldStarBodies) {
+        expect(isGold(star.backgroundImage)).toBe(true);
+        expect(star.clipPath).toContain('polygon(');
+      }
+    });
+  }
+
+  test('freezes 40% of the way along its path, still visible, under prefers-reduced-motion', async ({
+    page,
+  }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./');
+
+    const coverBox = await page.getByTestId('cover').boundingBox();
+    expect(coverBox).not.toBeNull();
 
     const particles = await page.locator('[data-drift]').evaluateAll((elements) =>
       elements.map((el) => {
@@ -352,17 +412,26 @@ test.describe('Cover drifting light', () => {
         return {
           animationName: style.animationName,
           opacity: parseFloat(style.opacity),
-          width: box.width,
-          height: box.height,
+          xPct: parseFloat(style.getPropertyValue('--drift-x')),
+          yPct: parseFloat(style.getPropertyValue('--drift-y')),
+          dxPct: parseFloat(style.getPropertyValue('--drift-dx')),
+          dyPct: parseFloat(style.getPropertyValue('--drift-dy')),
+          centerX: box.x + box.width / 2,
+          centerY: box.y + box.height / 2,
         };
       }),
     );
-    expect(particles).toHaveLength(12);
+    expect(particles).toHaveLength(22);
     for (const particle of particles) {
       expect(particle.animationName).toBe('none');
       expect(particle.opacity).toBeGreaterThan(0);
-      expect(particle.width).toBeGreaterThan(0);
-      expect(particle.height).toBeGreaterThan(0);
+
+      const spawnX = coverBox!.x + (particle.xPct / 100) * coverBox!.width;
+      const spawnY = coverBox!.y + (particle.yPct / 100) * coverBox!.height;
+      const expectedX = spawnX + 0.4 * (particle.dxPct / 100) * coverBox!.width;
+      const expectedY = spawnY + 0.4 * (particle.dyPct / 100) * coverBox!.height;
+      expect(Math.abs(particle.centerX - expectedX)).toBeLessThanOrEqual(1);
+      expect(Math.abs(particle.centerY - expectedY)).toBeLessThanOrEqual(1);
     }
   });
 });
