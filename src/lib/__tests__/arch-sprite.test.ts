@@ -244,12 +244,12 @@ describe('ArchSprite perf guard', () => {
   });
 });
 
-// Each rose tone shares the same petal geometry (the "accepted duplication" from the design doc)
-// but paints its three rings — outer/mid/inner — from its own tone-specific gradient trio, so a
-// "petal path" is any path filled from one of those three ring gradients (as opposed to the
-// center spiral bud or the curl-highlight stroke, which are not counted as petals).
+// Each rose tone paints its petals from its own tone-specific ring gradients (outer/mid/inner), so a
+// "petal path" is any path filled from one of those ring gradients — as opposed to the center bud
+// or the lip-highlight stroke, which are not counted as petals.
 const ROSE_IDS = ['rose-pink', 'rose-cream'];
 const roseRingGradientIds = (id: string): string[] => [`${id}-outer`, `${id}-mid`, `${id}-inner`];
+const PEONY_RING_IDS = ['peony-blush-outer', 'peony-blush-mid', 'peony-blush-inner'];
 
 function petalPaths(el: Element, ringGradientIds: string[]): Element[] {
   return Array.from(el.querySelectorAll('path')).filter((path) =>
@@ -257,7 +257,114 @@ function petalPaths(el: Element, ringGradientIds: string[]): Element[] {
   );
 }
 
-describe('ArchSprite flowers', () => {
+type Point = [number, number];
+interface Segment {
+  from: Point;
+  c1: Point;
+  c2: Point;
+  to: Point;
+}
+
+/** Parses an absolute `M…C…Z` path (the only commands the flower petals and highlights use) into
+ *  subpaths of cubic segments. Any other command throws, so a petal drawn with straight `L`/`H`/`V`
+ *  edges or an unparsed shape fails loudly instead of being silently mis-measured. */
+function cubicSubpaths(d: string): { segments: Segment[]; closed: boolean }[] {
+  const tokens = d.match(/[A-Za-z]|-?\d*\.?\d+(?:e-?\d+)?/g) ?? [];
+  const subpaths: { segments: Segment[]; closed: boolean }[] = [];
+  let current: { segments: Segment[]; closed: boolean } | null = null;
+  let pen: Point = [0, 0];
+  let i = 0;
+  const num = (): number => Number(tokens[i++]);
+  while (i < tokens.length) {
+    const cmd = tokens[i++];
+    if (cmd === 'M') {
+      pen = [num(), num()];
+      current = { segments: [], closed: false };
+      subpaths.push(current);
+    } else if (cmd === 'C') {
+      while (i < tokens.length && !/[A-Za-z]/.test(tokens[i])) {
+        const c1: Point = [num(), num()];
+        const c2: Point = [num(), num()];
+        const to: Point = [num(), num()];
+        current!.segments.push({ from: pen, c1, c2, to });
+        pen = to;
+      }
+    } else if (cmd === 'Z') {
+      current!.closed = true;
+    } else {
+      throw new Error(`unsupported path command "${cmd}" in "${d}" — flower art is absolute M/C/Z only`);
+    }
+  }
+  return subpaths;
+}
+
+/** The `rotate(a cx cy)` transform on a petal, applied to a point (identity when absent). */
+function transformPoint(el: Element, [x, y]: Point): Point {
+  const match = (el.getAttribute('transform') ?? '').match(/rotate\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\)/);
+  if (!match) return [x, y];
+  const [a, cx, cy] = match.slice(1).map(Number);
+  const rad = (a * Math.PI) / 180;
+  const dx = x - cx;
+  const dy = y - cy;
+  return [cx + dx * Math.cos(rad) - dy * Math.sin(rad), cy + dx * Math.sin(rad) + dy * Math.cos(rad)];
+}
+
+/** Every point (anchors and control points) of a path, in its own untransformed coordinates. */
+function pathPoints(el: Element): Point[] {
+  return cubicSubpaths(el.getAttribute('d') ?? '').flatMap(({ segments }) =>
+    segments.flatMap(({ from, c1, c2, to }) => [from, c1, c2, to]),
+  );
+}
+
+function boxOf(points: Point[]): { minX: number; minY: number; maxX: number; maxY: number } {
+  const xs = points.map(([x]) => x);
+  const ys = points.map(([, y]) => y);
+  return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+}
+
+/** The petal outline as a polygon through its on-curve anchors, placed by its transform. */
+function petalPolygon(el: Element): Point[] {
+  const [{ segments }] = cubicSubpaths(el.getAttribute('d') ?? '');
+  return segments.map(({ to }) => transformPoint(el, to));
+}
+
+function insidePolygon([x, y]: Point, polygon: Point[]): boolean {
+  let inside = false;
+  for (let a = 0, b = polygon.length - 1; a < polygon.length; b = a++) {
+    const [xa, ya] = polygon[a];
+    const [xb, yb] = polygon[b];
+    if (ya > y !== yb > y && x < ((xb - xa) * (y - ya)) / (yb - ya) + xa) inside = !inside;
+  }
+  return inside;
+}
+
+/** Largest change of direction (degrees) where two consecutive cubic segments meet, including the
+ *  closing joint of a closed outline — a sharp corner (a pointy petal tip or a V notch) shows up as
+ *  a large turn, a smoothly rounded outline stays small everywhere. */
+function sharpestJoint(d: string): number {
+  let worst = 0;
+  for (const { segments, closed } of cubicSubpaths(d)) {
+    const jointCount = closed ? segments.length : segments.length - 1;
+    for (let k = 0; k < jointCount; k++) {
+      const incoming = segments[k];
+      const outgoing = segments[(k + 1) % segments.length];
+      const inDir = Math.atan2(incoming.to[1] - incoming.c2[1], incoming.to[0] - incoming.c2[0]);
+      const outDir = Math.atan2(outgoing.c1[1] - outgoing.from[1], outgoing.c1[0] - outgoing.from[0]);
+      let turn = Math.abs(((outDir - inDir) * 180) / Math.PI) % 360;
+      if (turn > 180) turn = 360 - turn;
+      worst = Math.max(worst, turn);
+    }
+  }
+  return worst;
+}
+
+function highlightPath(el: Element): Element | undefined {
+  return Array.from(el.querySelectorAll('path')).find(
+    (path) => path.getAttribute('fill') === 'none' && (path.getAttribute('stroke') ?? '').includes('var(--c-white)'),
+  );
+}
+
+describe('ArchSprite roses', () => {
   it.each(ROSE_IDS)('%s has at least 12 petal paths drawn from 3 distinct ring gradients', (id) => {
     const el = symbol(id);
     const ringIds = roseRingGradientIds(id);
@@ -271,19 +378,58 @@ describe('ArchSprite flowers', () => {
     }
   });
 
-  it.each(ROSE_IDS)('%s stays within its element budget (<= 18 elements)', (id) => {
-    expect(symbol(id).children.length).toBeLessThanOrEqual(18);
+  it.each(ROSE_IDS)('%s stays within its element budget (<= 24 elements)', (id) => {
+    expect(symbol(id).children.length).toBeLessThanOrEqual(24);
   });
 
-  it.each(ROSE_IDS)('%s has a multi-subpath curl-highlight stroke along the petal rims', (id) => {
-    const el = symbol(id);
-    const highlight = Array.from(el.querySelectorAll('path')).find((path) => {
-      const stroke = path.getAttribute('stroke') ?? '';
-      return path.getAttribute('fill') === 'none' && stroke.includes('var(--c-white)');
-    });
+  it.each(ROSE_IDS)('%s outer petals are broad shells: each wider than it is tall', (id) => {
+    const outer = petalPaths(symbol(id), [`${id}-outer`]);
+    expect(outer.length).toBeGreaterThanOrEqual(5);
+    for (const petal of outer) {
+      const box = boxOf(pathPoints(petal));
+      expect(box.maxX - box.minX).toBeGreaterThan(box.maxY - box.minY);
+    }
+  });
+
+  it.each(ROSE_IDS)('%s has a round, near-circular overall silhouette', (id) => {
+    const placed = petalPaths(symbol(id), roseRingGradientIds(id)).flatMap((petal) => petalPolygon(petal));
+    const box = boxOf(placed);
+    const aspect = (box.maxX - box.minX) / (box.maxY - box.minY);
+    expect(aspect).toBeGreaterThanOrEqual(0.85);
+    expect(aspect).toBeLessThanOrEqual(1.15);
+  });
+
+  it.each(ROSE_IDS)('%s petals are smoothly rounded and fully opaque (no pointed corners, no wash)', (id) => {
+    for (const petal of petalPaths(symbol(id), roseRingGradientIds(id))) {
+      expect(sharpestJoint(petal.getAttribute('d') ?? '')).toBeLessThanOrEqual(20);
+      expect(petal.getAttribute('fill-opacity')).toBeNull();
+      expect(petal.getAttribute('opacity')).toBeNull();
+    }
+  });
+
+  it('rose-pink and rose-cream have different silhouettes, not just different colours', () => {
+    const outline = (id: string): string[] =>
+      petalPaths(symbol(id), roseRingGradientIds(id)).map((petal) => `${petal.getAttribute('d')}|${petal.getAttribute('transform')}`);
+    const pink = outline('rose-pink');
+    const cream = outline('rose-cream');
+    expect(pink.length === cream.length && pink.every((petal, k) => petal === cream[k])).toBe(false);
+  });
+
+  it.each(ROSE_IDS)('%s has a multi-subpath lip highlight stroke', (id) => {
+    const highlight = highlightPath(symbol(id));
     expect(highlight).not.toBeUndefined();
-    const subpathCount = (highlight!.getAttribute('d')?.match(/M/g) ?? []).length;
-    expect(subpathCount).toBeGreaterThanOrEqual(2);
+    expect(cubicSubpaths(highlight!.getAttribute('d') ?? '').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each(ROSE_IDS)('%s lip highlights sit on the petals, never floating outside the flower', (id) => {
+    const el = symbol(id);
+    const polygons = petalPaths(el, roseRingGradientIds(id)).map((petal) => petalPolygon(petal));
+    const highlight = highlightPath(el)!;
+    for (const { segments } of cubicSubpaths(highlight.getAttribute('d') ?? '')) {
+      for (const point of [segments[0].from, ...segments.map(({ to }) => to)]) {
+        expect(polygons.some((polygon) => insidePolygon(point, polygon)), `highlight point ${point} is off-petal`).toBe(true);
+      }
+    }
   });
 
   it.each(ROSE_IDS)('%s shows a darker spiral bud furled at its center', (id) => {
@@ -296,22 +442,29 @@ describe('ArchSprite flowers', () => {
     // A swirl, not a straight-edged shape: at least one curve command.
     expect(bud!.getAttribute('d')).toMatch(/[cCqQ]/);
   });
+});
 
-  it('peony-blush has at least 16 petal paths drawn from 2 ring gradients', () => {
+describe('ArchSprite peony', () => {
+  it('peony-blush has at least 16 petal paths drawn from 3 ring gradients', () => {
     const el = symbol('peony-blush');
-    const ringIds = ['peony-blush-outer', 'peony-blush-inner'];
-    for (const ringId of ringIds) {
+    for (const ringId of PEONY_RING_IDS) {
       expect(root.querySelector(`#${ringId}`)).not.toBeNull();
     }
-    const petals = petalPaths(el, ringIds);
+    const petals = petalPaths(el, PEONY_RING_IDS);
     expect(petals.length).toBeGreaterThanOrEqual(16);
-    for (const ringId of ringIds) {
+    for (const ringId of PEONY_RING_IDS) {
       expect(petals.some((petal) => petal.getAttribute('fill') === `url(#${ringId})`)).toBe(true);
     }
   });
 
-  it('peony-blush stays within its element budget (<= 22 elements)', () => {
-    expect(symbol('peony-blush').children.length).toBeLessThanOrEqual(22);
+  it('peony-blush stays within its element budget (<= 30 elements)', () => {
+    expect(symbol('peony-blush').children.length).toBeLessThanOrEqual(30);
+  });
+
+  it('peony-blush petals are soft, rounded ruffles with no pointed corners anywhere on the outline', () => {
+    for (const petal of petalPaths(symbol('peony-blush'), PEONY_RING_IDS)) {
+      expect(sharpestJoint(petal.getAttribute('d') ?? '')).toBeLessThanOrEqual(20);
+    }
   });
 
   it('peony-blush shows a few champagne stamen hints peeking from its center', () => {
