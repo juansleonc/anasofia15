@@ -504,7 +504,7 @@ test.describe('Cover section', () => {
   // Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is getting airier
   // in a parallel task, so the cover's own centre needed more presence: bigger type, a flourish,
   // and a tight ring of extra sparkles (below), rather than more clutter.
-  test('the celebrant name is large enough to fill the centre at 375 and grows further on desktop', async ({
+  test('the celebrant name is large enough to fill the centre at 375 and 390 and grows further on desktop', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
@@ -513,10 +513,18 @@ test.describe('Cover section', () => {
     const nameFontSize375 = await page
       .getByTestId('cover-celebrant-name')
       .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    // The name must fit the arch's clear zone on ONE line at 375 (see the "single line" test
-    // below), so its size is derived from the available width; 52px keeps it a bold centrepiece
-    // while leaving the one-line fit as the binding constraint.
-    expect(nameFontSize375).toBeGreaterThanOrEqual(52);
+    // The name must fit the arch's clear zone on ONE line at every phone size (see the "single
+    // line" test below), so its size is derived from the available width rather than a fixed
+    // target; these floors are the measured render on the merged garland/type/atmosphere lanes.
+    expect(nameFontSize375).toBeGreaterThanOrEqual(68);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+
+    const nameFontSize390 = await page
+      .getByTestId('cover-celebrant-name')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(nameFontSize390).toBeGreaterThanOrEqual(71);
 
     for (const viewport of [
       { width: 1366, height: 768 },
