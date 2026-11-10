@@ -243,19 +243,33 @@ describe('buildArch', () => {
 });
 
 describe('airy garland', () => {
-  // Below `fadeStart` the side columns are masked out, so only the opaque part has to stay whole.
-  it('keeps every visible item wholly inside the canvas, never cut at an edge', () => {
+  // Below `fadeStart` the side columns are masked out, so only the opaque part is checked. Side
+  // balloons may run off the outer edge by up to 30% of their size and leaves by 40%; the top
+  // edge and flowers are never cut, and nothing in the crown leaves the canvas.
+  it('never cuts the top edge or a flower; side items bleed past the outer edge within limits', () => {
+    const bleedLimit = { balloon: 0.3, leaf: 0.4, flower: 0 };
     for (const spec of SEEDED_SPECS) {
       const visible = buildArch(spec).items.filter((item) => item.y <= spec.fadeStart);
       expect(visible.length).toBeGreaterThan(0);
       for (const item of visible) {
         const r = item.size / 2;
         const where = `${item.kind} at (${item.x.toFixed(1)}, ${item.y.toFixed(1)}) size ${item.size.toFixed(1)}`;
-        expect(item.x - r, where).toBeGreaterThanOrEqual(0);
-        expect(item.x + r, where).toBeLessThanOrEqual(spec.width);
+        const inSideColumn = item.y + r > spec.band;
+        const allowed = inSideColumn ? bleedLimit[item.kind] * item.size : 0;
+        expect(item.x - r, where).toBeGreaterThanOrEqual(-allowed - 1e-9);
+        expect(item.x + r, where).toBeLessThanOrEqual(spec.width + allowed + 1e-9);
         expect(item.y - r, where).toBeGreaterThanOrEqual(0);
       }
     }
+  });
+
+  it('lets some portrait side balloon bleed past each outer edge', () => {
+    const spec = ARCH_SPECS.portrait;
+    const sideBalloons = buildArch(spec).items.filter(
+      (item) => item.kind === 'balloon' && item.y <= spec.fadeStart && item.y + item.size / 2 > spec.band,
+    );
+    expect(sideBalloons.some((b) => b.x - b.size / 2 < 0)).toBe(true);
+    expect(sideBalloons.some((b) => b.x + b.size / 2 > spec.width)).toBe(true);
   });
 
   // Overlap stays modest: no balloon or flower hides more than 40% of itself behind the items

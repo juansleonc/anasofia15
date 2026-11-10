@@ -318,21 +318,31 @@ function mirrorItem(item: ArchItem, spec: ArchSpec, rng: () => number): ArchItem
 }
 
 /**
- * Moves an item out of the text clear zone, then wholly inside the canvas's top and side edges
- * (inset by `spec.inset`), shrinking it if a side column is too narrow to hold it.
+ * Share of its size a side-column item may run past the outer canvas edge. Set a kind to 0 to keep
+ * it wholly inside; flowers and the top edge are never cut.
+ */
+const SIDE_BLEED: Record<ArchItemKind, number> = { balloon: 0.3, leaf: 0.4, flower: 0 };
+
+/**
+ * Moves an item out of the text clear zone, then inside the canvas's top and side edges (inset by
+ * `spec.inset`), shrinking it if a side column is too narrow to hold it. Side-column items may
+ * bleed past the outer edge by their kind's `SIDE_BLEED`.
  */
 function fitInside(item: ArchItem, spec: ArchSpec): ArchItem {
   const cleared = clampOutOfClearZone(item, spec);
   const margin = spec.inset;
   const inSideColumn = cleared.y + cleared.size / 2 > spec.band;
-  const size = inSideColumn ? Math.min(cleared.size, spec.gutter - margin) : cleared.size;
+  const bleed = inSideColumn ? SIDE_BLEED[cleared.kind] : 0;
+  const maxSideSize = bleed > 0 ? spec.gutter / (1 - bleed) : spec.gutter - margin;
+  const size = inSideColumn ? Math.min(cleared.size, maxSideSize) : cleared.size;
   const r = size / 2;
+  const outer = bleed > 0 ? r - bleed * size : margin + r;
   const onLeft = cleared.x < spec.width / 2;
   const [minX, maxX] = !inSideColumn
     ? [margin + r, spec.width - margin - r]
     : onLeft
-      ? [margin + r, spec.gutter - r]
-      : [spec.width - spec.gutter + r, spec.width - margin - r];
+      ? [outer, spec.gutter - r]
+      : [spec.width - spec.gutter + r, spec.width - outer];
   return { ...cleared, size, x: clamp(cleared.x, minX, maxX), y: Math.max(cleared.y, margin + r) };
 }
 
