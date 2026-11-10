@@ -142,9 +142,16 @@
     <!-- Shared by every flower: a soft rose shadow offset down-right under the bloom, so it sits
          pressed into the balloons around it instead of floating on top. -->
     <radialGradient id="flower-seat-shadow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" style="stop-color: var(--c-rose-700)" stop-opacity="0.18" />
+      <stop offset="0%" style="stop-color: var(--c-rose-700)" stop-opacity="0.28" />
       <stop offset="60%" style="stop-color: var(--c-rose-700)" stop-opacity="0.1" />
       <stop offset="100%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
+    </radialGradient>
+    <!-- Rim occlusion: a rose/peony's last child is a circle filled with this, so the outer
+         petals darken right where the bloom sinks between the balloons around it. -->
+    <radialGradient id="flower-occlusion" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
+      <stop offset="62%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
+      <stop offset="100%" style="stop-color: var(--c-rose-700)" stop-opacity="0.22" />
     </radialGradient>
     <!-- Flower rings: one gradient per ring, `objectBoundingBox` units (the default — no
          `gradientUnits` attr) so each petal is shaded within its own bounding box, computed before
@@ -367,6 +374,7 @@
     <path d="M33.7 35.49C32.46 36.21 30.91 36.16 29.71 35.37C28.51 34.59 27.86 33.19 28.03 31.76C28.19 30.33 29.15 29.12 30.5 28.63C31.82 28.15 32.5 30.03 31.18 30.51C30.54 30.74 30.09 31.31 30.01 31.99C29.93 32.67 30.24 33.33 30.81 33.7C31.38 34.08 32.11 34.1 32.7 33.76C33.91 33.06 34.91 34.79 33.7 35.49Z" fill="url(#rose-pink-heart)" />
     <path d="M32 29.6C33.16 29.6 34.16 30.44 34.36 31.58C34.57 32.73 33.92 33.86 32.82 34.26C31.83 34.61 31.32 33.2 32.31 32.85C32.72 32.7 32.96 32.27 32.89 31.84C32.81 31.41 32.44 31.1 32 31.1C30.95 31.1 30.95 29.6 32 29.6Z" fill="url(#rose-pink-heart)" />
     <path d="M32 30.4C33.4 30.4 34 31.6 33.5 32.6C33 33.6 31.5 33.7 30.9 32.8C30.5 32.1 31 31.4 31.8 31.6C32.4 31.8 32.5 32.4 32.1 32.6Z" fill="var(--c-rose-700)" fill-opacity="0.7" />
+    <circle cx="32" cy="32" r="31" fill="url(#flower-occlusion)" />
   </symbol>
 
   <symbol id="rose-cream" viewBox="0 0 64 64">
@@ -392,6 +400,7 @@
     <path d="M32.78 35.87C31.4 36.24 29.92 35.8 28.96 34.73C28.01 33.65 27.74 32.13 28.27 30.8C28.8 29.46 30.04 28.54 31.47 28.41C32.86 28.29 33.04 30.28 31.64 30.41C30.97 30.47 30.38 30.9 30.13 31.54C29.88 32.17 30 32.89 30.46 33.4C30.91 33.91 31.61 34.11 32.27 33.94C33.62 33.58 34.14 35.51 32.78 35.87Z" fill="url(#rose-cream-heart)" />
     <path d="M32.62 29.68C33.75 29.98 34.49 31.05 34.39 32.21C34.29 33.37 33.37 34.29 32.21 34.39C31.16 34.48 31.03 32.99 32.08 32.9C32.51 32.86 32.86 32.51 32.9 32.08C32.93 31.64 32.65 31.24 32.23 31.13C31.22 30.86 31.61 29.41 32.62 29.68Z" fill="url(#rose-cream-heart)" />
     <path d="M32 30.4C33.4 30.4 34 31.6 33.5 32.6C33 33.6 31.5 33.7 30.9 32.8C30.5 32.1 31 31.4 31.8 31.6C32.4 31.8 32.5 32.4 32.1 32.6Z" fill="var(--c-champagne-700)" fill-opacity="0.6" />
+    <circle cx="32" cy="32" r="31" fill="url(#flower-occlusion)" />
   </symbol>
 
   <!-- Peonies: lush open blooms. Three rings of ruffled petals (8 outer, 6 mid, 5 inner), each
@@ -427,6 +436,7 @@
     <circle cx="34.2" cy="33.2" r="1" fill="var(--c-champagne-500)" />
     <circle cx="39.4" cy="37.2" r="1" fill="var(--c-champagne-700)" />
     <circle cx="36.3" cy="36.1" r="1.8" fill="var(--c-champagne-300)" />
+    <circle cx="36" cy="36" r="35" fill="url(#flower-occlusion)" />
   </symbol>
 
   <symbol id="peony-ivory" viewBox="0 0 72 72">
@@ -459,6 +469,7 @@
     <circle cx="34.2" cy="33.2" r="1" fill="var(--c-champagne-500)" />
     <circle cx="39.4" cy="37.2" r="1" fill="var(--c-champagne-700)" />
     <circle cx="36.3" cy="36.1" r="1.8" fill="var(--c-champagne-300)" />
+    <circle cx="36" cy="36" r="35" fill="url(#flower-occlusion)" />
   </symbol>
 
   <!-- `blossom`: 5 petals from a single radial gradient (darker base, pale rose rim), one
@@ -581,6 +592,78 @@
       stroke="var(--c-champagne-700)"
       stroke-width="0.4"
       stroke-opacity="0.5"
+      stroke-linecap="round"
+    />
+  </symbol>
+
+  <!-- `leaf-laurel-cluster`: 3 bowed stems fan from one hidden root at (60, 114), each carrying
+       6 broad elliptic laurel leaves that overlap along the stem for a lush mass rather than a
+       thin spine. A third of the leaves are gold foil, 2 of the sage ones carry a gilt edge, and
+       one multi-subpath path traces every leaf's midrib. No new gradient defs: it reuses
+       `leaf-olive-gradient` and `leaf-gold-metal` from the branches above. -->
+  <symbol id="leaf-laurel-cluster" viewBox="0 0 120 120">
+    <path d="M60 114C39.23 95.85 28.63 71.34 17.61 46.16" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
+    <path d="M60 114C63.2 87.6 61.6 61.2 60 34" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.3" stroke-opacity="0.65" />
+    <path d="M60 114C80.77 95.85 91.37 71.34 102.39 46.16" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="translate(49.4 97.04) rotate(-6)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(43.04 86.86) rotate(-58)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(36.68 76.69) rotate(-6)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(30.32 66.51) rotate(-58)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(23.97 56.33) rotate(-6)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(19.73 49.55) rotate(-58)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(60 94) rotate(26)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(60 82) rotate(-26)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(60 70) rotate(26)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(60 58) rotate(-26)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(60 46) rotate(26)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(60 38) rotate(-26)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(70.6 97.04) rotate(58)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(76.96 86.86) rotate(6)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(83.32 76.69) rotate(58)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="translate(89.68 66.51) rotate(6)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(96.03 56.33) rotate(58)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(100.27 49.55) rotate(6)" />
+    <path
+      d="M49.4 97.04L47.83 82.12 M43.04 86.86L33.29 80.77 M36.68 76.69L35.11 61.77 M30.32 66.51L20.57 60.42 M23.97 56.33L22.4 41.41 M19.73 49.55L9.98 43.46 M60 94L66.58 80.52 M60 82L54.96 71.66 M60 70L66.58 56.52 M60 58L54.96 47.66 M60 46L66.58 32.52 M60 38L54.96 27.66 M70.6 97.04L83.32 89.09 M76.96 86.86L78.16 75.42 M83.32 76.69L96.04 68.74 M89.68 66.51L90.88 55.07 M96.03 56.33L108.75 48.38 M100.27 49.55L101.47 38.11"
+      fill="none"
+      stroke="var(--c-leaf-deep)"
+      stroke-width="0.4"
+      stroke-opacity="0.45"
+      stroke-linecap="round"
+    />
+  </symbol>
+
+  <!-- `leaf-eucalyptus-cluster`: 3 bowed stems fan from one hidden root at (60, 114); round
+       silver-dollar leaves overlap in pairs along each stem (radial-lit, same gradient as the
+       sprig above), with short creases and gilt touches. No new gradient defs. -->
+  <symbol id="leaf-eucalyptus-cluster" viewBox="0 0 120 120">
+    <path d="M60 114C37.24 97.77 22.91 74.47 7.29 51.18" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
+    <path d="M60 114C50.67 87.65 52.29 60.35 52.85 32.31" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.3" stroke-opacity="0.65" />
+    <path d="M60 114C79.59 94.07 89.66 68.63 101 42.99" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
+    <ellipse cx="36.81" cy="92.75" rx="11.5" ry="13.8" fill="url(#leaf-gold-metal)" transform="rotate(-54 36.81 92.75)" />
+    <ellipse cx="49.46" cy="95.05" rx="11.5" ry="13.8" fill="url(#leaf-gold-metal)" transform="rotate(-26 49.46 95.05)" />
+    <ellipse cx="25.35" cy="78.42" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-54 25.35 78.42)" />
+    <ellipse cx="36.68" cy="80.48" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="rotate(-26 36.68 80.48)" />
+    <ellipse cx="13.88" cy="64.09" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-54 13.88 64.09)" />
+    <ellipse cx="23.89" cy="65.91" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="rotate(-26 23.89 65.91)" />
+    <ellipse cx="51.39" cy="86.71" rx="11.5" ry="13.8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-19 51.39 86.71)" />
+    <ellipse cx="64.04" cy="89.01" rx="11.5" ry="13.8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(9 64.04 89.01)" />
+    <ellipse cx="50.4" cy="68.04" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-19 50.4 68.04)" />
+    <ellipse cx="61.73" cy="70.1" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(9 61.73 70.1)" />
+    <ellipse cx="49.42" cy="49.37" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-19 49.42 49.37)" />
+    <ellipse cx="59.43" cy="51.19" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(9 59.43 51.19)" />
+    <ellipse cx="66.8" cy="90.13" rx="11.5" ry="13.8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(16 66.8 90.13)" />
+    <ellipse cx="79.45" cy="92.43" rx="11.5" ry="13.8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(44 79.45 92.43)" />
+    <ellipse cx="76.88" cy="73.91" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(16 76.88 73.91)" />
+    <ellipse cx="88.22" cy="75.97" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(44 88.22 75.97)" />
+    <ellipse cx="86.98" cy="57.7" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(16 86.98 57.7)" />
+    <ellipse cx="96.98" cy="59.52" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(44 96.98 59.52)" />
+    <path
+      d="M30.3 88.02L43.32 97.48 M45.93 87.81L52.99 102.29 M19.52 74.18L31.18 82.66 M33.52 74L39.84 86.96 M8.73 60.35L19.03 67.83 M21.1 60.18L26.68 71.64 M48.77 79.1L54.01 94.32 M65.3 81.06L62.78 96.96 M48.05 61.22L52.75 74.86 M62.86 62.98L60.6 77.22 M47.35 43.35L51.49 55.39 M60.43 44.9L58.43 57.48 M69.02 82.39L64.58 97.87 M85.04 86.64L73.86 98.22 M78.87 66.98L74.89 80.84 M93.23 70.78L83.21 81.16 M88.74 51.58L85.22 63.82 M101.4 54.94L92.56 64.1"
+      fill="none"
+      stroke="var(--c-leaf-deep)"
+      stroke-width="0.4"
+      stroke-opacity="0.45"
       stroke-linecap="round"
     />
   </symbol>

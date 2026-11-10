@@ -101,6 +101,7 @@ const BRANCH_IDS = ['leaf-olive', 'leaf-gold'];
 const BRANCH_LEAF_GRADIENT: Record<string, string> = { 'leaf-olive': 'leaf-olive-gradient', 'leaf-gold': 'leaf-gold-metal' };
 const LEAF_IDS = ['leaf-eucalyptus', 'leaf-olive', 'leaf-gold'];
 const FLOWER_IDS = ['rose-pink', 'rose-cream', 'peony-blush', 'peony-ivory', 'blossom'];
+const CLUSTER_IDS = ['leaf-laurel-cluster', 'leaf-eucalyptus-cluster'];
 
 /** Both ends of a single stem path drawn with M plus absolute C or relative c curves. */
 function stemEnds(d: string): Point[] {
@@ -160,6 +161,47 @@ function pathBoundingBox(d: string): { width: number; height: number } {
     width: Math.max(...xs) - Math.min(...xs),
     height: Math.max(...ys) - Math.min(...ys),
   };
+}
+
+/** The stem paths (`fill="none"`, each a single `M`) that fan out from a cluster's shared root. */
+function clusterStems(el: Element): Element[] {
+  return Array.from(el.querySelectorAll('path[fill="none"]')).filter(
+    (path) => (path.getAttribute('d')?.match(/M/g) ?? []).length === 1,
+  );
+}
+
+/** Applies an SVG `transform` (any sequence of `translate(x y)` / `rotate(a)` / `rotate(a cx cy)`,
+ *  composed in SVG's usual right-to-left order) to a point in the element's own coordinate space —
+ *  a generalization of `transformPoint` below, which only understands a lone `rotate(a cx cy)`. */
+function applyTransform(transform: string, [x, y]: Point): Point {
+  const ops = Array.from(transform.matchAll(/(translate|rotate)\(([^)]+)\)/g));
+  let px = x;
+  let py = y;
+  for (let i = ops.length - 1; i >= 0; i--) {
+    const args = ops[i][2].trim().split(/[\s,]+/).map(Number);
+    if (ops[i][1] === 'translate') {
+      const [tx, ty = 0] = args;
+      px += tx;
+      py += ty;
+    } else {
+      const [deg, cx = 0, cy = 0] = args;
+      const rad = (deg * Math.PI) / 180;
+      const dx = px - cx;
+      const dy = py - cy;
+      px = cx + dx * Math.cos(rad) - dy * Math.sin(rad);
+      py = cy + dx * Math.sin(rad) + dy * Math.cos(rad);
+    }
+  }
+  return [px, py];
+}
+
+/** Every numeric pair in a path's `d` string, treated as alternating x/y — a conservative
+ *  (superset) point set that works for any command (M/L/C/Z/...), good enough for a bounds check. */
+function rawPoints(d: string): Point[] {
+  const numbers = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+  const points: Point[] = [];
+  for (let i = 0; i + 1 < numbers.length; i += 2) points.push([numbers[i], numbers[i + 1]]);
+  return points;
 }
 
 describe('ArchSprite balloons', () => {
@@ -418,6 +460,26 @@ describe('footprint contract', () => {
     expect(reach).toBeLessThanOrEqual(width / 2);
   });
 
+  it.each(CLUSTER_IDS)('%s is a 120x120 square rooted near (60, 114), with every drawn point inside it', (id) => {
+    const el = symbol(id);
+    expect(el.getAttribute('viewBox')).toBe('0 0 120 120');
+    const stems = clusterStems(el);
+    expect(stems.length).toBe(3);
+    for (const stem of stems) {
+      const [start] = stemEnds(stem.getAttribute('d') ?? '');
+      expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
+    }
+    for (const path of Array.from(el.querySelectorAll('path'))) {
+      const transform = path.getAttribute('transform') ?? '';
+      for (const point of rawPoints(path.getAttribute('d') ?? '').map((p) => applyTransform(transform, p))) {
+        expect(point[0]).toBeGreaterThanOrEqual(0);
+        expect(point[0]).toBeLessThanOrEqual(120);
+        expect(point[1]).toBeGreaterThanOrEqual(0);
+        expect(point[1]).toBeLessThanOrEqual(120);
+      }
+    }
+  });
+
   it.each(ALL_BALLOONS)('%s keeps its visible body within the old 88 x 92 body box, give or take 2 units', (id) => {
     const el = symbol(id);
     expect(el.getAttribute('viewBox')).toBe('0 0 100 110');
@@ -559,12 +621,12 @@ function veinPath(el: Element, minSubpaths: number): Element | undefined {
 }
 
 describe('ArchSprite flower seat shadow', () => {
-  it('shares one soft rose-700 seat-shadow gradient fading from 18% to nothing', () => {
+  it('shares one soft rose-700 seat-shadow gradient fading from 28% to nothing', () => {
     const seat = gradient('flower-seat-shadow');
     expect(seat.tagName.toLowerCase()).toBe('radialgradient');
     const stops = Array.from(seat.querySelectorAll('stop'));
     for (const style of stopColors(seat)) expect(style).toMatch(/var\(--c-rose-700\)/);
-    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.18);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.28);
     expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
   });
 
@@ -576,6 +638,32 @@ describe('ArchSprite flower seat shadow', () => {
     const [, , width, height] = viewBoxOf(el);
     expect(Number(first.getAttribute('cx'))).toBeGreaterThan(width / 2);
     expect(Number(first.getAttribute('cy'))).toBeGreaterThan(height / 2);
+  });
+});
+
+describe('ArchSprite flower rim occlusion', () => {
+  it('shares one rose-700 rim-occlusion gradient, transparent up to 62% then 0.22 at the rim', () => {
+    const occ = gradient('flower-occlusion');
+    expect(occ.tagName.toLowerCase()).toBe('radialgradient');
+    const stops = Array.from(occ.querySelectorAll('stop'));
+    for (const style of stopColors(occ)) expect(style).toMatch(/var\(--c-rose-700\)/);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBe(0);
+    const midStop = stops.find((stop) => parseFloat(stop.getAttribute('offset') ?? '') === 62);
+    expect(midStop).not.toBeUndefined();
+    expect(Number(midStop!.getAttribute('stop-opacity'))).toBe(0);
+    expect(Number(stops[stops.length - 1].getAttribute('stop-opacity'))).toBeCloseTo(0.22);
+  });
+
+  it.each([...ROSE_IDS, ...PEONY_IDS])('%s ends with a rim-occlusion circle inside its inscribed circle', (id) => {
+    const el = symbol(id);
+    const last = el.lastElementChild!;
+    expect(last.tagName.toLowerCase()).toBe('circle');
+    expect(last.getAttribute('fill')).toBe('url(#flower-occlusion)');
+    const [, , width] = viewBoxOf(el);
+    const cx = Number(last.getAttribute('cx'));
+    const cy = Number(last.getAttribute('cy'));
+    const r = Number(last.getAttribute('r'));
+    expect(Math.hypot(cx - width / 2, cy - width / 2) + r).toBeLessThanOrEqual(width / 2);
   });
 });
 
@@ -950,6 +1038,38 @@ describe('ArchSprite foliage', () => {
 
   it('leaf-gold stays within its element budget (<= 12 elements)', () => {
     expect(symbol('leaf-gold').querySelectorAll('path, ellipse, circle').length).toBeLessThanOrEqual(12);
+  });
+});
+
+describe('ArchSprite foliage clusters', () => {
+  it('the laurel cluster has >= 15 leaves on 3 stems from one root, >= 30% gold', () => {
+    const el = symbol('leaf-laurel-cluster');
+    const stems = clusterStems(el);
+    expect(stems.length).toBe(3);
+    for (const stem of stems) {
+      const [start] = stemEnds(stem.getAttribute('d') ?? '');
+      expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
+    }
+    const leaves = Array.from(el.querySelectorAll('[fill="url(#leaf-olive-gradient)"], [fill="url(#leaf-gold-metal)"]'));
+    expect(leaves.length).toBeGreaterThanOrEqual(15);
+    const gold = leaves.filter((leaf) => leaf.getAttribute('fill') === 'url(#leaf-gold-metal)');
+    expect(gold.length / leaves.length).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it('the eucalyptus cluster has >= 14 round leaves on 3 stems, >= 2 gold and >= 2 gilt', () => {
+    const el = symbol('leaf-eucalyptus-cluster');
+    const stems = clusterStems(el);
+    expect(stems.length).toBe(3);
+    for (const stem of stems) {
+      const [start] = stemEnds(stem.getAttribute('d') ?? '');
+      expect(Math.hypot(start[0] - 60, start[1] - 114)).toBeLessThanOrEqual(4.8);
+    }
+    const leaves = Array.from(el.querySelectorAll('ellipse[fill="url(#leaf-eucalyptus-gradient)"], ellipse[fill="url(#leaf-gold-metal)"]'));
+    expect(leaves.length).toBeGreaterThanOrEqual(14);
+    const gold = leaves.filter((leaf) => leaf.getAttribute('fill') === 'url(#leaf-gold-metal)');
+    expect(gold.length).toBeGreaterThanOrEqual(2);
+    const gilt = leaves.filter((leaf) => leaf.getAttribute('stroke') === 'var(--c-champagne-500)');
+    expect(gilt.length).toBeGreaterThanOrEqual(2);
   });
 });
 
