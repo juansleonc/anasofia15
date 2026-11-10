@@ -145,20 +145,29 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     padding-top: max(clamp(3.75rem, 14vh, 6rem), calc(var(--arch-band-portrait) * 100%));
     text-align: center;
     isolation: isolate;
-    /* Depth behind the whole cover: a soft vignette (draws the eye to the centre) over a vertical
-       champagne-to-rose wash (reads as light falling from above), both static. */
+    /* A warm, luminous, festive base: a champagne glow under the garland, rose blooms in both
+       bottom corners, over a champagne-to-rose wash. Static. */
     background-image:
       radial-gradient(
-        ellipse 120% 90% at 50% 42%,
-        transparent 58%,
-        color-mix(in srgb, var(--c-rose-300) 26%, transparent) 100%
+        ellipse 70% 50% at 50% 30%,
+        color-mix(in srgb, var(--c-champagne-100) 85%, transparent) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 60% 45% at 8% 92%,
+        color-mix(in srgb, var(--c-rose-200) 55%, transparent) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 60% 45% at 92% 92%,
+        color-mix(in srgb, var(--c-rose-200) 55%, transparent) 0%,
+        transparent 70%
       ),
       linear-gradient(
         180deg,
         var(--c-champagne-100) 0%,
-        var(--c-bg) 34%,
-        var(--c-rose-100) 72%,
-        color-mix(in srgb, var(--c-rose-200) 70%, var(--c-bg)) 100%
+        var(--c-rose-100) 48%,
+        color-mix(in srgb, var(--c-rose-200) 75%, var(--c-champagne-100)) 100%
       );
   }
 
