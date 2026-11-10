@@ -6,13 +6,25 @@
 // accessible content and never intercepts clicks on the title/button it sits above.
 import { ARCH_SPECS, archFadeMask, buildArch, type ArchLayout } from '../lib/cover-arch';
 
+// `clipToFrame` is opt-in so the arch stays reusable outside a framed cover (e.g. a future
+// section without `.cover__frame`'s --cover-frame-inset/--cover-frame-radius vars).
+interface Props {
+  clipToFrame?: boolean;
+}
+
+const { clipToFrame = false } = Astro.props;
+
 const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: string }[] = [
   { name: 'portrait', layout: buildArch(ARCH_SPECS.portrait), mask: archFadeMask(ARCH_SPECS.portrait) },
   { name: 'landscape', layout: buildArch(ARCH_SPECS.landscape), mask: archFadeMask(ARCH_SPECS.landscape) },
 ];
 ---
 
-<div class="balloon-arch" data-testid="balloon-arch" aria-hidden="true">
+<div
+  class:list={['balloon-arch', { 'balloon-arch--clipped': clipToFrame }]}
+  data-testid="balloon-arch"
+  aria-hidden="true"
+>
   {
     layouts.map(({ name, layout, mask }) => (
       <svg
@@ -44,6 +56,13 @@ const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: strin
     inset: 0 0 auto 0;
     z-index: 0;
     pointer-events: none;
+  }
+
+  /* Relies on --cover-frame-inset/--cover-frame-radius inheriting from the ancestor `.cover`
+     section's frame vars — CSS custom properties cascade through the DOM regardless of Astro's
+     per-component style scoping. */
+  .balloon-arch--clipped {
+    clip-path: inset(var(--cover-frame-inset) round var(--cover-frame-radius));
   }
 
   .balloon-arch__layout {

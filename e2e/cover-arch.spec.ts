@@ -165,6 +165,17 @@ test.describe('Balloon arch', () => {
     }
   });
 
+  test('the arch is clipped to the frame', async ({ page }) => {
+    await page.goto('./');
+
+    const clipPath = await page
+      .getByTestId('balloon-arch')
+      .evaluate((el) => getComputedStyle(el).clipPath);
+
+    expect(clipPath).toContain('inset(');
+    expect(clipPath).toContain('round');
+  });
+
   test('the cover loads with no raster image requests', async ({ page }) => {
     const imageRequests: string[] = [];
     page.on('request', (request) => {
