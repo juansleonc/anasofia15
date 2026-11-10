@@ -130,10 +130,56 @@
       <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="0.35" />
       <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="rose-cream-gradient" cx="40%" cy="35%" r="75%">
+    <!-- Rose rings (rose-pink and rose-cream): one radial gradient per ring (outer/mid/inner),
+         `objectBoundingBox` units (the default — no `gradientUnits` attr) so the SAME stop recipe
+         gives every petal its own light-rim -> deep-base shading regardless of which way it's
+         rotated: a gradient's percentages map to that single path's own bounding box, computed
+         before its `transform="rotate(… 32 32)"` is applied, not to the flower as a whole. `cy`
+         sits high in the box (petals point tip-up, base-down) so the lightest stop lands at the
+         curled tip and the darkest at the base, closest to the flower's center. -->
+    <radialGradient id="rose-pink-outer" cx="50%" cy="15%" r="90%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="50%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+    </radialGradient>
+    <radialGradient id="rose-pink-mid" cx="50%" cy="15%" r="90%">
+      <stop offset="0%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="50%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+    </radialGradient>
+    <radialGradient id="rose-pink-inner" cx="50%" cy="15%" r="90%">
+      <stop offset="0%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="50%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-600)" />
+    </radialGradient>
+    <radialGradient id="rose-cream-outer" cx="50%" cy="15%" r="90%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="50%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
+    </radialGradient>
+    <radialGradient id="rose-cream-mid" cx="50%" cy="15%" r="90%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-200)" />
       <stop offset="50%" style="stop-color: var(--c-champagne-300)" />
-      <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
+    </radialGradient>
+    <radialGradient id="rose-cream-inner" cx="50%" cy="15%" r="90%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="50%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="100%" style="stop-color: var(--c-rosegold-400)" />
+    </radialGradient>
+
+    <!-- Peony rings: only two gradients for three rings (outer and mid share one — a peony's
+         ruffle reads from petal *count* and overlap, not a third tone step) plus a deeper inner
+         ring gradient so the furled center still reads darker than the outer ruffle. -->
+    <radialGradient id="peony-blush-outer" cx="50%" cy="20%" r="90%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="50%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-300)" />
+    </radialGradient>
+    <radialGradient id="peony-blush-inner" cx="50%" cy="20%" r="90%">
+      <stop offset="0%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="50%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
     </radialGradient>
     <radialGradient id="blossom-gradient" cx="50%" cy="40%" r="70%">
       <stop offset="0%" style="stop-color: var(--c-rose-100)" />
@@ -230,34 +276,87 @@
     <use href="#balloon-gloss" />
   </symbol>
 
+  <!-- `rose-pink` and `rose-cream` share the same petal paths (the two rose tones are the same
+       flower in different light) in three rings — 5 outer cupped petals, 4 middle, 3 inner —
+       rotated with `transform="rotate(… 32 32)"` around the flower's own center so each ring's one
+       gradient def paints every petal in it. A swirled center bud (solid darkest token, no
+       gradient) reads as the furled spiral a real rose hides at its heart, and a thin multi-subpath
+       stroke traces a curl-highlight along a few petal rims for the "lit edge" the flat version
+       (one same-shade blob per ring) was missing. -->
+  <symbol id="rose-pink" viewBox="0 0 64 64">
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-pink-outer)" />
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-pink-outer)" transform="rotate(72 32 32)" />
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-pink-outer)" transform="rotate(144 32 32)" />
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-pink-outer)" transform="rotate(216 32 32)" />
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-pink-outer)" transform="rotate(288 32 32)" />
+    <path d="M32 32C27 30 25 22 28 15C29 13 35 13 36 15C39 22 37 30 32 32Z" fill="url(#rose-pink-mid)" transform="rotate(36 32 32)" />
+    <path d="M32 32C27 30 25 22 28 15C29 13 35 13 36 15C39 22 37 30 32 32Z" fill="url(#rose-pink-mid)" transform="rotate(126 32 32)" />
+    <path d="M32 32C27 30 25 22 28 15C29 13 35 13 36 15C39 22 37 30 32 32Z" fill="url(#rose-pink-mid)" transform="rotate(216 32 32)" />
+    <path d="M32 32C27 30 25 22 28 15C29 13 35 13 36 15C39 22 37 30 32 32Z" fill="url(#rose-pink-mid)" transform="rotate(306 32 32)" />
+    <path d="M32 32C29 30 27 25 29 20C29.5 18.5 34.5 18.5 35 20C37 25 35 30 32 32Z" fill="url(#rose-pink-inner)" transform="rotate(60 32 32)" />
+    <path d="M32 32C29 30 27 25 29 20C29.5 18.5 34.5 18.5 35 20C37 25 35 30 32 32Z" fill="url(#rose-pink-inner)" transform="rotate(180 32 32)" />
+    <path d="M32 32C29 30 27 25 29 20C29.5 18.5 34.5 18.5 35 20C37 25 35 30 32 32Z" fill="url(#rose-pink-inner)" transform="rotate(300 32 32)" />
+    <path d="M32 26c3 0 6 2 6 6c0 3-2 6-6 6c-3 0-5-2-5-5c0-2 1-4 3-4c1 0 2 1 2 2" fill="var(--c-rose-600)" />
+    <path
+      d="M22 14Q27 9 32 10M32 10Q37 9 42 14M16 28Q19 21 24 17"
+      fill="none"
+      stroke="var(--c-white)"
+      stroke-width="1"
+      stroke-opacity="0.5"
+      stroke-linecap="round"
+    />
+  </symbol>
+
   <symbol id="rose-cream" viewBox="0 0 64 64">
-    <circle cx="32" cy="34" r="22" fill="url(#rose-cream-gradient)" fill-opacity="0.78" />
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-cream-outer)" />
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-cream-outer)" transform="rotate(72 32 32)" />
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-cream-outer)" transform="rotate(144 32 32)" />
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-cream-outer)" transform="rotate(216 32 32)" />
+    <path d="M32 32C25 29 22 18 27 9C29 6 35 6 37 9C42 18 39 29 32 32Z" fill="url(#rose-cream-outer)" transform="rotate(288 32 32)" />
+    <path d="M32 32C27 30 25 22 28 15C29 13 35 13 36 15C39 22 37 30 32 32Z" fill="url(#rose-cream-mid)" transform="rotate(36 32 32)" />
+    <path d="M32 32C27 30 25 22 28 15C29 13 35 13 36 15C39 22 37 30 32 32Z" fill="url(#rose-cream-mid)" transform="rotate(126 32 32)" />
+    <path d="M32 32C27 30 25 22 28 15C29 13 35 13 36 15C39 22 37 30 32 32Z" fill="url(#rose-cream-mid)" transform="rotate(216 32 32)" />
+    <path d="M32 32C27 30 25 22 28 15C29 13 35 13 36 15C39 22 37 30 32 32Z" fill="url(#rose-cream-mid)" transform="rotate(306 32 32)" />
+    <path d="M32 32C29 30 27 25 29 20C29.5 18.5 34.5 18.5 35 20C37 25 35 30 32 32Z" fill="url(#rose-cream-inner)" transform="rotate(60 32 32)" />
+    <path d="M32 32C29 30 27 25 29 20C29.5 18.5 34.5 18.5 35 20C37 25 35 30 32 32Z" fill="url(#rose-cream-inner)" transform="rotate(180 32 32)" />
+    <path d="M32 32C29 30 27 25 29 20C29.5 18.5 34.5 18.5 35 20C37 25 35 30 32 32Z" fill="url(#rose-cream-inner)" transform="rotate(300 32 32)" />
+    <path d="M32 26c3 0 6 2 6 6c0 3-2 6-6 6c-3 0-5-2-5-5c0-2 1-4 3-4c1 0 2 1 2 2" fill="var(--c-champagne-700)" />
     <path
-      d="M32 12c8 2 14 9 14 17s-6 14-14 16c-8-2-14-8-14-16s6-15 14-17Z"
-      fill="url(#rose-cream-gradient)"
-      fill-opacity="0.8"
+      d="M22 14Q27 9 32 10M32 10Q37 9 42 14M16 28Q19 21 24 17"
+      fill="none"
+      stroke="var(--c-white)"
+      stroke-width="1"
+      stroke-opacity="0.5"
+      stroke-linecap="round"
     />
-    <path
-      d="M18 25c3-7 9-11 14-11s11 4 14 11c-3 6-8 10-14 10s-11-4-14-10Z"
-      fill="url(#rose-cream-gradient)"
-      fill-opacity="0.76"
-    />
-    <path
-      d="M20 35c2-7 7-11 12-11s10 4 12 11-5 12-12 14c-7-2-12-7-12-14Z"
-      fill="url(#rose-cream-gradient)"
-      fill-opacity="0.82"
-    />
-    <path
-      d="M25 39c1-5 4-9 7-9s6 4 7 9-3 10-7 11-8-6-7-11Z"
-      fill="url(#rose-cream-gradient)"
-      fill-opacity="0.88"
-    />
-    <path d="M32 44c-2 3-2 6-2 8h4c0-2 0-5-2-8Z" fill="url(#rose-cream-gradient)" fill-opacity="0.9" />
-    <path
-      d="M32 18c-6 1-10 6-11 11 3-3 7-6 11-6s8 3 11 6c-1-5-5-10-11-11Z"
-      fill="url(#rose-cream-gradient)"
-      fill-opacity="0.75"
-    />
+  </symbol>
+
+  <!-- `peony-blush`: a fuller, ruffled bloom — 3 rings of scalloped (double-lobed tip) petals, 16
+       in all, outer and mid sharing one gradient (a peony's ruffle reads from petal count and
+       overlap, not a third tone step) with a deeper inner-ring gradient so the furled center still
+       reads darker. A few loose champagne dots peeking through the center stand in for stamens. -->
+  <symbol id="peony-blush" viewBox="0 0 72 72">
+    <path d="M36 36C29 33 25 25 27 16C28 12 30 10 32 12C33.5 13.5 34 15.5 36 16C38 15.5 38.5 13.5 40 12C42 10 44 12 45 16C47 25 43 33 36 36Z" fill="url(#peony-blush-outer)" />
+    <path d="M36 36C29 33 25 25 27 16C28 12 30 10 32 12C33.5 13.5 34 15.5 36 16C38 15.5 38.5 13.5 40 12C42 10 44 12 45 16C47 25 43 33 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(60 36 36)" />
+    <path d="M36 36C29 33 25 25 27 16C28 12 30 10 32 12C33.5 13.5 34 15.5 36 16C38 15.5 38.5 13.5 40 12C42 10 44 12 45 16C47 25 43 33 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(120 36 36)" />
+    <path d="M36 36C29 33 25 25 27 16C28 12 30 10 32 12C33.5 13.5 34 15.5 36 16C38 15.5 38.5 13.5 40 12C42 10 44 12 45 16C47 25 43 33 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(180 36 36)" />
+    <path d="M36 36C29 33 25 25 27 16C28 12 30 10 32 12C33.5 13.5 34 15.5 36 16C38 15.5 38.5 13.5 40 12C42 10 44 12 45 16C47 25 43 33 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(240 36 36)" />
+    <path d="M36 36C29 33 25 25 27 16C28 12 30 10 32 12C33.5 13.5 34 15.5 36 16C38 15.5 38.5 13.5 40 12C42 10 44 12 45 16C47 25 43 33 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(300 36 36)" />
+    <path d="M36 36C30 34 27 27 29 19C30 16 32 15 33.5 17C34.5 18 35 19 36 19.5C37 19 37.5 18 38.5 17C40 15 42 16 43 19C45 27 42 34 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(30 36 36)" />
+    <path d="M36 36C30 34 27 27 29 19C30 16 32 15 33.5 17C34.5 18 35 19 36 19.5C37 19 37.5 18 38.5 17C40 15 42 16 43 19C45 27 42 34 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(90 36 36)" />
+    <path d="M36 36C30 34 27 27 29 19C30 16 32 15 33.5 17C34.5 18 35 19 36 19.5C37 19 37.5 18 38.5 17C40 15 42 16 43 19C45 27 42 34 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(150 36 36)" />
+    <path d="M36 36C30 34 27 27 29 19C30 16 32 15 33.5 17C34.5 18 35 19 36 19.5C37 19 37.5 18 38.5 17C40 15 42 16 43 19C45 27 42 34 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(210 36 36)" />
+    <path d="M36 36C30 34 27 27 29 19C30 16 32 15 33.5 17C34.5 18 35 19 36 19.5C37 19 37.5 18 38.5 17C40 15 42 16 43 19C45 27 42 34 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(270 36 36)" />
+    <path d="M36 36C30 34 27 27 29 19C30 16 32 15 33.5 17C34.5 18 35 19 36 19.5C37 19 37.5 18 38.5 17C40 15 42 16 43 19C45 27 42 34 36 36Z" fill="url(#peony-blush-outer)" transform="rotate(330 36 36)" />
+    <path d="M36 36C32 34.5 30 30 31.5 24C32 21.5 34 20.5 36 22C38 20.5 40 21.5 40.5 24C42 30 40 34.5 36 36Z" fill="url(#peony-blush-inner)" transform="rotate(45 36 36)" />
+    <path d="M36 36C32 34.5 30 30 31.5 24C32 21.5 34 20.5 36 22C38 20.5 40 21.5 40.5 24C42 30 40 34.5 36 36Z" fill="url(#peony-blush-inner)" transform="rotate(135 36 36)" />
+    <path d="M36 36C32 34.5 30 30 31.5 24C32 21.5 34 20.5 36 22C38 20.5 40 21.5 40.5 24C42 30 40 34.5 36 36Z" fill="url(#peony-blush-inner)" transform="rotate(225 36 36)" />
+    <path d="M36 36C32 34.5 30 30 31.5 24C32 21.5 34 20.5 36 22C38 20.5 40 21.5 40.5 24C42 30 40 34.5 36 36Z" fill="url(#peony-blush-inner)" transform="rotate(315 36 36)" />
+    <circle cx="34" cy="34" r="1.3" fill="var(--c-champagne-300)" />
+    <circle cx="38" cy="34" r="1.3" fill="var(--c-champagne-300)" />
+    <circle cx="34" cy="38" r="1.3" fill="var(--c-champagne-300)" />
+    <circle cx="38" cy="38" r="1.3" fill="var(--c-champagne-300)" />
+    <circle cx="36" cy="36" r="1.4" fill="var(--c-champagne-300)" />
   </symbol>
 
   <symbol id="blossom" viewBox="0 0 48 48">

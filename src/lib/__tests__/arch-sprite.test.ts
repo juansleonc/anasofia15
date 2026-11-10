@@ -244,6 +244,85 @@ describe('ArchSprite perf guard', () => {
   });
 });
 
+// Each rose tone shares the same petal geometry (the "accepted duplication" from the design doc)
+// but paints its three rings — outer/mid/inner — from its own tone-specific gradient trio, so a
+// "petal path" is any path filled from one of those three ring gradients (as opposed to the
+// center spiral bud or the curl-highlight stroke, which are not counted as petals).
+const ROSE_IDS = ['rose-pink', 'rose-cream'];
+const roseRingGradientIds = (id: string): string[] => [`${id}-outer`, `${id}-mid`, `${id}-inner`];
+
+function petalPaths(el: Element, ringGradientIds: string[]): Element[] {
+  return Array.from(el.querySelectorAll('path')).filter((path) =>
+    ringGradientIds.some((ringId) => path.getAttribute('fill') === `url(#${ringId})`),
+  );
+}
+
+describe('ArchSprite flowers', () => {
+  it.each(ROSE_IDS)('%s has at least 12 petal paths drawn from 3 distinct ring gradients', (id) => {
+    const el = symbol(id);
+    const ringIds = roseRingGradientIds(id);
+    for (const ringId of ringIds) {
+      expect(root.querySelector(`#${ringId}`)).not.toBeNull();
+    }
+    const petals = petalPaths(el, ringIds);
+    expect(petals.length).toBeGreaterThanOrEqual(12);
+    for (const ringId of ringIds) {
+      expect(petals.some((petal) => petal.getAttribute('fill') === `url(#${ringId})`)).toBe(true);
+    }
+  });
+
+  it.each(ROSE_IDS)('%s stays within its element budget (<= 18 elements)', (id) => {
+    expect(symbol(id).children.length).toBeLessThanOrEqual(18);
+  });
+
+  it.each(ROSE_IDS)('%s has a multi-subpath curl-highlight stroke along the petal rims', (id) => {
+    const el = symbol(id);
+    const highlight = Array.from(el.querySelectorAll('path')).find((path) => {
+      const stroke = path.getAttribute('stroke') ?? '';
+      return path.getAttribute('fill') === 'none' && stroke.includes('var(--c-white)');
+    });
+    expect(highlight).not.toBeUndefined();
+    const subpathCount = (highlight!.getAttribute('d')?.match(/M/g) ?? []).length;
+    expect(subpathCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it.each(ROSE_IDS)('%s shows a darker spiral bud furled at its center', (id) => {
+    const el = symbol(id);
+    const bud = Array.from(el.querySelectorAll('path')).find((path) => {
+      const fill = path.getAttribute('fill') ?? '';
+      return fill.startsWith('var(--c-');
+    });
+    expect(bud).not.toBeUndefined();
+    // A swirl, not a straight-edged shape: at least one curve command.
+    expect(bud!.getAttribute('d')).toMatch(/[cCqQ]/);
+  });
+
+  it('peony-blush has at least 16 petal paths drawn from 2 ring gradients', () => {
+    const el = symbol('peony-blush');
+    const ringIds = ['peony-blush-outer', 'peony-blush-inner'];
+    for (const ringId of ringIds) {
+      expect(root.querySelector(`#${ringId}`)).not.toBeNull();
+    }
+    const petals = petalPaths(el, ringIds);
+    expect(petals.length).toBeGreaterThanOrEqual(16);
+    for (const ringId of ringIds) {
+      expect(petals.some((petal) => petal.getAttribute('fill') === `url(#${ringId})`)).toBe(true);
+    }
+  });
+
+  it('peony-blush stays within its element budget (<= 22 elements)', () => {
+    expect(symbol('peony-blush').children.length).toBeLessThanOrEqual(22);
+  });
+
+  it('peony-blush shows a few champagne stamen hints peeking from its center', () => {
+    const el = symbol('peony-blush');
+    const stamens = Array.from(el.querySelectorAll('circle, ellipse')).filter(
+      (shape) => shape.getAttribute('fill') === 'var(--c-champagne-300)',
+    );
+    expect(stamens.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe('arch-sprite.test.ts helpers', () => {
   it('countDeep follows <use href> into the symbol it references', () => {
     const own = symbol('balloon-pink').querySelectorAll('ellipse, path, circle').length;
