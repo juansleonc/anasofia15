@@ -43,6 +43,31 @@ describe('buildArch', () => {
     }
   });
 
+  it('guarantees every balloon tone a floor(n/3) share, for both specs', () => {
+    for (const spec of SPECS) {
+      const { items } = buildArch(spec);
+      const balloons = items.filter((item) => item.kind === 'balloon');
+      const minShare = Math.floor(spec.counts.balloons / 3);
+      const tallies = { 'balloon-pink': 0, 'balloon-rosegold': 0, 'balloon-champagne': 0 } as Record<
+        string,
+        number
+      >;
+      for (const balloon of balloons) {
+        tallies[balloon.symbol] += 1;
+      }
+      expect(tallies['balloon-pink']).toBeGreaterThanOrEqual(minShare);
+      expect(tallies['balloon-rosegold']).toBeGreaterThanOrEqual(minShare);
+      expect(tallies['balloon-champagne']).toBeGreaterThanOrEqual(minShare);
+    }
+  });
+
+  it('assigns one of each tone when a spec asks for exactly three balloons', () => {
+    const spec: ArchSpec = { ...ARCH_SPECS.portrait, counts: { ...ARCH_SPECS.portrait.counts, balloons: 3 } };
+    const { items } = buildArch(spec);
+    const tones = items.filter((item) => item.kind === 'balloon').map((item) => item.symbol);
+    expect(tones.sort()).toEqual(['balloon-champagne', 'balloon-pink', 'balloon-rosegold']);
+  });
+
   it('keeps every item center within the viewBox, allowing bleed up to its max size', () => {
     for (const spec of SPECS) {
       const { items } = buildArch(spec);

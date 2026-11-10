@@ -161,14 +161,30 @@ function taper(t: number): number {
 }
 
 /**
+ * Round-robin tones across `count` slots, then seeded-shuffle the slots so the mix is guaranteed
+ * (each tone gets floor(count/3) or ceil(count/3)) rather than left to an independent random pick.
+ */
+function shuffledTones(count: number, rng: () => number): ArchSymbol[] {
+  const tones: ArchSymbol[] = [];
+  for (let i = 0; i < count; i++) {
+    tones.push(BALLOON_SYMBOLS[i % BALLOON_SYMBOLS.length]);
+  }
+  for (let i = tones.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [tones[i], tones[j]] = [tones[j], tones[i]];
+  }
+  return tones;
+}
+
+/**
  * Spreads balloons evenly along the spine (with seeded jitter), tapering their size down the
- * sides, in two paint layers (big back balloons, smaller front accents). Tone assignment here is
- * a plain seeded pick — later work replaces it with a round-robin shuffle that guarantees the mix.
+ * sides, in two paint layers (big back balloons, smaller front accents).
  */
 function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
   const count = spec.counts.balloons;
   const maxSize = spec.sizeRange[1];
   const sizeSpan = spec.sizeRange[1] - spec.sizeRange[0];
+  const tones = shuffledTones(count, rng);
   const items: ArchItem[] = [];
 
   for (let i = 0; i < count; i++) {
@@ -186,10 +202,8 @@ function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): Arch
     const rawX = sample.x + sample.nx * offset;
     const rawY = sample.y + sample.ny * offset;
 
-    const toneIndex = Math.min(BALLOON_SYMBOLS.length - 1, Math.floor(rng() * BALLOON_SYMBOLS.length));
-
     items.push({
-      symbol: BALLOON_SYMBOLS[toneIndex],
+      symbol: tones[i],
       kind: 'balloon',
       x: clamp(rawX, -maxSize, spec.width + maxSize),
       y: clamp(rawY, -maxSize, spec.height),
