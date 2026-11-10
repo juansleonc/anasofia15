@@ -173,19 +173,6 @@ describe('buildArch', () => {
     }
   });
 
-  it('really descends both side columns down to near sideDepth', () => {
-    for (const spec of SPECS) {
-      const { items } = buildArch(spec);
-      const leftThird = spec.width / 3;
-      const rightThird = (spec.width * 2) / 3;
-      const minY = spec.sideDepth - spec.sizeRange[1];
-      const leftDescends = items.some((item) => item.x < leftThird && item.y >= minY);
-      const rightDescends = items.some((item) => item.x > rightThird && item.y >= minY);
-      expect(leftDescends).toBe(true);
-      expect(rightDescends).toBe(true);
-    }
-  });
-
   it('descends to the north-star depth on both sides', () => {
     const floors = new Map([
       [ARCH_SPECS.portrait, { height: 540, fadeStart: 360 }],
@@ -460,6 +447,87 @@ describe('flower prominence', () => {
         expect(flower.y - r).toBeGreaterThanOrEqual(0);
         expect(flower.y + r).toBeLessThanOrEqual(spec.height);
       }
+    }
+  });
+});
+
+describe('foliage', () => {
+  // In the reference the eucalyptus and gold sprigs grow out of the balloon-and-flower mass: each
+  // is pressed into it, fans away from the arch's inside and trails below the garland's end.
+  function leavesAndSolids(spec: ArchSpec): { leaves: ArchItem[]; solids: ArchItem[] } {
+    const { items } = buildArch(spec);
+    return { leaves: items.filter((item) => item.kind === 'leaf'), solids: items.filter((item) => item.kind !== 'leaf') };
+  }
+
+  it('presses every leaf into a balloon or flower by at least 15% of its own size', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { leaves, solids } = leavesAndSolids(spec);
+      expect(leaves).toHaveLength(spec.counts.leaves);
+      for (const leaf of leaves) {
+        const depth = Math.max(
+          ...solids.map((solid) => (leaf.size + solid.size) / 2 - Math.hypot(leaf.x - solid.x, leaf.y - solid.y)),
+        );
+        const where = `seed ${spec.seed} ${spec.width}x${spec.height}: leaf at (${leaf.x.toFixed(1)}, ${leaf.y.toFixed(1)})`;
+        expect(depth / leaf.size, where).toBeGreaterThanOrEqual(0.15);
+      }
+    }
+  });
+
+  it('fans at least 70% of the leaves out of the arch, on the outer side of the spine', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { leaves } = leavesAndSolids(spec);
+      const spine = spineSamples(spec, 1200);
+      expect(leaves.length).toBeGreaterThan(0);
+      const outward = leaves.filter((leaf) => inwardOffset(spine, leaf) <= 0);
+      expect(outward.length / leaves.length, `seed ${spec.seed} ${spec.width}x${spec.height}`).toBeGreaterThanOrEqual(0.7);
+    }
+  });
+
+  it('trails leaves down each side column and past the lowest balloon or flower', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { leaves, solids } = leavesAndSolids(spec);
+      for (const onSide of [(x: number) => x < spec.width / 2, (x: number) => x > spec.width / 2]) {
+        const sideLeaves = leaves.filter((leaf) => onSide(leaf.x));
+        const lowestSolid = Math.max(...solids.filter((solid) => onSide(solid.x)).map((solid) => solid.y));
+        const lowestLeaf = Math.max(...sideLeaves.map((leaf) => leaf.y));
+        const where = `seed ${spec.seed} ${spec.width}x${spec.height}`;
+        expect(sideLeaves.filter((leaf) => leaf.y > spec.band).length, where).toBeGreaterThanOrEqual(4);
+        expect(lowestLeaf - lowestSolid, where).toBeGreaterThanOrEqual(0.3 * spec.sizeRange[1]);
+      }
+    }
+  });
+
+  it('grows an odd leaf out on the axis, still pressed into a balloon or flower', () => {
+    for (const spec of SPECS.map((s) => ({ ...s, counts: { ...s.counts, leaves: s.counts.leaves + 1 } }))) {
+      const { leaves, solids } = leavesAndSolids(spec);
+      const onAxis = leaves.filter((leaf) => leaf.x === spec.width / 2);
+      expect(leaves).toHaveLength(spec.counts.leaves);
+      expect(onAxis).toHaveLength(1);
+      const [leaf] = onAxis;
+      const depth = Math.max(
+        ...solids.map((solid) => (leaf.size + solid.size) / 2 - Math.hypot(leaf.x - solid.x, leaf.y - solid.y)),
+      );
+      expect(depth / leaf.size).toBeGreaterThanOrEqual(0.15);
+    }
+  });
+
+  it('places no leaf when there is no balloon or flower to grow from', () => {
+    for (const base of SPECS) {
+      const spec: ArchSpec = { ...base, counts: { balloons: 0, fillers: 0, flowers: 0, leaves: base.counts.leaves + 1 } };
+      expect(buildArch(spec).items).toEqual([]);
+    }
+  });
+
+  it('sizes the median leaf at least 0.6 times the median large balloon', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { items } = buildArch(spec);
+      const leaves = items.filter((item) => item.kind === 'leaf').map((item) => item.size);
+      const largeBalloons = items
+        .filter((item) => item.kind === 'balloon' && item.size >= 0.75 * spec.sizeRange[1])
+        .map((item) => item.size);
+      expect(leaves.length).toBeGreaterThan(0);
+      expect(largeBalloons.length).toBeGreaterThan(0);
+      expect(median(leaves) / median(largeBalloons), `seed ${spec.seed} ${spec.width}x${spec.height}`).toBeGreaterThanOrEqual(0.6);
     }
   });
 });
@@ -831,6 +899,25 @@ function median(values: number[]): number {
 
 function spineSamples(spec: ArchSpec, steps: number): { x: number; y: number }[] {
   return Array.from({ length: steps + 1 }, (_, i) => archSpinePoint(spec, i / steps));
+}
+
+/**
+ * Signed distance of `point` from its nearest spine sample along the spine's inward normal:
+ * positive toward the arch's inside, zero or negative on its outer side.
+ */
+function inwardOffset(spine: { x: number; y: number }[], point: { x: number; y: number }): number {
+  let nearest = 0;
+  for (let i = 1; i < spine.length; i++) {
+    if (Math.hypot(spine[i].x - point.x, spine[i].y - point.y) < Math.hypot(spine[nearest].x - point.x, spine[nearest].y - point.y)) {
+      nearest = i;
+    }
+  }
+  const before = spine[Math.max(nearest - 1, 0)];
+  const after = spine[Math.min(nearest + 1, spine.length - 1)];
+  // Travelling up the left side, over the crown and down the right, the inward side is on the right.
+  const nx = -(after.y - before.y);
+  const ny = after.x - before.x;
+  return ((point.x - spine[nearest].x) * nx + (point.y - spine[nearest].y) * ny) / Math.hypot(nx, ny);
 }
 
 function wrapRadians(angle: number): number {

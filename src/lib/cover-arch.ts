@@ -223,11 +223,6 @@ export function archSpinePoint(spec: ArchSpec, t: number): { x: number; y: numbe
 /** How much of the spine's local direction a flower or leaf leans into, so it follows the curve. */
 const TANGENT_TILT = 0.3;
 
-/** Big across the crown (t≈0.5), shrinking down the sides (t≈0 / t≈1). */
-function taper(t: number): number {
-  return 0.45 + 0.55 * Math.sin(Math.PI * clamp(t, 0, 1));
-}
-
 /** Spine fraction over which the pull toward each corner's shoulder falls off. */
 const CORNER_BUMP_WIDTH = 0.12;
 
@@ -679,11 +674,6 @@ function placeFillers(spec: ArchSpec, spine: Spine, solids: ArchItem[], rng: () 
   return withFinishes(items);
 }
 
-/** The balloon size the taper would give at `t`, before any per-item scaling. */
-function taperedBalloonSize(spec: ArchSpec, t: number): number {
-  return spec.sizeRange[0] + (spec.sizeRange[1] - spec.sizeRange[0]) * taper(t);
-}
-
 /**
  * How many flowers each left cluster (and so its mirrored twin) gets, plus the center cluster on
  * the axis: an even split, with spare pairs going to the corner clusters first, then inward, so
@@ -839,48 +829,199 @@ function placeFlowers(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem
   return groups;
 }
 
+/** Leaf size range, as fractions of the biggest balloon: sprigs about as long as a balloon. */
+const LEAF_SIZE = [0.55, 0.75] as const;
+/** How deep a leaf presses into the solid it grows from, as fractions of its own size: shallowest first. */
+const LEAF_DEPTHS = [0.25, 0.35, 0.5, 0.65, 0.8];
+/** The least a leaf may press into its anchor, as a fraction of its own size, after edge clamping and mirror jitter. */
+const LEAF_MIN_DEPTH = 0.2;
+/** Turns, in degrees, a leaf may take off its slot's preferred direction to fan out from its neighbors. */
+const LEAF_FAN = [0, 25, -25, 50, -50, 75, -75];
+/** How far a leaf's center may stray from the spine, as a fraction of the biggest balloon. */
+const LEAF_REACH = 0.55;
+/** How many of the solids nearest its slot a leaf may try to grow from. */
+const LEAF_ANCHOR_TRIES = 6;
+/** Spine samples used to find the nearest spine point and its normal. */
+const LEAF_SPINE_STEPS = 400;
+/** Offsets the leaf stream from the main seed, so leaf tweaks never move a balloon or flower. */
+const LEAF_SEED_OFFSET = 7919;
+
+/** The spine sample nearest `point`. */
+function nearestSpineSample(samples: SpineSample[], point: Point): SpineSample {
+  let best = samples[0];
+  for (const sample of samples) {
+    if (Math.hypot(sample.x - point.x, sample.y - point.y) < Math.hypot(best.x - point.x, best.y - point.y)) {
+      best = sample;
+    }
+  }
+  return best;
+}
+
+function rotated(direction: Point, degrees: number): Point {
+  const a = (degrees * Math.PI) / 180;
+  return {
+    x: direction.x * Math.cos(a) - direction.y * Math.sin(a),
+    y: direction.x * Math.sin(a) + direction.y * Math.cos(a),
+  };
+}
+
+function unit(vector: Point): Point {
+  const length = Math.hypot(vector.x, vector.y);
+  return { x: vector.x / length, y: vector.y / length };
+}
+
 /**
- * Scatters leaves behind the balloons along the left half of the spine, offset further outward
- * than any other item so they fan out past the arch's edge, then mirrors each to the right as a
- * shifted leaf symbol; an odd one out sits on the axis. Round-robin over the leaf symbols, so a
- * spec with at least 3 leaves uses all of them.
+ * Grows leaves out of the placed balloons and flowers. Each left slot along the spine anchors its
+ * leaf to the solid nearest it and presses the leaf into that solid's outer edge, fanning outward
+ * from the arch (down and outward where the slot hangs below its solid, so sprigs trail past the
+ * garland's end), turning aside from leaves already there and never straying far from the spine.
+ * Each is mirrored onto the twin of its anchor on the right as a shifted leaf symbol; an odd one
+ * out grows up from the solid on the axis. Leaves sit behind everything, on layer 0. Round-robin
+ * over the leaf symbols, so a spec with at least 3 leaves uses all of them.
  */
-function placeLeaves(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem[] {
+function placeLeaves(spec: ArchSpec, spine: Spine, solids: ArchItem[], rng: () => number): ArchItem[] {
   const count = spec.counts.leaves;
   const half = Math.floor(count / 2);
   const maxSize = spec.sizeRange[1];
+  const axis = spec.width / 2;
+  const samples = Array.from({ length: LEAF_SPINE_STEPS + 1 }, (_, i) => sampleSpine(spine, i / LEAF_SPINE_STEPS));
   const symbolShift = 1 + Math.floor(rng() * (LEAF_SYMBOLS.length - 1));
+  const items: ArchItem[] = [];
 
-  const leafAt = (t: number, symbol: ArchSymbol): ArchItem => {
-    const sample = sampleSpine(spine, t);
-    const size = taperedBalloonSize(spec, t) * (0.4 + rng() * 0.3);
-    // Outward = away from the arch's interior (the left side column fans left, the crown fans
-    // up), so the leaves read as sprigs trailing past the balloons, not tucked inside.
-    const offset = -(0.5 + rng() * 0.3) * size;
-    return {
-      symbol,
-      kind: 'leaf',
-      x: clamp(sample.x + sample.nx * offset, -maxSize, spec.width + maxSize),
-      y: clamp(sample.y + sample.ny * offset, -maxSize, spec.height),
-      size,
-      rotate: TANGENT_TILT * sample.angle + (rng() - 0.5) * 30,
-      layer: 0,
-    };
+  const depthOf = (leaf: ArchItem, solid: ArchItem): number =>
+    (leaf.size + solid.size) / 2 - Math.hypot(leaf.x - solid.x, leaf.y - solid.y);
+  const byDistance = (point: Point, among: ArchItem[]): ArchItem[] =>
+    [...among].sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y));
+
+  interface Growth {
+    leaf: ArchItem;
+    turn: number;
+    depth: number;
+    score: number;
+  }
+
+  const leafAt = (anchor: ArchItem, heading: Point, depth: number, size: number, symbol: ArchSymbol, rotate: number): ArchItem => {
+    const reach = (anchor.size + size) / 2 - depth * size;
+    return fitInside(
+      {
+        symbol,
+        kind: 'leaf',
+        x: clamp(anchor.x + heading.x * reach, -maxSize, spec.width + maxSize),
+        y: clamp(anchor.y + heading.y * reach, -maxSize, spec.height),
+        size,
+        rotate,
+        layer: 0,
+      },
+      spec,
+    );
   };
 
-  const items: ArchItem[] = [];
+  /** Pressed into its anchor, on the outer side of the spine (its normal points inward) and near it. */
+  const holds = (leaf: ArchItem, anchor: ArchItem): boolean => {
+    const near = nearestSpineSample(samples, leaf);
+    return (
+      depthOf(leaf, anchor) >= LEAF_MIN_DEPTH * leaf.size &&
+      (leaf.x - near.x) * near.nx + (leaf.y - near.y) * near.ny <= 0 &&
+      Math.hypot(leaf.x - near.x, leaf.y - near.y) <= LEAF_REACH * maxSize
+    );
+  };
+
+  /**
+   * The leaf grown from `anchor` toward `direction`, or a fan turn off it, that holds and keeps
+   * clearest of the leaves already placed — or, given a `target`, lands nearest it; null when no
+   * turn and depth holds.
+   */
+  const growLeaf = (
+    anchor: ArchItem,
+    direction: Point,
+    size: number,
+    symbol: ArchSymbol,
+    rotate: number,
+    { target, trailing = false }: { target?: Point; trailing?: boolean } = {},
+  ): Growth | null => {
+    let best: Growth | null = null;
+    for (const turn of LEAF_FAN) {
+      for (const depth of LEAF_DEPTHS) {
+        const leaf = leafAt(anchor, rotated(direction, turn), depth, size, symbol, rotate);
+        if (!holds(leaf, anchor)) {
+          continue;
+        }
+        const room = Math.min(size, clearance(leaf, items) + size / 2);
+        const score = target
+          ? -Math.hypot(leaf.x - target.x, leaf.y - target.y)
+          : room - 0.1 * size * (Math.abs(turn) / 25 + depth) + (trailing ? leaf.y : 0);
+        if (best === null || score > best.score) {
+          best = { leaf, turn, depth, score };
+        }
+      }
+    }
+    return best;
+  };
+
+  /** True when `slot` hangs below `anchor`, past the garland's end: its leaf trails downward. */
+  const trails = (slot: Point, anchor: ArchItem): boolean => slot.y > anchor.y + anchor.size / 2;
+  /** Outward from the arch, or down and outward for a trailing slot. */
+  const directionFor = (slot: SpineSample, trailing: boolean): Point => {
+    const outward = { x: -slot.nx, y: -slot.ny };
+    return trailing ? unit({ x: outward.x * 0.6, y: 1 }) : outward;
+  };
+
+  const left = solids.filter((solid) => solid.x < axis);
+  const right = solids.filter((solid) => solid.x > axis);
   for (let i = 0; i < half; i++) {
     const base = half <= 1 ? 0 : (0.5 * i) / (half - 0.5);
-    const jitter = (rng() - 0.5) * (0.5 / count);
-    const left = fitInside(leafAt(clamp(base + jitter, 0, LEFT_HALF_END), LEAF_SYMBOLS[i % LEAF_SYMBOLS.length]), spec);
-    const right = fitInside(mirrorItem(left, spec, rng), spec);
-    items.push(left, { ...right, symbol: shiftedSymbol(LEAF_SYMBOLS, left.symbol, symbolShift) });
+    const slot = sampleSpine(spine, clamp(base + (rng() - 0.5) * (0.5 / count), 0, LEFT_HALF_END));
+    const size = maxSize * (LEAF_SIZE[0] + rng() * (LEAF_SIZE[1] - LEAF_SIZE[0]));
+    const rotate = TANGENT_TILT * slot.angle + (rng() - 0.5) * 30;
+    const symbol = LEAF_SYMBOLS[i % LEAF_SYMBOLS.length];
+    const twinSize = size * (1 + (rng() - 0.5) * 2 * MIRROR_SIZE_JITTER);
+    const twinSymbol = shiftedSymbol(LEAF_SYMBOLS, symbol, symbolShift);
+    // The nearest solid may sit too far inside the arch for a leaf to reach out of it, so the next
+    // few are tried too: the first that grows a leaf wins, or for a trailing slot the lowest leaf.
+    const anchors = byDistance(slot, left).slice(0, LEAF_ANCHOR_TRIES);
+    const trailing = anchors.length > 0 && trails(slot, anchors[0]);
+    const direction = directionFor(slot, trailing);
+    const options = anchors.flatMap((anchor) => {
+      const grown = growLeaf(anchor, direction, size, symbol, rotate, { trailing });
+      return grown ? [{ anchor, grown }] : [];
+    });
+    const chosen = trailing ? options.sort((a, b) => b.grown.score - a.grown.score)[0] : options[0];
+    if (chosen === undefined) {
+      continue;
+    }
+    const { anchor, grown } = chosen;
+    const [twinAnchor] = byDistance({ x: spec.width - anchor.x, y: anchor.y }, right);
+    const mirrored = { x: -direction.x, y: direction.y };
+    const exact = leafAt(twinAnchor, rotated(mirrored, -grown.turn), grown.depth, twinSize, twinSymbol, -rotate);
+    const twin = holds(exact, twinAnchor)
+      ? exact
+      : growLeaf(twinAnchor, mirrored, twinSize, twinSymbol, -rotate, {
+          target: { x: spec.width - grown.leaf.x, y: grown.leaf.y },
+        })?.leaf;
+    items.push(grown.leaf, ...(twin ? [twin] : []));
   }
   if (count % 2 === 1) {
-    items.push(fitInside({ ...leafAt(0.5, LEAF_SYMBOLS[half % LEAF_SYMBOLS.length]), x: spec.width / 2 }, spec));
+    const top = sampleSpine(spine, 0.5);
+    const [anchor] = byDistance(top, solids);
+    const grown = anchor && growLeaf(anchor, { x: 0, y: -1 }, maxSize * LEAF_SIZE[0], LEAF_SYMBOLS[half % LEAF_SYMBOLS.length], 0);
+    if (grown) {
+      items.push({ ...grown.leaf, x: axis });
+    }
   }
 
   return items;
+}
+
+/**
+ * Advances `rng` past the draws an earlier leaf pass took from the main stream before any solid
+ * was placed. Leaves now draw from their own stream, but every balloon and flower layout was tuned
+ * against the main stream's sequence after those draws, so skipping them keeps those layouts as tuned.
+ */
+function skipLegacyLeafDraws(rng: () => number, leaves: number): void {
+  const draws = 1 + 7 * Math.floor(leaves / 2) + 3 * (leaves % 2);
+  for (let i = 0; i < draws; i++) {
+    rng();
+  }
 }
 
 /**
@@ -1066,13 +1207,14 @@ function settleFlowers(spec: ArchSpec, items: ArchItem[], groups: ArchItem[][]):
 export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
   const spine = buildSpine(spec);
-  const leaves = placeLeaves(spec, spine, rng);
+  skipLegacyLeafDraws(rng, spec.counts.leaves);
   const crownGroups = placeFlowers(spec, spine, rng);
   const crownFlowers = crownGroups.flat();
   const solids = [...placeBalloons(spec, spine, crownFlowers, rng), ...crownFlowers];
   const fillers = placeFillers(spec, spine, solids, rng);
   const sideGroups = tuckSideFlowers(spec, spine, [...solids, ...fillers], rng);
   const settled = settleFlowers(spec, [...solids, ...fillers, ...sideGroups.flat()], [...crownGroups, ...sideGroups]);
+  const leaves = placeLeaves(spec, spine, settled, seededRandom(spec.seed + LEAF_SEED_OFFSET));
   const items = [...leaves, ...settled].sort((a, b) => a.layer - b.layer || a.y - b.y);
 
   return { width: spec.width, height: spec.height, items };
