@@ -1,0 +1,153 @@
+---
+// The intro/name screen shown right after the countdown: eyebrow line, the celebrant's name in
+// the self-hosted cursive font, a thin divider, the tagline, and the portrait slot (a real photo
+// once the family drops one at `public/images/portrait.jpg`, or an initials medallion fallback
+// until then — both render at the same box size, so there's no layout shift when the photo
+// arrives). Celebrant name/portrait path are pulled from src/data/event.ts and site.config.ts —
+// never hardcoded here — so the family only ever edits one place.
+import { event } from '../data/event';
+import { siteConfig } from '../data/site.config';
+import { publicAssetExists } from '../lib/assets';
+import { withBase } from '../lib/base';
+import EyebrowEmoji from '../components/EyebrowEmoji.astro';
+
+// Split the name on the first space so "Ana" and "Sofía" can sit at staggered levels like a
+// handwritten signature. The <h2> still reads as the full name (with the explicit space between
+// the spans) to screen readers — the spans are purely a layout device.
+const [firstWord, ...rest] = event.celebrantName.split(' ');
+const restWords = rest.join(' ');
+
+const initials = event.celebrantName
+  .split(' ')
+  .map((word) => word[0])
+  .join('')
+  .toUpperCase();
+
+const hasPortrait = publicAssetExists(siteConfig.portraitPath);
+const portraitSrc = withBase(siteConfig.portraitPath);
+---
+
+<section class="hero" data-testid="hero" aria-label="Presentación">
+  <p class="hero__eyebrow"><EyebrowEmoji emoji="🌹" />Te invito a celebrar</p>
+  {
+    hasPortrait ? (
+      <img
+        class="hero__portrait"
+        data-testid="hero-portrait"
+        src={portraitSrc}
+        alt={event.celebrantName}
+        width="320"
+        height="320"
+        decoding="async"
+      />
+    ) : (
+      <div
+        class="hero__portrait hero__portrait-fallback"
+        data-testid="hero-portrait-fallback"
+        role="img"
+        aria-label={event.celebrantName}
+      >
+        <span class="hero__portrait-initials font-cursive">{initials}</span>
+      </div>
+    )
+  }
+  <h2 class="hero__name font-cursive" data-testid="cursive-name">
+    <span class="hero__name-word hero__name-word--first">{firstWord}</span>{' '}<span
+      class="hero__name-word hero__name-word--last">{restWords}</span
+    >
+  </h2>
+  <div class="hero__divider"></div>
+  <p class="hero__tagline">Mis XV años</p>
+</section>
+
+<style>
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: 88dvh;
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+
+  .hero__eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--c-rose-700);
+  }
+
+  .hero__portrait {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .hero__portrait-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 35% 30%, var(--c-rose-100), var(--c-rose-700));
+  }
+
+  .hero__portrait-initials {
+    font-size: 3.5rem;
+    line-height: 1;
+    color: var(--c-ink);
+  }
+
+  .hero__name {
+    /* Great Vibes' capital-L swashes and descender tails reach far past the em box, and
+       background-clip:text only paints inside the border box — so the name needs a tall line
+       box (line-height 1.5) plus vertical padding, or the flourishes render transparent
+       ("clipped"). The side padding does the same job for the entry/exit swashes. */
+    font-size: clamp(4.75rem, 26vw, 13rem);
+    line-height: 1.5;
+    margin: 0;
+    padding: 0.12em 0.2em;
+    max-width: 100%;
+    overflow: visible;
+    display: inline-block;
+    text-align: left;
+    background: var(--gradient-rose);
+    background-size: 220% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    /* Halo that survives background-clip:text (box-shadow/text-shadow would not). */
+    filter: drop-shadow(0 0 22px color-mix(in srgb, var(--c-rose-400) 30%, transparent))
+      drop-shadow(0 0 60px color-mix(in srgb, var(--c-rose-100) 14%, transparent));
+  }
+
+  /* Signature-style stagger: "Ana" up top hugging the left, "Sofía" below shifted right, the two
+     lines overlapping a touch (negative margin eats some of the tall line box, which exists for
+     clip room — see .hero__name). Margins, not transforms: transformed descendants can escape
+     the parent's background-clip:text and lose the metallic fill. */
+  .hero__name-word {
+    display: block;
+    overflow: visible;
+  }
+
+  .hero__name-word--last {
+    margin-top: -0.72em;
+    margin-left: 0.9em;
+  }
+
+  .hero__divider {
+    width: 90px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--c-rose-400), transparent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--c-rose-400) 45%, transparent);
+  }
+
+  .hero__tagline {
+    font-weight: 300;
+    font-size: 1rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--c-ink);
+  }
+</style>

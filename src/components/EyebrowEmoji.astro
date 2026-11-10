@@ -1,0 +1,23 @@
+---
+// A single decorative emoji dropped at the front of a section's eyebrow line. Purely visual —
+// `aria-hidden="true"` keeps it out of the accessible name so screen readers still announce just
+// the eyebrow's wording, not an emoji name mixed in. `letter-spacing: normal` overrides the
+// eyebrow's own ultra-wide caps tracking (it inherits from the parent `<p>` otherwise, which
+// pushes a visible gap in *after* the emoji too) and the explicit margin re-adds a smaller,
+// deliberate gap so the emoji doesn't read as glued to or detached from the first word.
+interface Props {
+  emoji: string;
+}
+
+const { emoji } = Astro.props;
+---
+
+<span class="eyebrow-emoji" aria-hidden="true">{emoji}</span>
+
+<style>
+  .eyebrow-emoji {
+    display: inline-block;
+    letter-spacing: normal;
+    margin-right: 0.35em;
+  }
+</style>

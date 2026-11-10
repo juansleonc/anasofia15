@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Cover from '../sections/Cover.astro';
+import Hero from '../sections/Hero.astro';
+import Countdown from '../sections/Countdown.astro';
+import Detalles from '../sections/Detalles.astro';
+import ColorWheel from '../sections/ColorWheel.astro';
+import ComoLlegar from '../sections/ComoLlegar.astro';
+import Trivia from '../sections/Trivia.astro';
+import Rsvp from '../sections/Rsvp.astro';
+import Footer from '../sections/Footer.astro';
+import MusicToggle from '../islands/MusicToggle.astro';
+---
+
+<BaseLayout>
+	<main>
+		<Cover />
+		<!-- Cover is the immediate above-the-fold view; everything scrolled to below it gets the
+		     subtle scroll-reveal treatment (data-reveal, see BaseLayout's script + tokens.css). -->
+		<div data-reveal><Countdown /></div>
+		<div data-reveal><Hero /></div>
+		<div data-reveal><Detalles /></div>
+		<div data-reveal><ColorWheel /></div>
+		<div data-reveal><ComoLlegar /></div>
+		<div data-reveal><Trivia /></div>
+		<div data-reveal><Rsvp /></div>
+		<div data-reveal><Footer /></div>
+	</main>
+	<!-- Globally visible on every page (there is only this one so far). -->
+	<MusicToggle />
+</BaseLayout>

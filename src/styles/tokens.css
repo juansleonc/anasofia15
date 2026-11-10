@@ -1,0 +1,121 @@
+/**
+ * Design tokens — "Rosas y flores" theme: blush/rose watercolor palette.
+ * CSS custom properties consumed by every section/component; do not hardcode raw hex values
+ * or font-family strings elsewhere — reference these tokens instead.
+ */
+
+:root {
+  /* Palette */
+  --c-bg: #fff7f5;
+  --c-bg-deep: #fbe9e7;
+  --c-rose-100: #fce4e8;
+  --c-rose-200: #f3c6d0;
+  --c-rose-300: #e8a3b4;
+  --c-rose-400: #d47f97;
+  --c-rose-600: #b5617a;
+  --c-rose-700: #9e4a63;
+  --c-ink: #4a2632;
+  --c-ink-soft: #7a4a58;
+  --c-leaf: #8fae8b;
+  --c-leaf-deep: #5f7f5b;
+  --c-white: #ffffff;
+  --c-error: #a3324a;
+  --c-success: #3f6b47;
+
+  /* Composite surfaces */
+  --gradient-rose: linear-gradient(135deg, #f3c6d0 0%, #e8a3b4 45%, #b5617a 100%);
+  --gradient-button: linear-gradient(135deg, #b5617a 0%, #9e4a63 100%);
+  --card-bg: rgba(255, 255, 255, 0.78);
+  --card-border: 1px solid rgba(158, 74, 99, 0.18);
+  --card-shadow: 0 18px 40px -24px rgba(158, 74, 99, 0.35);
+
+  /* Typography */
+  --font-cursive: 'Great Vibes', cursive;
+  --font-display: 'Playfair Display', 'Georgia', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Motion */
+  --motion-duration-base: 600ms;
+  --motion-duration-slow: 1600ms;
+  --motion-easing: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Theme-fidelity: all drift/spin/reveal animation must be built on the motion vars above and
+   freeze when the visitor prefers reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-base: 0ms;
+    --motion-duration-slow: 0ms;
+  }
+}
+
+body {
+  position: relative;
+  background-color: var(--c-bg);
+  color: var(--c-ink);
+  font-family: var(--font-body);
+}
+
+/* Blush wash backdrop. CSS-only (no canvas/JS), fixed in the viewport (not
+   `background-attachment: fixed`, which janks on iOS), and layered behind every section via a
+   negative z-index. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 15% 20%, var(--c-rose-100) 0%, transparent 45%),
+    radial-gradient(circle at 85% 10%, var(--c-bg-deep) 0%, transparent 50%),
+    radial-gradient(circle at 50% 95%, var(--c-rose-200) 0%, transparent 55%);
+}
+
+.font-cursive {
+  font-family: var(--font-cursive);
+}
+
+.text-rose {
+  color: var(--c-rose-700);
+}
+
+/* Scroll-reveal: the `.reveal-pending` class is added ONLY by JS, right before it starts
+   observing the element — so if JS fails to run at all, this rule never applies and content
+   stays at its default full opacity/position. `.is-revealed` (also JS-added, on intersection)
+   is what actually plays the fade/rise; `prefers-reduced-motion` shows content immediately with
+   no motion, both here and (belt-and-suspenders) in the JS that decides whether to reveal at all. */
+[data-reveal].reveal-pending {
+  opacity: 0;
+  transform: translateY(1.5rem);
+}
+
+[data-reveal].reveal-pending.is-revealed {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--motion-duration-base) var(--motion-easing),
+    transform var(--motion-duration-base) var(--motion-easing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal].reveal-pending {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Cover open-gate: `.scroll-locked` is added to <body> ONLY by JS, on load, before the guest can
+   interact — so if JS fails to run at all this rule never applies and the page stays reachable
+   by scroll (progressive enhancement, same principle as `.reveal-pending` above). Cover's own
+   script removes the class the instant "Abrir invitación" is clicked, before the programmatic
+   scroll-to-hero runs. `position: fixed` (not just `overflow: hidden`) is required here: WebKit
+   still honors a programmatic `window.scrollTo` against an `overflow: hidden` root/body that was
+   toggled on after the initial layout, so `overflow: hidden` alone does not reliably block it —
+   pinning the body's box to the viewport does. */
+body.scroll-locked {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  overflow: hidden;
+}

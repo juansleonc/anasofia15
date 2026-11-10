@@ -1,0 +1,116 @@
+import { describe, it, expect } from 'vitest';
+import { createTriviaState, answer, progress, resultMessage } from '../trivia';
+import { triviaQuestions, resultMessages } from '../../data/trivia';
+
+describe('trivia pure logic', () => {
+  // Adversarial cases first: the ways this could silently score wrong or drift from the data file.
+
+  it('consumes all questions from the trivia data module', () => {
+    expect(triviaQuestions).toHaveLength(11);
+  });
+
+  it('keeps every correctIndex within its own options array (no out-of-range answer key)', () => {
+    for (const question of triviaQuestions) {
+      expect(question.correctIndex).toBeGreaterThanOrEqual(0);
+      expect(question.correctIndex).toBeLessThan(question.options.length);
+    }
+  });
+
+  it('exposes exactly 12 result messages, one per achievable score, all non-empty', () => {
+    expect(resultMessages).toHaveLength(12);
+    for (const message of resultMessages) {
+      expect(message.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it('does not increment the score on a wrong answer', () => {
+    const state = createTriviaState();
+    const wrongIndex = triviaQuestions[0].options.findIndex(
+      (_, i) => i !== triviaQuestions[0].correctIndex,
+    );
+
+    const next = answer(state, wrongIndex);
+
+    expect(next.score).toBe(0);
+  });
+
+  it('increments the score on a correct answer', () => {
+    const state = createTriviaState();
+
+    const next = answer(state, triviaQuestions[0].correctIndex);
+
+    expect(next.score).toBe(1);
+  });
+
+  it('advances progress by one per answered question', () => {
+    const state = createTriviaState();
+    expect(progress(state)).toBe(0);
+
+    const next = answer(state, triviaQuestions[0].correctIndex);
+
+    expect(progress(next)).toBe(1);
+  });
+
+  it('yields a done state with the correct final score after answering every question', () => {
+    let state = createTriviaState();
+    let expectedScore = 0;
+
+    // Walk every question in the data file, alternating correct/wrong answers, and derive the
+    // expected score from the walk itself rather than a hardcoded question count.
+    for (const [i, question] of triviaQuestions.entries()) {
+      const answerCorrectly = i % 2 === 0;
+      if (answerCorrectly) {
+        expectedScore += 1;
+        state = answer(state, question.correctIndex);
+      } else {
+        const wrongIndex = question.options.findIndex((_, idx) => idx !== question.correctIndex);
+        state = answer(state, wrongIndex);
+      }
+    }
+
+    expect(state.done).toBe(true);
+    expect(state.score).toBe(expectedScore);
+    expect(progress(state)).toBe(triviaQuestions.length);
+  });
+
+  it('maps a perfect score to the matching resultMessages entry', () => {
+    let state = createTriviaState();
+    for (const q of triviaQuestions) {
+      state = answer(state, q.correctIndex);
+    }
+
+    expect(state.score).toBe(triviaQuestions.length);
+    expect(resultMessage(state)).toBe(resultMessages[triviaQuestions.length]);
+  });
+
+  it('has a defined, non-empty message for every achievable score', () => {
+    expect(resultMessages).toHaveLength(triviaQuestions.length + 1);
+
+    for (let score = 0; score <= triviaQuestions.length; score++) {
+      const message = resultMessage({ step: triviaQuestions.length, score, done: true });
+      expect(typeof message).toBe('string');
+      expect(message.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it('is a no-op when answering after the trivia is already done (guard)', () => {
+    let state = createTriviaState();
+    for (const q of triviaQuestions) {
+      state = answer(state, q.correctIndex);
+    }
+    const doneState = state;
+
+    const afterExtraAnswer = answer(doneState, 0);
+
+    expect(afterExtraAnswer).toEqual(doneState);
+  });
+
+  it('does not mutate the state passed to answer (immutability)', () => {
+    const state = createTriviaState();
+    const frozenCopy = { ...state };
+
+    answer(state, triviaQuestions[0].correctIndex);
+
+    expect(state).toEqual(frozenCopy);
+  });
+});

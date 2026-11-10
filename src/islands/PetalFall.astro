@@ -1,0 +1,113 @@
+---
+// One-shot rose-petal shower fired by the "Abrir invitación" open gesture. Listens for
+// `OPEN_INVITATION_EVENT` (Cover dispatches it; this island never touches the button or the
+// scroll gate) and spawns a capped batch of DOM/CSS petal spans that drift down and sway, then
+// clears them once the shower settles. Particle init is the pure, unit-tested
+// `createPetals`/`showerDurationMs` (src/lib/petals.ts); only the DOM/CSS rendering lives here.
+// State surfaces on `data-petals` (fired/skipped) and `data-petal-showers` so tests can observe
+// the shower without pixel sampling. `prefers-reduced-motion` skips the shower; petal colors
+// come from the rose tokens at runtime (no literal colors), so the shower matches the live theme.
+---
+
+<div class="petal-fall" data-testid="petal-fall" aria-hidden="true"></div>
+
+<style>
+  .petal-fall {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    /* Above the cover art; never above pointer reach — the container ignores all input. */
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .petal-fall :global(.petal-fall__petal) {
+    position: absolute;
+    top: -10%;
+    left: var(--petal-x);
+    width: var(--petal-size);
+    height: var(--petal-size);
+    background: var(--petal-color);
+    border-radius: 60% 0 60% 0;
+    opacity: 0.85;
+    animation-name: petal-fall-drop;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    animation-delay: var(--petal-delay);
+    animation-duration: var(--petal-duration);
+  }
+
+  @keyframes petal-fall-drop {
+    0% {
+      transform: translate3d(0, 0, 0) rotate(var(--petal-rotate));
+    }
+    50% {
+      transform: translate3d(var(--petal-sway), 55vh, 0) rotate(calc(var(--petal-rotate) + 180deg));
+    }
+    100% {
+      transform: translate3d(0, 115vh, 0) rotate(calc(var(--petal-rotate) + 360deg));
+    }
+  }
+</style>
+
+<script>
+  import { createPetals, showerDurationMs, type Petal } from '../lib/petals';
+  import { OPEN_INVITATION_EVENT } from '../lib/events';
+
+  const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+  const PETAL_COUNT = 28;
+  const ROSE_TOKEN_NAMES = ['--c-rose-100', '--c-rose-200', '--c-rose-300', '--c-rose-400'];
+
+  function initPetalFall(): void {
+    const containerEl = document.querySelector<HTMLDivElement>('[data-testid="petal-fall"]');
+    if (!containerEl) return;
+
+    // Rebind as a definite local so the nested closures below see a non-nullable type — TS
+    // narrowing doesn't flow into nested function bodies.
+    const container: HTMLDivElement = containerEl;
+
+    function paletteFromTokens(): string[] {
+      const styles = getComputedStyle(document.documentElement);
+      return ROSE_TOKEN_NAMES.map((name) => styles.getPropertyValue(name).trim()).filter(Boolean);
+    }
+
+    function createPetalElement(petal: Petal): HTMLSpanElement {
+      const span = document.createElement('span');
+      span.className = 'petal-fall__petal';
+      span.style.setProperty('--petal-x', `${petal.xPct}%`);
+      span.style.setProperty('--petal-size', `${petal.sizePx}px`);
+      span.style.setProperty('--petal-color', petal.color);
+      span.style.setProperty('--petal-delay', `${petal.delayMs}ms`);
+      span.style.setProperty('--petal-duration', `${petal.durationMs}ms`);
+      span.style.setProperty('--petal-sway', `${petal.swayPx}px`);
+      span.style.setProperty('--petal-rotate', `${petal.rotateDeg}deg`);
+      return span;
+    }
+
+    function fire(): void {
+      if (window.matchMedia(REDUCED_MOTION_QUERY).matches) {
+        container.dataset.petals = 'skipped';
+        return;
+      }
+      if (container.dataset.petals === 'fired') return;
+
+      const petals = createPetals({ count: PETAL_COUNT, palette: paletteFromTokens() });
+      for (const petal of petals) {
+        container.appendChild(createPetalElement(petal));
+      }
+
+      container.dataset.petals = 'fired';
+      container.dataset.petalShowers = String(Number(container.dataset.petalShowers ?? '0') + 1);
+
+      window.setTimeout(() => {
+        container.replaceChildren();
+      }, showerDurationMs(petals));
+    }
+
+    // `once` is the primary one-shot guard; `fire` itself re-checks so a manually re-dispatched
+    // event can never restart a shower.
+    window.addEventListener(OPEN_INVITATION_EVENT, fire, { once: true });
+  }
+
+  initPetalFall();
+</script>

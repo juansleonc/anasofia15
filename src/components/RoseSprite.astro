@@ -1,0 +1,103 @@
+---
+// Single hidden sprite sheet for every rose illustration on the page: one <svg> holding the
+// shared gradient <defs> plus the three reusable <symbol> shapes (bloom/bud/leaf) that
+// Rose.astro references by id via <use>. Defining each shape exactly once here — instead of
+// inline per Rose instance — is what keeps "no duplicate element ids" true no matter how many
+// roses a page mounts.
+//
+// Gradient stop-colors read from theme tokens (`style="stop-color: var(--c-rose-…)"`) rather than
+// raw hex, so the whole sprite re-themes from the palette alone. No SVG filters
+// (feTurbulence/feDisplacement): those are too costly on iPhone WebKit during scroll/animation —
+// the watercolor read comes entirely from layered, semi-transparent petal paths instead.
+---
+
+<svg
+  class="rose-sprite"
+  data-testid="rose-sprite"
+  aria-hidden="true"
+  focusable="false"
+  style="position:absolute;width:0;height:0;overflow:hidden"
+>
+  <defs>
+    <radialGradient id="rose-bloom-gradient" cx="40%" cy="35%" r="75%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="55%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+    </radialGradient>
+    <radialGradient id="rose-bud-gradient" cx="45%" cy="30%" r="80%">
+      <stop offset="0%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-600)" />
+    </radialGradient>
+    <linearGradient id="rose-leaf-gradient" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-leaf)" />
+      <stop offset="100%" style="stop-color: var(--c-leaf-deep)" />
+    </linearGradient>
+  </defs>
+
+  <symbol id="rose-bloom" viewBox="0 0 64 64">
+    <circle cx="32" cy="34" r="22" fill="url(#rose-bloom-gradient)" fill-opacity="0.78" />
+    <path
+      d="M32 12c8 2 14 9 14 17s-6 14-14 16c-8-2-14-8-14-16s6-15 14-17Z"
+      fill="url(#rose-bloom-gradient)"
+      fill-opacity="0.8"
+    />
+    <path
+      d="M18 25c3-7 9-11 14-11s11 4 14 11c-3 6-8 10-14 10s-11-4-14-10Z"
+      fill="url(#rose-bloom-gradient)"
+      fill-opacity="0.76"
+    />
+    <path
+      d="M20 35c2-7 7-11 12-11s10 4 12 11-5 12-12 14c-7-2-12-7-12-14Z"
+      fill="url(#rose-bloom-gradient)"
+      fill-opacity="0.82"
+    />
+    <path
+      d="M25 39c1-5 4-9 7-9s6 4 7 9-3 10-7 11-8-6-7-11Z"
+      fill="url(#rose-bloom-gradient)"
+      fill-opacity="0.88"
+    />
+    <path
+      d="M32 44c-2 3-2 6-2 8h4c0-2 0-5-2-8Z"
+      fill="url(#rose-bloom-gradient)"
+      fill-opacity="0.9"
+    />
+    <path
+      d="M32 18c-6 1-10 6-11 11 3-3 7-6 11-6s8 3 11 6c-1-5-5-10-11-11Z"
+      fill="url(#rose-bloom-gradient)"
+      fill-opacity="0.75"
+    />
+  </symbol>
+
+  <symbol id="rose-bud" viewBox="0 0 32 48">
+    <path
+      d="M16 4c6 2 10 9 10 16s-4 13-10 15c-6-2-10-8-10-15S10 6 16 4Z"
+      fill="url(#rose-bud-gradient)"
+      fill-opacity="0.85"
+    />
+    <path
+      d="M16 10c3 2 5 6 5 10s-2 8-5 9c-3-1-5-5-5-9s2-8 5-10Z"
+      fill="url(#rose-bud-gradient)"
+      fill-opacity="0.9"
+    />
+    <path
+      d="M16 34c-3 3-4 8-4 10h8c0-2-1-7-4-10Z"
+      fill="url(#rose-leaf-gradient)"
+      fill-opacity="0.85"
+    />
+  </symbol>
+
+  <symbol id="rose-leaf" viewBox="0 0 40 24">
+    <path
+      d="M2 20c6-14 20-18 36-16-8 12-20 18-36 16Z"
+      fill="url(#rose-leaf-gradient)"
+      fill-opacity="0.85"
+    />
+    <path
+      d="M6 18c6-8 16-11 26-10"
+      fill="none"
+      stroke="var(--c-leaf-deep)"
+      stroke-width="1"
+      stroke-opacity="0.6"
+    />
+  </symbol>
+</svg>

@@ -1,0 +1,39 @@
+---
+// "Juguemos": header + the playable trivia game (delegated to TriviaIsland, which owns the
+// reveal/advance/restart client-side state machine built on the pure logic in `src/lib/trivia.ts`).
+import TriviaIsland from '../islands/TriviaIsland.astro';
+import EyebrowEmoji from '../components/EyebrowEmoji.astro';
+import { event } from '../data/event';
+---
+
+<section class="trivia" data-testid="trivia" aria-label="Trivia">
+  <div class="trivia__header">
+    <p class="trivia__eyebrow"><EyebrowEmoji emoji="🌷" />Juguemos</p>
+    <h2 class="trivia__title text-rose">¿Cuánto conoces a {event.celebrantName}?</h2>
+  </div>
+  <TriviaIsland />
+</section>
+
+<style>
+  .trivia {
+    padding: 2.5rem 1rem 4.375rem;
+  }
+
+  .trivia__header {
+    text-align: center;
+    margin-bottom: 1.875rem;
+  }
+
+  .trivia__eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--c-rose-700);
+  }
+
+  .trivia__title {
+    font-weight: 700;
+    font-size: clamp(1.75rem, 7vw, 2.75rem);
+    margin-top: 0.75rem;
+  }
+</style>

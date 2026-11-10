@@ -1,0 +1,361 @@
+---
+// Playable trivia: renders the current question + its options (SSR'd from the first question so
+// there's no flash-of-empty-content before hydration), a top progress bar (one segment per
+// question), and the "Pregunta N de {total}" counter. All copy comes from src/data/trivia.ts —
+// nothing is hardcoded here.
+//
+// The client script owns the reveal-then-advance choreography: tapping an option briefly colors
+// it correct/wrong (compared locally against the current question, before calling into the logic
+// module) and only THEN calls src/lib/trivia.ts's `answer` to atomically advance step/score — that
+// module stays a pure, atomic scorer; the transient "which option was just tapped" state is a DOM
+// concern owned entirely by this island.
+import { triviaQuestions } from '../data/trivia';
+
+const firstQuestion = triviaQuestions[0];
+const totalQuestions = triviaQuestions.length;
+---
+
+<div class="trivia-game" data-testid="trivia-game">
+  <div class="trivia-question" data-testid="trivia-question-view">
+    <div class="trivia-progress" data-testid="trivia-progress">
+      {
+        triviaQuestions.map((_, i) => (
+          <span
+            class="trivia-progress__segment"
+            data-testid={`trivia-progress-segment-${i}`}
+            class:list={{ 'trivia-progress__segment--active': i === 0 }}
+          />
+        ))
+      }
+    </div>
+
+    <p class="trivia-counter" data-testid="trivia-counter">Pregunta 1 de {totalQuestions}</p>
+    <h3 class="trivia-prompt" data-testid="trivia-prompt">{firstQuestion.prompt}</h3>
+
+    <div class="trivia-options" data-testid="trivia-options">
+      {
+        firstQuestion.options.map((option, i) => (
+          <button type="button" class="trivia-option" data-testid={`trivia-option-${i}`} data-index={i}>
+            {option}
+          </button>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="trivia-result" data-testid="trivia-result" hidden>
+    <p class="trivia-result__score" data-testid="trivia-score"></p>
+    <p class="trivia-result__eyebrow">Tu resultado</p>
+    <p class="trivia-result__message" data-testid="trivia-message"></p>
+    <button type="button" class="trivia-restart" data-testid="trivia-restart">Jugar otra vez</button>
+  </div>
+
+  <canvas class="trivia-confetti" data-testid="trivia-confetti" aria-hidden="true"></canvas>
+</div>
+
+<style>
+  .trivia-game {
+    position: relative;
+    max-width: 34rem;
+    margin: 0 auto;
+  }
+
+  .trivia-question,
+  .trivia-result {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: 1.375rem;
+    padding: 1.625rem 1.375rem;
+    box-shadow: var(--card-shadow);
+  }
+
+  .trivia-question[hidden],
+  .trivia-result[hidden] {
+    display: none;
+  }
+
+  .trivia-progress {
+    display: flex;
+    gap: 0.375rem;
+    margin-bottom: 1.375rem;
+  }
+
+  .trivia-progress__segment {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--c-rose-700) 18%, transparent);
+    transition: background var(--motion-duration-base) var(--motion-easing);
+  }
+
+  .trivia-progress__segment--active {
+    background: var(--c-rose-400);
+  }
+
+  .trivia-counter {
+    font-size: 0.6875rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--c-rose-700);
+  }
+
+  .trivia-prompt {
+    font-weight: 700;
+    font-size: 1.4375rem;
+    line-height: 1.25;
+    margin: 0.875rem 0 1.5rem;
+    color: var(--c-ink);
+  }
+
+  .trivia-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Option buttons are re-created in JS on every question change/restart, so they never carry
+     Astro's scoped-style attribute — style them via :global() under the (scoped, SSR'd) options
+     container or every re-rendered question falls back to the UA's default white <button>. */
+  .trivia-options :global(.trivia-option) {
+    text-align: left;
+    padding: 1rem 1.125rem;
+    border-radius: 0.875rem;
+    background: color-mix(in srgb, var(--c-white) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-rose-700) 20%, transparent);
+    color: var(--c-ink);
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all var(--motion-duration-base) var(--motion-easing);
+  }
+
+  .trivia-options :global(.trivia-option:hover:enabled) {
+    background: color-mix(in srgb, var(--c-white) 9%, transparent);
+    border-color: color-mix(in srgb, var(--c-rose-400) 55%, transparent);
+  }
+
+  .trivia-options :global(.trivia-option:disabled) {
+    cursor: default;
+  }
+
+  .trivia-options :global(.trivia-option--correct),
+  .trivia-options :global(.trivia-option--correct:disabled) {
+    background: color-mix(in srgb, var(--c-success) 14%, transparent);
+    border-color: color-mix(in srgb, var(--c-success) 60%, transparent);
+    color: var(--c-success);
+  }
+
+  .trivia-options :global(.trivia-option--wrong),
+  .trivia-options :global(.trivia-option--wrong:disabled) {
+    background: color-mix(in srgb, var(--c-error) 12%, transparent);
+    border-color: color-mix(in srgb, var(--c-error) 55%, transparent);
+    color: var(--c-error);
+  }
+
+  .trivia-result {
+    text-align: center;
+  }
+
+  .trivia-result__score {
+    font-weight: 800;
+    font-size: clamp(3.25rem, 15vw, 5.25rem);
+    line-height: 1;
+    background: var(--gradient-rose);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .trivia-result__eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--c-rose-700);
+    margin-top: 0.875rem;
+  }
+
+  .trivia-result__message {
+    font-weight: 300;
+    font-size: 1.0625rem;
+    color: var(--c-ink-soft);
+    margin-top: 1.125rem;
+    line-height: 1.55;
+  }
+
+  .trivia-restart {
+    margin-top: 1.625rem;
+    padding: 0.875rem 1.875rem;
+    border-radius: 2.5rem;
+    background: color-mix(in srgb, var(--c-white) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-rose-700) 24%, transparent);
+    color: var(--c-ink-soft);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .trivia-confetti {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+</style>
+
+<script>
+  import { createTriviaState, answer, resultMessage, type TriviaState } from '../lib/trivia';
+  import { triviaQuestions } from '../data/trivia';
+
+  // Brief reveal window before advancing to the next question — the island's own choreography,
+  // not part of `src/lib/trivia.ts`'s atomic `answer()`.
+  const REVEAL_DELAY_MS = 900;
+
+  const root = document.querySelector('[data-testid="trivia-game"]');
+  const questionView = document.querySelector('[data-testid="trivia-question-view"]') as HTMLElement | null;
+  const resultView = document.querySelector('[data-testid="trivia-result"]') as HTMLElement | null;
+  const counterEl = document.querySelector('[data-testid="trivia-counter"]');
+  const promptEl = document.querySelector('[data-testid="trivia-prompt"]');
+  const optionsEl = document.querySelector('[data-testid="trivia-options"]') as HTMLElement | null;
+  const progressEl = document.querySelector('[data-testid="trivia-progress"]');
+  const scoreEl = document.querySelector('[data-testid="trivia-score"]');
+  const messageEl = document.querySelector('[data-testid="trivia-message"]');
+  const restartButton = document.querySelector('[data-testid="trivia-restart"]');
+  const confettiCanvas = document.querySelector('[data-testid="trivia-confetti"]') as HTMLCanvasElement | null;
+
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let state: TriviaState = createTriviaState();
+  let revealing = false;
+
+  function renderProgress(): void {
+    if (!progressEl) return;
+    progressEl.querySelectorAll('[data-testid^="trivia-progress-segment-"]').forEach((segment, i) => {
+      segment.classList.toggle('trivia-progress__segment--active', i <= state.step);
+    });
+  }
+
+  function setOptionsDisabled(disabled: boolean): void {
+    optionsEl?.querySelectorAll('button').forEach((button) => {
+      (button as HTMLButtonElement).disabled = disabled;
+    });
+  }
+
+  function renderQuestion(): void {
+    const question = triviaQuestions[state.step];
+    if (counterEl) counterEl.textContent = `Pregunta ${state.step + 1} de ${triviaQuestions.length}`;
+    if (promptEl) promptEl.textContent = question.prompt;
+
+    if (optionsEl) {
+      optionsEl.innerHTML = '';
+      question.options.forEach((label, i) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'trivia-option';
+        button.dataset.testid = `trivia-option-${i}`;
+        button.dataset.index = String(i);
+        button.textContent = label;
+        button.addEventListener('click', () => onOptionClick(i));
+        optionsEl.appendChild(button);
+      });
+    }
+
+    renderProgress();
+  }
+
+  // Read the burst colors from the live rose tokens rather than hardcoding hex — this canvas is
+  // the one place in the island that paints pixels directly instead of letting CSS resolve a
+  // `var(--…)` reference, so it has to ask the computed style for the token's current value.
+  function roseBurstPalette(): string[] {
+    const rootStyles = getComputedStyle(document.documentElement);
+    return ['--c-rose-700', '--c-rose-400', '--c-rose-100']
+      .map((token) => rootStyles.getPropertyValue(token).trim())
+      .filter((value) => value.length > 0);
+  }
+
+  function burstConfetti(): void {
+    if (prefersReducedMotion || !confettiCanvas || !root) return;
+    const rect = root.getBoundingClientRect();
+    const ctx = confettiCanvas.getContext('2d');
+    if (!ctx) return;
+
+    confettiCanvas.width = rect.width;
+    confettiCanvas.height = rect.height;
+
+    const colors = roseBurstPalette();
+    const particles = Array.from({ length: 36 }, () => ({
+      x: rect.width / 2,
+      y: rect.height / 2,
+      vx: (Math.random() - 0.5) * 6,
+      vy: -4 - Math.random() * 4,
+      size: 3 + Math.random() * 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    }));
+
+    let frame = 0;
+    function draw(): void {
+      if (!ctx || !confettiCanvas) return;
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      frame += 1;
+      particles.forEach((p) => {
+        p.vy += 0.25;
+        p.x += p.vx;
+        p.y += p.vy;
+        ctx.globalAlpha = Math.max(0, 1 - frame / 40);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      });
+      if (frame < 40) requestAnimationFrame(draw);
+      else ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+    draw();
+  }
+
+  function showResult(): void {
+    if (questionView) questionView.hidden = true;
+    if (resultView) resultView.hidden = false;
+    if (scoreEl) scoreEl.textContent = `${state.score}/${triviaQuestions.length}`;
+    if (messageEl) messageEl.textContent = resultMessage(state);
+  }
+
+  function onOptionClick(i: number): void {
+    if (revealing || state.done) return;
+    revealing = true;
+
+    const question = triviaQuestions[state.step];
+    const isCorrect = i === question.correctIndex;
+
+    setOptionsDisabled(true);
+    optionsEl?.querySelectorAll('button').forEach((button, idx) => {
+      if (idx === question.correctIndex) button.classList.add('trivia-option--correct');
+      else if (idx === i) button.classList.add('trivia-option--wrong');
+    });
+
+    if (isCorrect) burstConfetti();
+
+    setTimeout(() => {
+      state = answer(state, i);
+      revealing = false;
+      if (state.done) {
+        showResult();
+      } else {
+        renderQuestion();
+        setOptionsDisabled(false);
+      }
+    }, REVEAL_DELAY_MS);
+  }
+
+  function restart(): void {
+    state = createTriviaState();
+    revealing = false;
+    if (resultView) resultView.hidden = true;
+    if (questionView) questionView.hidden = false;
+    renderQuestion();
+    setOptionsDisabled(false);
+  }
+
+  restartButton?.addEventListener('click', restart);
+  optionsEl?.querySelectorAll('button').forEach((button, i) => {
+    button.addEventListener('click', () => onOptionClick(i));
+  });
+</script>

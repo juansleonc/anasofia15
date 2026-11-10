@@ -1,0 +1,365 @@
+---
+// The RSVP form itself: nombre y apellido + asistencia toggle (sí/no) + suggested song, a hidden
+// honeypot field, and the idle -> submitting -> success | error state machine. All validation /
+// payload-shaping / storage-guard logic lives in `src/lib/rsvp.ts` — this island only wires that
+// pure logic to the real DOM + `fetch('https://api.web3forms.com/submit')` (client script below).
+// The access key is passed down via `data-access-key` rather than imported by the script, so the
+// script has exactly one source for it and can never silently read a different value than what
+// was actually rendered.
+import { siteConfig } from '../data/site.config';
+
+const accessKey = siteConfig.web3formsAccessKey;
+---
+
+<div class="rsvp-form-root">
+  <p class="rsvp-not-configured" data-testid="rsvp-not-configured" role="status" hidden>
+    Muy pronto podrás confirmar tu asistencia aquí.
+  </p>
+  <form class="rsvp-form" data-testid="rsvp-form" data-access-key={accessKey} novalidate>
+    <div class="rsvp-field">
+      <label class="rsvp-label" for="rsvp-name">Nombre y apellido</label>
+      <input
+        id="rsvp-name"
+        class="rsvp-input"
+        type="text"
+        name="name"
+        data-testid="rsvp-name-input"
+        placeholder="Tu nombre y apellido"
+        autocomplete="name"
+      />
+      <p class="rsvp-error" data-testid="rsvp-error-name" role="alert"></p>
+    </div>
+
+    <div class="rsvp-field">
+      <span class="rsvp-label">¿Asistirás?</span>
+      <div class="rsvp-attending">
+        <button
+          type="button"
+          class="rsvp-toggle"
+          data-testid="rsvp-attending-yes"
+          data-value="yes"
+          aria-pressed="false"
+        >
+          Sí, allí estaré
+        </button>
+        <button
+          type="button"
+          class="rsvp-toggle"
+          data-testid="rsvp-attending-no"
+          data-value="no"
+          aria-pressed="false"
+        >
+          No podré ir
+        </button>
+      </div>
+      <p class="rsvp-error" data-testid="rsvp-error-attending" role="alert"></p>
+    </div>
+
+    <div class="rsvp-field">
+      <label class="rsvp-label" for="rsvp-song">Sugiere una canción para la pista 🎧</label>
+      <input
+        id="rsvp-song"
+        class="rsvp-input"
+        type="text"
+        name="song"
+        data-testid="rsvp-song-input"
+        placeholder="Sugiere una canción para la pista 🎧"
+      />
+    </div>
+
+    <!-- Honeypot: a real guest never sees or fills this field. Non-empty => silently drop the send. -->
+    <div class="rsvp-honeypot" aria-hidden="true">
+      <label for="rsvp-botcheck">No llenar este campo</label>
+      <input
+        id="rsvp-botcheck"
+        type="text"
+        name="botcheck"
+        data-testid="rsvp-honeypot-input"
+        tabindex="-1"
+        autocomplete="off"
+      />
+    </div>
+
+    <p class="rsvp-status" data-testid="rsvp-status" role="status" aria-live="polite"></p>
+
+    <button type="submit" class="rsvp-submit" data-testid="rsvp-submit-button">
+      Confirmar asistencia
+    </button>
+  </form>
+
+  <div class="rsvp-confirmed" data-testid="rsvp-confirmed" hidden>
+    <p class="rsvp-confirmed__message" data-testid="rsvp-confirmed-message"></p>
+  </div>
+</div>
+
+<style>
+  .rsvp-form-root {
+    max-width: 30rem;
+    margin: 0 auto;
+  }
+
+  .rsvp-not-configured {
+    text-align: center;
+    color: var(--c-ink-soft);
+    font-size: 0.9375rem;
+    margin: 0 0 1.25rem;
+  }
+
+  .rsvp-not-configured[hidden] {
+    display: none;
+  }
+
+  .rsvp-field {
+    margin-bottom: 1rem;
+  }
+
+  .rsvp-label {
+    display: block;
+    font-size: 0.8125rem;
+    letter-spacing: 0.03em;
+    color: var(--c-ink-soft);
+    opacity: 0.85;
+    margin-bottom: 0.5rem;
+  }
+
+  .rsvp-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 1rem 1.125rem;
+    border-radius: 0.875rem;
+    background: color-mix(in srgb, var(--c-white) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-rose-700) 18%, transparent);
+    color: var(--c-ink-soft);
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    outline: none;
+  }
+
+  .rsvp-attending {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .rsvp-toggle {
+    box-sizing: border-box;
+    flex: 1;
+    min-width: 0;
+    padding: 1.125rem;
+    border-radius: 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--c-rose-700) 24%, transparent);
+    background: color-mix(in srgb, var(--c-white) 4%, transparent);
+    color: var(--c-ink-soft);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all var(--motion-duration-base) var(--motion-easing);
+  }
+
+  .rsvp-toggle--active {
+    background: var(--gradient-button);
+    color: var(--c-white);
+    border-color: transparent;
+  }
+
+  .rsvp-error {
+    min-height: 1.125rem;
+    color: var(--c-error);
+    font-size: 0.8125rem;
+    margin-top: 0.375rem;
+  }
+
+  .rsvp-error:empty {
+    margin-top: 0;
+  }
+
+  .rsvp-honeypot {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .rsvp-status {
+    min-height: 1.125rem;
+    color: var(--c-ink-soft);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0.25rem 0 0.75rem;
+  }
+
+  .rsvp-submit {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 1.125rem;
+    border-radius: 0.875rem;
+    border: none;
+    background: var(--gradient-button);
+    color: var(--c-white);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.9375rem;
+    cursor: pointer;
+  }
+
+  .rsvp-submit:disabled {
+    opacity: 0.65;
+    cursor: default;
+  }
+
+  .rsvp-confirmed {
+    text-align: center;
+    padding: 1.75rem 1.5rem;
+    border-radius: 1rem;
+    border: var(--card-border);
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
+  }
+
+  .rsvp-confirmed[hidden] {
+    display: none;
+  }
+
+  .rsvp-confirmed__message {
+    color: var(--c-ink);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+</style>
+
+<script>
+  import {
+    validateRsvp,
+    isHoneypotTripped,
+    buildWeb3FormsPayload,
+    hasSubmitted,
+    markSubmitted,
+    readSubmission,
+    isWeb3FormsKeyConfigured,
+    type Attending,
+  } from '../lib/rsvp';
+  import { event } from '../data/event';
+
+  const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
+
+  const rootEl = document.querySelector('.rsvp-form-root') as HTMLElement | null;
+  const form = document.querySelector('[data-testid="rsvp-form"]') as HTMLFormElement | null;
+  const notConfiguredEl = document.querySelector(
+    '[data-testid="rsvp-not-configured"]',
+  ) as HTMLElement | null;
+  const nameInput = document.querySelector('[data-testid="rsvp-name-input"]') as HTMLInputElement | null;
+  const songInput = document.querySelector('[data-testid="rsvp-song-input"]') as HTMLInputElement | null;
+  const honeypotInput = document.querySelector(
+    '[data-testid="rsvp-honeypot-input"]',
+  ) as HTMLInputElement | null;
+  const yesButton = document.querySelector('[data-testid="rsvp-attending-yes"]') as HTMLButtonElement | null;
+  const noButton = document.querySelector('[data-testid="rsvp-attending-no"]') as HTMLButtonElement | null;
+  const errorNameEl = document.querySelector('[data-testid="rsvp-error-name"]');
+  const errorAttendingEl = document.querySelector('[data-testid="rsvp-error-attending"]');
+  const statusEl = document.querySelector('[data-testid="rsvp-status"]');
+  const submitButton = document.querySelector('[data-testid="rsvp-submit-button"]') as HTMLButtonElement | null;
+  const confirmedEl = document.querySelector('[data-testid="rsvp-confirmed"]') as HTMLElement | null;
+  const confirmedMessageEl = document.querySelector('[data-testid="rsvp-confirmed-message"]');
+
+  // The ONLY place this script reads the access key — from the attribute the form was actually
+  // rendered with, never re-imported from site.config.ts, so there's exactly one source of truth.
+  const accessKey = form?.dataset.accessKey;
+  const isConfigured = isWeb3FormsKeyConfigured(accessKey);
+  rootEl?.setAttribute('data-rsvp-configured', String(isConfigured));
+  if (!isConfigured) {
+    if (notConfiguredEl) notConfiguredEl.hidden = false;
+    if (submitButton) submitButton.disabled = true;
+  }
+
+  let attending: Attending | null = null;
+
+  function personalizedMessage(name: string, att: Attending): string {
+    const firstName = name.trim().split(/\s+/)[0] || name.trim();
+    if (att === 'yes') {
+      return `¡Gracias, ${firstName}! Quedaste en la lista. ${event.celebrantName} te espera con mucha ilusión 🌸`;
+    }
+    return `Te vamos a extrañar, ${firstName}. ¡Gracias por avisar! 🤍`;
+  }
+
+  function showConfirmed(message: string): void {
+    if (form) form.hidden = true;
+    if (confirmedEl) confirmedEl.hidden = false;
+    if (confirmedMessageEl) confirmedMessageEl.textContent = message;
+  }
+
+  function setAttending(value: Attending): void {
+    attending = value;
+    yesButton?.setAttribute('aria-pressed', String(value === 'yes'));
+    noButton?.setAttribute('aria-pressed', String(value === 'no'));
+    yesButton?.classList.toggle('rsvp-toggle--active', value === 'yes');
+    noButton?.classList.toggle('rsvp-toggle--active', value === 'no');
+    if (errorAttendingEl) errorAttendingEl.textContent = '';
+  }
+
+  yesButton?.addEventListener('click', () => setAttending('yes'));
+  noButton?.addEventListener('click', () => setAttending('no'));
+
+  // Already confirmed on a prior visit: render the confirmed state instead of the empty form.
+  const existingRecord = hasSubmitted() ? readSubmission() : null;
+  if (existingRecord) {
+    showConfirmed(personalizedMessage(existingRecord.name, existingRecord.attending));
+  }
+
+  form?.addEventListener('submit', async (submitEvent) => {
+    submitEvent.preventDefault();
+    if (!isConfigured) return; // defense in depth — the submit button is already disabled
+    if (!nameInput) return;
+
+    const rawInput = {
+      name: nameInput.value,
+      attending: attending ?? undefined,
+      song: songInput?.value ?? '',
+    };
+
+    const validation = validateRsvp(rawInput);
+    if (errorNameEl) errorNameEl.textContent = validation.errors.name ?? '';
+    if (errorAttendingEl) errorAttendingEl.textContent = validation.errors.attending ?? '';
+    if (!validation.ok) return;
+
+    if (isHoneypotTripped({ botcheck: honeypotInput?.value })) {
+      // Silent no-op: a bot filled the honeypot, so we pretend nothing happened.
+      return;
+    }
+
+    const input = { name: rawInput.name.trim(), attending: attending as Attending, song: rawInput.song };
+    const payload = buildWeb3FormsPayload(input, accessKey ?? '', {
+      subject: `Nueva confirmación RSVP · XV años · ${event.celebrantName}`,
+    });
+
+    if (submitButton) submitButton.disabled = true;
+    if (statusEl) statusEl.textContent = 'Enviando...';
+
+    try {
+      const response = await fetch(WEB3FORMS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const body: unknown = await response.json().catch(() => null);
+      const ok =
+        response.ok &&
+        typeof body === 'object' &&
+        body !== null &&
+        (body as { success?: unknown }).success === true;
+
+      if (!ok) throw new Error('Web3Forms did not confirm success');
+
+      markSubmitted(input);
+      if (statusEl) statusEl.textContent = '';
+      showConfirmed(personalizedMessage(input.name, input.attending));
+    } catch {
+      if (submitButton) submitButton.disabled = false;
+      if (statusEl) {
+        statusEl.textContent = 'No pudimos enviar tu confirmación. Intenta de nuevo en un momento.';
+      }
+    }
+  });
+</script>
