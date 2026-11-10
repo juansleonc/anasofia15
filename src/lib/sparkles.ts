@@ -42,7 +42,7 @@ export interface ScatterSparklesOptions {
   seed: number;
 }
 
-/** Deterministic LCG — same shape as the one already used in cover-arch.ts, local to this module. */
+/** Deterministic LCG, local to this module (the curated garland in cover-garland.ts needs none). */
 function seededRandom(seed: number): () => number {
   let state = seed;
   return () => {
