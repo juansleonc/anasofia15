@@ -247,9 +247,9 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Nov 2026 user-feedback pass: tightened from 0.5rem so the lead and name read as one
-       cohesive block instead of two loosely related lines (see the lead/name gap e2e test). */
-    gap: 0.3rem;
+    /* Tight, so the lead and name read as one cohesive block; the larger name carries its own
+       ascender room. */
+    gap: 0.15rem;
     margin: 0;
     /* Never wider than the arch's own text clear zone (see archClearWidthVars above) — otherwise a
        single-line lead/name can grow past the gutter and into the side balloons at some in-between
@@ -269,9 +269,8 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
 
   .cover__title-lead {
     font-family: var(--font-display);
-    /* Nov 2026 user-feedback pass: floor raised from 1.05rem (the old 4vw formula clamped to a
-       16.8px floor at 375px) to a 1.3rem (20.8px) floor, growing further on wide viewports. */
-    font-size: clamp(1.3rem, 0.95rem + 1.1vw, 1.8rem);
+    /* About 23px on phones, growing to about 35px on wide desktops. */
+    font-size: clamp(1.45rem, 1.05rem + 1.3vw, 2.25rem);
     font-weight: 600;
     font-style: italic;
     color: var(--c-ink);

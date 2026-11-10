@@ -562,25 +562,36 @@ test.describe('Cover section', () => {
     expect(color).toBe('rgb(110, 36, 64)');
   });
 
-  test('the lead line is large enough to read at 375 and scales up further on desktop', async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('./');
+  for (const { viewport, minLeadPx } of [
+    { viewport: { width: 375, height: 667 }, minLeadPx: 23 },
+    { viewport: { width: 1440, height: 800 }, minLeadPx: 34 },
+  ]) {
+    test(`the lead line is large and centred with the name at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
 
-    const leadFontSize375 = await page
-      .getByTestId('cover-title-lead')
-      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    expect(leadFontSize375).toBeGreaterThanOrEqual(20);
+      const measured = await page.evaluate(() => {
+        const centreX = (selector: string) => {
+          const rect = document.querySelector(selector)!.getBoundingClientRect();
+          return rect.left + rect.width / 2;
+        };
+        const lead = document.querySelector('[data-testid="cover-title-lead"]') as HTMLElement;
+        return {
+          leadFontSize: parseFloat(getComputedStyle(lead).fontSize),
+          coverCentre: centreX('[data-testid="cover"]'),
+          leadCentre: centreX('[data-testid="cover-title-lead"]'),
+          nameCentre: centreX('[data-testid="cover-celebrant-name"]'),
+        };
+      });
 
-    await page.setViewportSize({ width: 1440, height: 800 });
-    await page.reload();
-
-    const leadFontSize1440 = await page
-      .getByTestId('cover-title-lead')
-      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    expect(leadFontSize1440).toBeGreaterThan(leadFontSize375);
-  });
+      expect(measured.leadFontSize).toBeGreaterThanOrEqual(minLeadPx);
+      expect(Math.abs(measured.leadCentre - measured.coverCentre)).toBeLessThanOrEqual(2);
+      expect(Math.abs(measured.nameCentre - measured.coverCentre)).toBeLessThanOrEqual(2);
+    });
+  }
 
   // Nov 2026 fix-cover pass: the name used to wrap onto two lines ("Ana" / "Sofía") at narrow
   // viewports because its font-size clamp grew independently of the room it had to fit in.
