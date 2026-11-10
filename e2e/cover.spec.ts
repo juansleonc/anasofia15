@@ -708,8 +708,107 @@ test.describe('Cover section', () => {
       // Measured off the actual text (Range), not the elements' own box edges — a box's
       // line-height adds leading inside its own edges, which would hide exactly the whitespace
       // this test is meant to catch.
-      expect(gap / nameFontSize).toBeLessThanOrEqual(0.2);
+      //
+      // Nov 2026 user-feedback pass: widened from 0.2 to 0.25 for the slightly larger box-edge
+      // gap added below (the "breathe further apart" tests) — still well inside the title-cohesion
+      // ceiling of 0.35 × name font-size.
+      expect(gap / nameFontSize).toBeLessThanOrEqual(0.25);
       expect(gap).toBeGreaterThanOrEqual(0);
+    });
+  }
+
+  // Nov 2026 user-feedback pass: the block above reads as cohesive, but the user still wanted a
+  // touch more breathing room between the lead and the name (+12-16px over the box edges, not the
+  // glyph ink measured above).
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 1366, height: 768 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`the lead and the name breathe further apart at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      const gap = await page.evaluate(() => {
+        const lead = document.querySelector('[data-testid="cover-title-lead"]') as HTMLElement;
+        const name = document.querySelector('[data-testid="cover-celebrant-name"]') as HTMLElement;
+        const leadBox = lead.getBoundingClientRect();
+        const nameBox = name.getBoundingClientRect();
+        return nameBox.top - leadBox.bottom;
+      });
+
+      expect(gap).toBeGreaterThanOrEqual(14);
+      expect(gap).toBeLessThanOrEqual(19);
+    });
+  }
+
+  // Guard: the phone name must keep clear margins off the screen edges, and stay live, crisp
+  // vector text (never blurred by a transform/filter), regardless of what else changes nearby.
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+  ]) {
+    test(`the name's ink stays clear of the screen edges at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      const { leftMargin, rightMargin, viewportWidth } = await page.evaluate(() => {
+        const name = document.querySelector('[data-testid="cover-celebrant-name"]') as HTMLElement;
+        const rect = name.getBoundingClientRect();
+        const centerX = (rect.left + rect.right) / 2;
+        const style = getComputedStyle(name);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!;
+        ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        ctx.textAlign = 'center';
+        const metrics = ctx.measureText((name.textContent ?? '').trim());
+        const inkLeft = centerX - metrics.actualBoundingBoxLeft;
+        const inkRight = centerX + metrics.actualBoundingBoxRight;
+        return {
+          leftMargin: inkLeft,
+          rightMargin: window.innerWidth - inkRight,
+          viewportWidth: window.innerWidth,
+        };
+      });
+
+      const floor = Math.max(20, 0.06 * viewportWidth);
+      expect(leftMargin).toBeGreaterThanOrEqual(floor);
+      expect(rightMargin).toBeGreaterThanOrEqual(floor);
+    });
+
+    test(`the name is live text with no blurring transform or filter at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const result = await page.evaluate(() => {
+        const name = document.querySelector('[data-testid="cover-celebrant-name"]') as HTMLElement;
+        const offenders: string[] = [];
+        let el: HTMLElement | null = name;
+        while (el) {
+          const style = getComputedStyle(el);
+          const label = el.tagName.toLowerCase() + (el.className ? `.${el.className}` : '');
+          if (style.transform !== 'none') offenders.push(`${label}:transform`);
+          if (style.filter !== 'none') offenders.push(`${label}:filter`);
+          if (style.backdropFilter !== 'none') offenders.push(`${label}:backdrop-filter`);
+          if (style.willChange.split(',').map((s) => s.trim()).includes('transform')) {
+            offenders.push(`${label}:will-change`);
+          }
+          el = el.parentElement;
+        }
+        return { text: (name.textContent ?? '').trim(), offenders };
+      });
+
+      expect(result.text).toBe('Ana Sofía');
+      expect(result.offenders).toEqual([]);
     });
   }
 

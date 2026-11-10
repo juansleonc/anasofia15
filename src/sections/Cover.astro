@@ -243,9 +243,10 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Tight, so the lead and name read as one cohesive block; the larger name carries its own
-       ascender room. */
-    gap: 0.15rem;
+    /* Nov 2026 user-feedback pass: +12-16px over the previous 0.15rem so the lead and the name
+       breathe a little further apart, while still reading as one cohesive block — the larger
+       name carries its own ascender room on top of this. */
+    gap: clamp(0.9rem, 0.75rem + 0.5vw, 1.15rem);
     margin: 0;
     /* Never wider than the garland's text clear zone (`--arch-clear-portrait` /
        `--arch-clear-landscape`, set from `garlandCoverVars()` above) — otherwise a single-line
