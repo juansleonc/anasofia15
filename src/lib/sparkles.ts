@@ -151,6 +151,104 @@ export function ringSparkles(options: RingSparklesOptions): Sparkle[] {
   return sparkles;
 }
 
+export interface LowerGlitterOptions {
+  flakeCount: number;
+  bokehCount: number;
+  seed: number;
+}
+
+/** Where the lower glitter band starts, as a percentage of the cover's own height — kept well
+ *  below the title/button block (a generous safety margin, tuned against the shortest supported
+ *  viewport) so the band never creeps into the name/button's own space; Cover.astro positions this
+ *  layer with `inset: 0` over the whole cover, same as the whole-cover scatter. */
+export const LOWER_REGION_START_PCT = 80;
+
+/** Minimum spacing between any two lower-glitter particles, in cover-percentage units — tighter
+ *  than MIN_DISTANCE_PCT since the band only has the bottom ~40% of the cover to work with. */
+export const LOWER_MIN_DISTANCE_PCT = 5;
+
+const LOWER_PLACEMENT_ATTEMPTS = 60;
+
+/** Skews y toward the bottom edge of the lower region (closer to 100) so the band reads denser
+ *  toward the bottom — the mirror image of biasedYPct's top-heavy skew. */
+function biasedLowerYPct(random: () => number): number {
+  const span = 100 - LOWER_REGION_START_PCT;
+  return LOWER_REGION_START_PCT + span * Math.pow(random(), 0.5);
+}
+
+/** Same rejection-sampling as placePosition, but confined to the lower band and its own (tighter)
+ *  minimum spacing. */
+function placeLowerPosition(random: () => number, placed: readonly Position[]): Position {
+  let best: Position = { xPct: random() * 100, yPct: biasedLowerYPct(random) };
+  let bestDistance = placed.length === 0 ? Infinity : minDistanceTo(best, placed);
+
+  for (
+    let attempt = 1;
+    attempt < LOWER_PLACEMENT_ATTEMPTS && bestDistance < LOWER_MIN_DISTANCE_PCT;
+    attempt++
+  ) {
+    const candidate: Position = { xPct: random() * 100, yPct: biasedLowerYPct(random) };
+    const candidateDistance = minDistanceTo(candidate, placed);
+    if (candidateDistance > bestDistance) {
+      best = candidate;
+      bestDistance = candidateDistance;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * The lower-half glitter band (see components/CoverLowerGlitter.astro): tiny twinkling light
+ * flecks (`glow`, 2-5px) growing denser toward the bottom edge, plus a handful of larger, static,
+ * blurred golden `bokeh` discs. Nov 2026 user-feedback pass: "la mitad inferior se siente
+ * desaprovechada" — the empty lower half (below the button) gets its own calm dynamism instead of
+ * staying a flat, unused gradient.
+ */
+export function lowerGlitter(options: LowerGlitterOptions): Sparkle[] {
+  const random = seededRandom(options.seed);
+  const flakeCount = Math.max(0, Math.floor(options.flakeCount));
+  const bokehCount = Math.max(0, Math.floor(options.bokehCount));
+
+  const placed: Position[] = [];
+  const sparkles: Sparkle[] = [];
+
+  for (let i = 0; i < flakeCount; i++) {
+    const position = placeLowerPosition(random, placed);
+    placed.push(position);
+
+    sparkles.push({
+      kind: 'glow',
+      xPct: position.xPct,
+      yPct: position.yPct,
+      sizePx: 2 + random() * 3,
+      rotateDeg: 0,
+      delayMs: random() * 4000,
+      durationMs: 3600 + random() * 2800,
+    });
+  }
+
+  for (let i = 0; i < bokehCount; i++) {
+    const position = placeLowerPosition(random, placed);
+    placed.push(position);
+    const [min, max] = SIZE_RANGES.bokeh;
+
+    // Static — no delay/duration needed; CoverLowerGlitter.astro never animates bokeh discs (kept
+    // out of the twinkling-element budget, see the e2e render-budget test).
+    sparkles.push({
+      kind: 'bokeh',
+      xPct: position.xPct,
+      yPct: position.yPct,
+      sizePx: min + random() * (max - min),
+      rotateDeg: 0,
+      delayMs: 0,
+      durationMs: 0,
+    });
+  }
+
+  return sparkles;
+}
+
 export function scatterSparkles(options: ScatterSparklesOptions): Sparkle[] {
   const random = seededRandom(options.seed);
   const count = Math.min(MAX_SPARKLES, Math.max(0, Math.floor(options.count)));

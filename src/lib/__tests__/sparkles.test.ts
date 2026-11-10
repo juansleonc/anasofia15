@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { scatterSparkles, ringSparkles, MAX_SPARKLES, MIN_DISTANCE_PCT, type Sparkle } from '../sparkles';
+import {
+  scatterSparkles,
+  ringSparkles,
+  lowerGlitter,
+  MAX_SPARKLES,
+  MIN_DISTANCE_PCT,
+  LOWER_REGION_START_PCT,
+  LOWER_MIN_DISTANCE_PCT,
+  type Sparkle,
+} from '../sparkles';
 
 const SIZE_RANGES: Record<Sparkle['kind'], [number, number]> = {
   glow: [3, 7],
@@ -171,5 +180,88 @@ describe('ringSparkles', () => {
 
   it('varies the layout when the seed changes', () => {
     expect(ring(12, 4015)).not.toEqual(ring(12, 7));
+  });
+});
+
+// Nov 2026 user-feedback pass: "la mitad inferior se siente desaprovechada" — the lower half
+// (below the button) gets its own soft glitter band (tiny twinkling flecks plus a few larger,
+// blurred golden bokeh discs) instead of staying a flat, empty gradient.
+describe('lowerGlitter', () => {
+  function glitter(flakeCount: number, bokehCount: number, seed = 7421): Sparkle[] {
+    return lowerGlitter({ flakeCount, bokehCount, seed });
+  }
+
+  it('returns exactly flakeCount + bokehCount particles', () => {
+    expect(glitter(12, 3)).toHaveLength(15);
+    expect(glitter(0, 0)).toHaveLength(0);
+  });
+
+  it('produces only glow (flecks) and bokeh (discs) kinds, in the requested amounts', () => {
+    const sparkles = glitter(12, 3);
+    const counts = { glow: 0, star: 0, bokeh: 0 };
+    for (const sparkle of sparkles) counts[sparkle.kind]++;
+    expect(counts.glow).toBe(12);
+    expect(counts.bokeh).toBe(3);
+    expect(counts.star).toBe(0);
+  });
+
+  it('sizes every fleck (glow) between 2 and 5px', () => {
+    const sparkles = glitter(12, 3);
+    for (const sparkle of sparkles.filter((s) => s.kind === 'glow')) {
+      expect(sparkle.sizePx).toBeGreaterThanOrEqual(2);
+      expect(sparkle.sizePx).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it('sizes every bokeh disc within the shared bokeh range', () => {
+    const sparkles = glitter(12, 3);
+    for (const sparkle of sparkles.filter((s) => s.kind === 'bokeh')) {
+      expect(sparkle.sizePx).toBeGreaterThanOrEqual(26);
+      expect(sparkle.sizePx).toBeLessThanOrEqual(58);
+    }
+  });
+
+  it('keeps every particle in the lower region of the cover', () => {
+    const sparkles = glitter(12, 3);
+    for (const sparkle of sparkles) {
+      expect(sparkle.yPct).toBeGreaterThanOrEqual(LOWER_REGION_START_PCT);
+      expect(sparkle.yPct).toBeLessThanOrEqual(100);
+      expect(sparkle.xPct).toBeGreaterThanOrEqual(0);
+      expect(sparkle.xPct).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it('is denser toward the bottom edge than toward the top of the lower region', () => {
+    const sparkles = glitter(12, 3, 1234);
+    const midpoint = (LOWER_REGION_START_PCT + 100) / 2;
+    const upperHalf = sparkles.filter((sparkle) => sparkle.yPct < midpoint).length;
+    const lowerHalf = sparkles.filter((sparkle) => sparkle.yPct >= midpoint).length;
+    expect(lowerHalf).toBeGreaterThan(upperHalf);
+  });
+
+  it('keeps a minimum spacing between every pair of particles', () => {
+    const sparkles = glitter(12, 3);
+    for (let i = 0; i < sparkles.length; i++) {
+      for (let j = i + 1; j < sparkles.length; j++) {
+        const distance = Math.hypot(
+          sparkles[i].xPct - sparkles[j].xPct,
+          sparkles[i].yPct - sparkles[j].yPct,
+        );
+        expect(distance).toBeGreaterThanOrEqual(LOWER_MIN_DISTANCE_PCT);
+      }
+    }
+  });
+
+  it('returns no particles for non-positive counts', () => {
+    expect(glitter(0, 0)).toHaveLength(0);
+    expect(glitter(-3, -1)).toHaveLength(0);
+  });
+
+  it('is deterministic for a given seed', () => {
+    expect(glitter(12, 3, 7421)).toEqual(glitter(12, 3, 7421));
+  });
+
+  it('varies the layout when the seed changes', () => {
+    expect(glitter(12, 3, 7421)).not.toEqual(glitter(12, 3, 7));
   });
 });
