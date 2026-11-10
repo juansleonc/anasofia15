@@ -641,6 +641,32 @@ describe('ArchSprite flower seat shadow', () => {
   });
 });
 
+describe('ArchSprite flower rim occlusion', () => {
+  it('shares one rose-700 rim-occlusion gradient, transparent up to 62% then 0.22 at the rim', () => {
+    const occ = gradient('flower-occlusion');
+    expect(occ.tagName.toLowerCase()).toBe('radialgradient');
+    const stops = Array.from(occ.querySelectorAll('stop'));
+    for (const style of stopColors(occ)) expect(style).toMatch(/var\(--c-rose-700\)/);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBe(0);
+    const midStop = stops.find((stop) => parseFloat(stop.getAttribute('offset') ?? '') === 62);
+    expect(midStop).not.toBeUndefined();
+    expect(Number(midStop!.getAttribute('stop-opacity'))).toBe(0);
+    expect(Number(stops[stops.length - 1].getAttribute('stop-opacity'))).toBeCloseTo(0.22);
+  });
+
+  it.each([...ROSE_IDS, ...PEONY_IDS])('%s ends with a rim-occlusion circle inside its inscribed circle', (id) => {
+    const el = symbol(id);
+    const last = el.lastElementChild!;
+    expect(last.tagName.toLowerCase()).toBe('circle');
+    expect(last.getAttribute('fill')).toBe('url(#flower-occlusion)');
+    const [, , width] = viewBoxOf(el);
+    const cx = Number(last.getAttribute('cx'));
+    const cy = Number(last.getAttribute('cy'));
+    const r = Number(last.getAttribute('r'));
+    expect(Math.hypot(cx - width / 2, cy - width / 2) + r).toBeLessThanOrEqual(width / 2);
+  });
+});
+
 describe('ArchSprite roses', () => {
   it.each(ROSE_IDS)('%s has at least 12 petal paths drawn from 3 distinct ring gradients', (id) => {
     const el = symbol(id);

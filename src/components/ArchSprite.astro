@@ -146,6 +146,13 @@
       <stop offset="60%" style="stop-color: var(--c-rose-700)" stop-opacity="0.1" />
       <stop offset="100%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
     </radialGradient>
+    <!-- Rim occlusion: a rose/peony's last child is a circle filled with this, so the outer
+         petals darken right where the bloom sinks between the balloons around it. -->
+    <radialGradient id="flower-occlusion" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
+      <stop offset="62%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
+      <stop offset="100%" style="stop-color: var(--c-rose-700)" stop-opacity="0.22" />
+    </radialGradient>
     <!-- Flower rings: one gradient per ring, `objectBoundingBox` units (the default — no
          `gradientUnits` attr) so each petal is shaded within its own bounding box, computed before
          its `transform="rotate(… c c)"`. Outer/mid petals point tip-up, so a high `cy` puts the
@@ -367,6 +374,7 @@
     <path d="M33.7 35.49C32.46 36.21 30.91 36.16 29.71 35.37C28.51 34.59 27.86 33.19 28.03 31.76C28.19 30.33 29.15 29.12 30.5 28.63C31.82 28.15 32.5 30.03 31.18 30.51C30.54 30.74 30.09 31.31 30.01 31.99C29.93 32.67 30.24 33.33 30.81 33.7C31.38 34.08 32.11 34.1 32.7 33.76C33.91 33.06 34.91 34.79 33.7 35.49Z" fill="url(#rose-pink-heart)" />
     <path d="M32 29.6C33.16 29.6 34.16 30.44 34.36 31.58C34.57 32.73 33.92 33.86 32.82 34.26C31.83 34.61 31.32 33.2 32.31 32.85C32.72 32.7 32.96 32.27 32.89 31.84C32.81 31.41 32.44 31.1 32 31.1C30.95 31.1 30.95 29.6 32 29.6Z" fill="url(#rose-pink-heart)" />
     <path d="M32 30.4C33.4 30.4 34 31.6 33.5 32.6C33 33.6 31.5 33.7 30.9 32.8C30.5 32.1 31 31.4 31.8 31.6C32.4 31.8 32.5 32.4 32.1 32.6Z" fill="var(--c-rose-700)" fill-opacity="0.7" />
+    <circle cx="32" cy="32" r="31" fill="url(#flower-occlusion)" />
   </symbol>
 
   <symbol id="rose-cream" viewBox="0 0 64 64">
@@ -392,6 +400,7 @@
     <path d="M32.78 35.87C31.4 36.24 29.92 35.8 28.96 34.73C28.01 33.65 27.74 32.13 28.27 30.8C28.8 29.46 30.04 28.54 31.47 28.41C32.86 28.29 33.04 30.28 31.64 30.41C30.97 30.47 30.38 30.9 30.13 31.54C29.88 32.17 30 32.89 30.46 33.4C30.91 33.91 31.61 34.11 32.27 33.94C33.62 33.58 34.14 35.51 32.78 35.87Z" fill="url(#rose-cream-heart)" />
     <path d="M32.62 29.68C33.75 29.98 34.49 31.05 34.39 32.21C34.29 33.37 33.37 34.29 32.21 34.39C31.16 34.48 31.03 32.99 32.08 32.9C32.51 32.86 32.86 32.51 32.9 32.08C32.93 31.64 32.65 31.24 32.23 31.13C31.22 30.86 31.61 29.41 32.62 29.68Z" fill="url(#rose-cream-heart)" />
     <path d="M32 30.4C33.4 30.4 34 31.6 33.5 32.6C33 33.6 31.5 33.7 30.9 32.8C30.5 32.1 31 31.4 31.8 31.6C32.4 31.8 32.5 32.4 32.1 32.6Z" fill="var(--c-champagne-700)" fill-opacity="0.6" />
+    <circle cx="32" cy="32" r="31" fill="url(#flower-occlusion)" />
   </symbol>
 
   <!-- Peonies: lush open blooms. Three rings of ruffled petals (8 outer, 6 mid, 5 inner), each
@@ -427,6 +436,7 @@
     <circle cx="34.2" cy="33.2" r="1" fill="var(--c-champagne-500)" />
     <circle cx="39.4" cy="37.2" r="1" fill="var(--c-champagne-700)" />
     <circle cx="36.3" cy="36.1" r="1.8" fill="var(--c-champagne-300)" />
+    <circle cx="36" cy="36" r="35" fill="url(#flower-occlusion)" />
   </symbol>
 
   <symbol id="peony-ivory" viewBox="0 0 72 72">
@@ -459,6 +469,7 @@
     <circle cx="34.2" cy="33.2" r="1" fill="var(--c-champagne-500)" />
     <circle cx="39.4" cy="37.2" r="1" fill="var(--c-champagne-700)" />
     <circle cx="36.3" cy="36.1" r="1.8" fill="var(--c-champagne-300)" />
+    <circle cx="36" cy="36" r="35" fill="url(#flower-occlusion)" />
   </symbol>
 
   <!-- `blossom`: 5 petals from a single radial gradient (darker base, pale rose rim), one
