@@ -49,7 +49,7 @@ test.describe('Cover lower glitter', () => {
 
     const flakeCount = await page.locator('[data-lower-sparkle="flake"]').count();
     expect(flakeCount).toBeGreaterThan(0);
-    expect(flakeCount).toBeLessThanOrEqual(14);
+    expect(flakeCount).toBeLessThanOrEqual(8);
   });
 
   for (const viewport of [

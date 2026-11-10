@@ -9,7 +9,7 @@
 // stars with a blurred halo) and `bokeh` (large, very faint out-of-focus discs) — at a lower,
 // Poisson-spaced count so the scatter reads as calm, organized light rather than scattered grit.
 
-export type SparkleKind = 'glow' | 'star' | 'bokeh' | 'sliver';
+export type SparkleKind = 'glow' | 'star' | 'bokeh';
 
 export interface Sparkle {
   kind: SparkleKind;
@@ -59,8 +59,6 @@ const SIZE_RANGES: Record<SparkleKind, [number, number]> = {
   glow: [3, 7],
   star: [8, 14],
   bokeh: [26, 58],
-  // Length only — a sliver's width is the fixed SLIVER_WIDTH_PX below, not part of this range.
-  sliver: [7, 12],
 };
 
 interface Position {
@@ -284,93 +282,6 @@ export function lowerGlitter(options: LowerGlitterOptions): Sparkle[] {
       yPct: position.yPct,
       sizePx: min + random() * (max - min),
       rotateDeg: 0,
-      delayMs: 0,
-      durationMs: 0,
-    });
-  }
-
-  return sparkles;
-}
-
-/** Fixed width of every confetti sliver, in px — only the length (`Sparkle.sizePx`) varies, which
- *  is what keeps the aspect ratio (length / this width) comfortably ≥ 3:1 at every size. */
-export const SLIVER_WIDTH_PX = 2;
-
-/** Hard cap on static gold confetti slivers per cover. */
-export const MAX_SLIVERS = 8;
-
-/** The arch's interior margin, in cover-percentage units: below the top edge, above the title
- *  box — one of the two bands a sliver may land in (the other is the lower band, below). */
-export const SLIVER_UPPER_BAND: readonly [number, number] = [12, 45];
-
-const SLIVER_PLACEMENT_ATTEMPTS = 60;
-
-/** Picks evenly between the two allowed bands, then a uniform position inside whichever is
- *  chosen — unlike the lower glitter's bottom-weighted skew, confetti reads as scattered, not
- *  gathered, so no bias toward either edge of a band. */
-function randomSliverYPct(random: () => number): number {
-  const [upperStart, upperEnd] = SLIVER_UPPER_BAND;
-  const lowerStart = LOWER_REGION_START_PCT;
-  const inUpperBand = random() < 0.5;
-  return inUpperBand
-    ? upperStart + random() * (upperEnd - upperStart)
-    : lowerStart + random() * (100 - lowerStart);
-}
-
-/** A handful of fixed anchors, one per band, that are never inside a realistic (partial-canvas)
- *  keep-out rect — the last-resort fallback if every sampled candidate landed inside one. */
-function fallbackOutsideSliverKeepOut(keepOutRects: readonly KeepOutRect[]): Position {
-  const [upperStart] = SLIVER_UPPER_BAND;
-  const anchors: Position[] = [
-    { xPct: 2, yPct: upperStart },
-    { xPct: 98, yPct: upperStart },
-    { xPct: 2, yPct: 100 },
-    { xPct: 98, yPct: 100 },
-  ];
-  return anchors.find((anchor) => !isInsideKeepOut(anchor, keepOutRects)) ?? anchors[anchors.length - 1];
-}
-
-/** Same rejection-sampling shape as `placeLowerPosition`, confined to the two sliver bands and —
- *  like the lower glitter — never settling for a candidate inside a keep-out rect. */
-function placeSliverPosition(random: () => number, keepOutRects: readonly KeepOutRect[]): Position {
-  for (let attempt = 0; attempt < SLIVER_PLACEMENT_ATTEMPTS; attempt++) {
-    const candidate: Position = { xPct: random() * 100, yPct: randomSliverYPct(random) };
-    if (!isInsideKeepOut(candidate, keepOutRects)) return candidate;
-  }
-  return fallbackOutsideSliverKeepOut(keepOutRects);
-}
-
-export interface ConfettiSliverOptions {
-  count: number;
-  seed: number;
-  /** Rects (lead, name, button, …) a sliver must never land inside. Defaults to none. */
-  keepOutRects?: readonly KeepOutRect[];
-}
-
-/**
- * Static gold confetti slivers (see CoverSparkles.astro): thin foil ribbons — the north-star
- * reference's scattered gold confetti — scattered in the arch's interior margin and the lower
- * band, outside the text. Deliberately separate from `scatterSparkles`'s soft-light glints
- * (glow/star/bokeh): slivers are a hard-edged shape by design (a ribbon, not a light), so they
- * stay a distinct kind rather than joining that round-only scatter. Static — no delay/duration —
- * so they cost nothing against the running-animation budget.
- */
-export function confettiSlivers(options: ConfettiSliverOptions): Sparkle[] {
-  const random = seededRandom(options.seed);
-  const count = Math.min(MAX_SLIVERS, Math.max(0, Math.floor(options.count)));
-  const keepOutRects = options.keepOutRects ?? [];
-  const [min, max] = SIZE_RANGES.sliver;
-
-  const sparkles: Sparkle[] = [];
-  for (let i = 0; i < count; i++) {
-    const position = placeSliverPosition(random, keepOutRects);
-
-    sparkles.push({
-      kind: 'sliver',
-      xPct: position.xPct,
-      yPct: position.yPct,
-      sizePx: min + random() * (max - min),
-      rotateDeg: random() * 360,
       delayMs: 0,
       durationMs: 0,
     });

@@ -84,13 +84,33 @@ test.describe('Cover sparkles', () => {
     }
   });
 
-  test('keeps the idle scatter at or under 28 particles for a calmer, organized look', async ({
+  test('keeps the idle scatter at or under 14 particles for a calmer, organized look', async ({
     page,
   }) => {
     await page.goto('./');
 
     const count = await page.locator('[data-sparkle]').count();
-    expect(count).toBeLessThanOrEqual(28);
+    expect(count).toBeGreaterThan(0);
+    expect(count).toBeLessThanOrEqual(14);
+  });
+
+  test('bokeh discs are static while glow and star twinkle', async ({ page }) => {
+    await page.goto('./');
+
+    const bokehAnimations = await page
+      .locator('[data-sparkle="bokeh"]')
+      .evaluateAll((elements) => elements.map((el) => getComputedStyle(el).animationName));
+    expect(bokehAnimations.length).toBeGreaterThanOrEqual(1);
+    for (const name of bokehAnimations) {
+      expect(name).toBe('none');
+    }
+
+    const twinkling = await page
+      .locator('[data-sparkle="glow"], [data-sparkle="star"]')
+      .evaluateAll(
+        (elements) => elements.filter((el) => getComputedStyle(el).animationName !== 'none').length,
+      );
+    expect(twinkling).toBeGreaterThanOrEqual(1);
   });
 
   test('sparkles twinkle by default and freeze under prefers-reduced-motion', async ({ page }) => {
@@ -122,106 +142,4 @@ test.describe('Cover sparkles', () => {
     }));
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
   });
-});
-
-// Nov 2026 north-star pass: static gold confetti slivers — thin foil ribbons, a
-// distinct kind from the round glow/star/bokeh glints above, never animated and never over text.
-test.describe('Cover confetti slivers', () => {
-  test('renders at most 8 slivers', async ({ page }) => {
-    await page.goto('./');
-
-    const count = await page.locator('[data-confetti="sliver"]').count();
-    expect(count).toBeGreaterThan(0);
-    expect(count).toBeLessThanOrEqual(8);
-  });
-
-  test('every sliver is static — animation-name is none', async ({ page }) => {
-    await page.goto('./');
-
-    const animationNames = await page
-      .locator('[data-confetti="sliver"]')
-      .evaluateAll((elements) => elements.map((el) => getComputedStyle(el).animationName));
-    expect(animationNames.length).toBeGreaterThan(0);
-    for (const name of animationNames) {
-      expect(name).toBe('none');
-    }
-  });
-
-  test('every sliver is a thin rotated span with an aspect ratio of at least 3:1', async ({
-    page,
-  }) => {
-    await page.goto('./');
-
-    const boxes = await page
-      .locator('[data-confetti="sliver"]')
-      .evaluateAll((elements) =>
-        elements.map((el) => {
-          const style = getComputedStyle(el);
-          return { width: parseFloat(style.width), height: parseFloat(style.height) };
-        }),
-      );
-    expect(boxes.length).toBeGreaterThan(0);
-    for (const box of boxes) {
-      const [short, long] = [box.width, box.height].sort((a, b) => a - b);
-      expect(long / short).toBeGreaterThanOrEqual(3);
-    }
-  });
-
-  test('every sliver is painted as a champagne-gold foil gradient, not a flat fill', async ({
-    page,
-  }) => {
-    await page.goto('./');
-
-    const backgrounds = await page
-      .locator('[data-confetti="sliver"]')
-      .evaluateAll((elements) => elements.map((el) => getComputedStyle(el).backgroundImage));
-    expect(backgrounds.length).toBeGreaterThan(0);
-    for (const backgroundImage of backgrounds) {
-      expect(backgroundImage).toContain('gradient');
-      // champagne-300 and champagne-500, from tokens.css.
-      expect(backgroundImage).toMatch(/rgb\(230, 201, 154\)/);
-      expect(backgroundImage).toMatch(/rgb\(205, 168, 105\)/);
-    }
-  });
-
-  for (const viewport of [
-    { width: 375, height: 667 },
-    { width: 1440, height: 800 },
-  ]) {
-    test(`no sliver intersects the lead, name or button box at ${viewport.width}x${viewport.height}`, async ({
-      page,
-    }) => {
-      await page.setViewportSize(viewport);
-      await page.goto('./');
-
-      const leadBox = await page.getByTestId('cover-title-lead').boundingBox();
-      const nameBox = await page.getByTestId('cover-celebrant-name').boundingBox();
-      const buttonBox = await page.getByTestId('open-invitation-button').boundingBox();
-      expect(leadBox).not.toBeNull();
-      expect(nameBox).not.toBeNull();
-      expect(buttonBox).not.toBeNull();
-
-      function intersects(a: { x: number; y: number; width: number; height: number }, b: typeof a) {
-        return (
-          a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
-        );
-      }
-
-      const slivers = page.locator('[data-confetti="sliver"]');
-      const count = await slivers.count();
-      expect(count).toBeGreaterThan(0);
-
-      let intersecting = 0;
-      for (let i = 0; i < count; i++) {
-        const box = await slivers.nth(i).boundingBox();
-        if (
-          box &&
-          (intersects(box, leadBox!) || intersects(box, nameBox!) || intersects(box, buttonBox!))
-        ) {
-          intersecting++;
-        }
-      }
-      expect(intersecting).toBe(0);
-    });
-  }
 });
