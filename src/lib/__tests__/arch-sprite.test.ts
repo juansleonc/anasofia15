@@ -78,6 +78,7 @@ function countDeep(el: Element, selector: string, seen: Set<Element> = new Set()
 const CHROME_BALLOONS = ['balloon-rosegold', 'balloon-champagne'];
 const SATIN_BALLOONS = ['balloon-rosegold-satin', 'balloon-champagne-satin'];
 const ALL_BALLOONS = ['balloon-pink', ...CHROME_BALLOONS, ...SATIN_BALLOONS];
+const PEARL_BALLOONS = ['balloon-rosegold-satin', 'balloon-rosegold', 'balloon-champagne-satin'];
 
 // Each balloon's knot is tone-matched (a darker shade of its own body colour) rather than every
 // tone sharing one wine-coloured knot; chrome and satin siblings of the same tone share a gradient.
@@ -192,6 +193,33 @@ describe('ArchSprite balloons', () => {
     const box = boxOf(pathPoints(horizon!));
     expect(box.maxX - box.minX).toBeGreaterThanOrEqual(50);
     expect(box.maxY - box.minY).toBeGreaterThanOrEqual(10);
+  });
+
+  it.each(PEARL_BALLOONS)('%s (pearl) carries a nacre overlay over its body and a soft specular', (id) => {
+    const el = symbol(id);
+    const children = Array.from(el.children);
+    const bodyIndex = children.findIndex((child) => child.getAttribute('fill') === `url(#${id}-gradient)`);
+    const nacreIndex = children.findIndex((child) => /^url\(#[\w-]+-nacre\)$/.test(child.getAttribute('fill') ?? ''));
+    expect(bodyIndex).toBeGreaterThanOrEqual(0);
+    expect(nacreIndex).toBeGreaterThan(bodyIndex);
+
+    const nacreId = (children[nacreIndex].getAttribute('fill') ?? '').slice(5, -1);
+    const stops = Array.from(gradient(nacreId).querySelectorAll('stop'));
+    expect(stops[0].getAttribute('style')).toMatch(/var\(--c-champagne-100\)/);
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.45);
+    const rose = stops.find((stop) => (stop.getAttribute('style') ?? '').includes('--c-rose-200'));
+    expect(Number(rose?.getAttribute('stop-opacity'))).toBeCloseTo(0.25);
+    expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
+
+    const glossUse = el.querySelector('use[href="#balloon-gloss"]');
+    const specStrength = Number((glossUse?.getAttribute('style') ?? '').match(/--balloon-spec:\s*([\d.]+)/)?.[1]);
+    expect(specStrength).toBeLessThanOrEqual(0.6);
+  });
+
+  it('the shared specular spot takes its strength from the balloon that uses it, full by default', () => {
+    const spot = symbol('balloon-gloss').querySelector('[fill="url(#balloon-gloss-spec)"]');
+    expect(spot?.getAttribute('style') ?? '').toMatch(/opacity:\s*var\(--balloon-spec,\s*1\)/);
+    expect(symbol('balloon-champagne').querySelector('use[href="#balloon-gloss"]')?.getAttribute('style') ?? '').not.toContain('--balloon-spec');
   });
 
   it('balloon bodies stay within their element budget (8 own shapes + the shared gloss use)', () => {

@@ -69,13 +69,15 @@
       <stop offset="50%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.22" />
       <stop offset="100%" style="stop-color: var(--c-champagne-200)" stop-opacity="0" />
     </radialGradient>
+    <!-- Pearl blush: a low-contrast champagne-to-rose-gold ramp (no gold terminator), so it
+         sits with the rose-gold pearls rather than reading as a second gold. -->
     <radialGradient id="balloon-champagne-satin-gradient" cx="30%" cy="26%" r="80%">
       <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
-      <stop offset="24%" style="stop-color: var(--c-champagne-200)" />
-      <stop offset="48%" style="stop-color: var(--c-champagne-300)" />
-      <stop offset="70%" style="stop-color: var(--c-champagne-500)" />
-      <stop offset="90%" style="stop-color: var(--c-champagne-700)" />
-      <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="25%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="50%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="72%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="90%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rosegold-200)" />
     </radialGradient>
 
     <!-- Shared across every tone: a soft contact shadow dropped below-right of the body (depth
@@ -104,6 +106,14 @@
     <linearGradient id="balloon-champagne-knot" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" style="stop-color: var(--c-champagne-500)" />
       <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
+    </linearGradient>
+
+    <!-- Pearl finish (rose-gold and pearl-blush balloons): a nacre sheen laid over the body,
+         champagne at the upper left melting into rose and then into nothing. -->
+    <linearGradient id="balloon-nacre" x1="10%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.45" />
+      <stop offset="45%" style="stop-color: var(--c-rose-200)" stop-opacity="0.25" />
+      <stop offset="100%" style="stop-color: var(--c-rose-200)" stop-opacity="0" />
     </linearGradient>
 
     <!-- Shared lighting for every balloon (the `balloon-gloss` symbol below): a softbox
@@ -219,7 +229,7 @@
 
   <symbol id="balloon-gloss" viewBox="0 0 100 110">
     <path d="M18 36C17 30 17 26 20 22C26 12 37 7 49 7C45 11 41 17 39 25C32 26 25 30 18 36Z" fill="url(#balloon-gloss-window)" />
-    <ellipse cx="29" cy="19" rx="5" ry="3.6" fill="url(#balloon-gloss-spec)" transform="rotate(-30 29 19)" />
+    <ellipse cx="29" cy="19" rx="5" ry="3.6" fill="url(#balloon-gloss-spec)" transform="rotate(-30 29 19)" style="opacity: var(--balloon-spec, 1)" />
     <path d="M91 40C92 60 83 78 64 89C77 77 85 60 86 42C87.5 41 89.5 40.5 91 40Z" fill="url(#balloon-gloss-rim)" />
     <path d="M14 62C22 80 36 90 50 91.5C64 90 78 80 86 62C78 78 64 87 50 87.5C36 87 22 78 14 62Z" fill="url(#balloon-gloss-ao)" />
   </symbol>
@@ -240,24 +250,26 @@
     <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
     <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-rosegold-gradient)" />
     <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-nacre)" />
     <path
       d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
       fill="url(#balloon-rosegold-knot)"
     />
     <ellipse cx="48.4" cy="93.8" rx="0.9" ry="0.5" fill="var(--c-white)" fill-opacity="0.5" transform="rotate(-20 48.4 93.8)" />
-    <use href="#balloon-gloss" />
+    <use href="#balloon-gloss" style="--balloon-spec: 0.5" />
   </symbol>
 
   <symbol id="balloon-rosegold-satin" viewBox="0 0 100 110">
     <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
     <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-rosegold-satin-gradient)" />
     <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-nacre)" />
     <path
       d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
       fill="url(#balloon-rosegold-knot)"
     />
     <ellipse cx="48.4" cy="93.8" rx="0.9" ry="0.5" fill="var(--c-white)" fill-opacity="0.5" transform="rotate(-20 48.4 93.8)" />
-    <use href="#balloon-gloss" />
+    <use href="#balloon-gloss" style="--balloon-spec: 0.5" />
   </symbol>
 
   <symbol id="balloon-champagne" viewBox="0 0 100 110">
@@ -277,12 +289,13 @@
     <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
     <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-champagne-satin-gradient)" />
     <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-nacre)" />
     <path
       d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
       fill="url(#balloon-champagne-knot)"
     />
     <ellipse cx="48.4" cy="93.8" rx="0.9" ry="0.5" fill="var(--c-white)" fill-opacity="0.5" transform="rotate(-20 48.4 93.8)" />
-    <use href="#balloon-gloss" />
+    <use href="#balloon-gloss" style="--balloon-spec: 0.5" />
   </symbol>
 
   <!-- Roses: round, cupped blooms. Broad shell-shaped outer petals (wider than tall, a slight
