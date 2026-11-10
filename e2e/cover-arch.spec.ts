@@ -168,6 +168,54 @@ test.describe('Balloon arch', () => {
     }
   });
 
+  test('in-between aspect ratios show no overlap, no overflow and a visible button', async ({
+    page,
+  }) => {
+    const viewports = [
+      { width: 768, height: 1024 },
+      { width: 900, height: 1000 },
+      { width: 1024, height: 768 },
+    ];
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      const button = page.getByRole('button', { name: 'Abrir invitación' });
+      await expect(button).toBeVisible();
+
+      const leadRect = await page.getByTestId('cover-title-lead').boundingBox();
+      const nameRect = await page.getByTestId('cover-celebrant-name').boundingBox();
+      const buttonRect = await button.boundingBox();
+      expect(leadRect).not.toBeNull();
+      expect(nameRect).not.toBeNull();
+      expect(buttonRect).not.toBeNull();
+
+      const targets = [leadRect, nameRect, buttonRect].filter((rect): rect is Rect => rect !== null);
+      expect(targets).toHaveLength(3);
+      for (const target of targets) {
+        expect(target.x).toBeGreaterThanOrEqual(0);
+        expect(target.x + target.width).toBeLessThanOrEqual(viewport.width);
+        expect(target.y).toBeGreaterThanOrEqual(0);
+        expect(target.y + target.height).toBeLessThanOrEqual(viewport.height);
+      }
+
+      const archRects = await visibleItemRects(page);
+      expect(archRects.length).toBeGreaterThan(0);
+      for (const archRect of archRects) {
+        for (const target of targets) {
+          expect(rectsIntersect(archRect, target)).toBe(false);
+        }
+      }
+
+      const overflow = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        innerWidth: window.innerWidth,
+      }));
+      expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
+    }
+  });
+
   test('both upper corners show foliage on screen', async ({ page }) => {
     // Floors are the real-render ceiling measured on the current composition (minimum of all 4
     // viewports was 306px² on phones, 11142px² on landscape), rounded down. Shrinking the two

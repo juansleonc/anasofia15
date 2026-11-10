@@ -311,6 +311,38 @@ describe('lowerGlitter', () => {
       }
     }
   });
+
+  // Every sampled candidate is seeded-random and never lands exactly on yPct 100 (biasedLowerYPct
+  // uses `random() < 1`, so its ceiling is approached but never reached) — a keep-out rect that
+  // swallows the entire band still lets every placement attempt land inside it, exhausting the
+  // budget and forcing the last-resort corner-anchor fallback.
+  it('falls back to a fixed corner anchor when every sampled candidate lands in a keep-out rect', () => {
+    const wholeBand = [{ xPct: 0, yPct: LOWER_REGION_START_PCT, widthPct: 100, heightPct: 42 }];
+    const sparkles = lowerGlitter({ flakeCount: 1, bokehCount: 0, seed: 7421, keepOutRects: wholeBand });
+
+    expect(sparkles).toHaveLength(1);
+    // Every fixed anchor ({2|98|50}, {58|100}) is also inside a rect covering the whole band, so
+    // the fallback exhausts its own anchor list too and settles on the last one.
+    expect(sparkles[0]).toMatchObject({ xPct: 50, yPct: 100 });
+  });
+
+  it('prefers the first fixed anchor that escapes the keep-out rects over the last-resort default', () => {
+    // Covers the band up to yPct 99.95 — below every candidate the seeded RNG actually draws here,
+    // so sampling still exhausts its budget — but stops short of the anchors sitting at yPct 100,
+    // so the first such anchor (2, 100) is found instead of falling through to the default.
+    const almostWholeBand = [
+      { xPct: 0, yPct: LOWER_REGION_START_PCT, widthPct: 100, heightPct: 41.95 },
+    ];
+    const sparkles = lowerGlitter({
+      flakeCount: 1,
+      bokehCount: 0,
+      seed: 7421,
+      keepOutRects: almostWholeBand,
+    });
+
+    expect(sparkles).toHaveLength(1);
+    expect(sparkles[0]).toMatchObject({ xPct: 2, yPct: 100 });
+  });
 });
 
 describe('fallingConfetti', () => {

@@ -188,7 +188,7 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'rosebud', x: 1340, y: 135, size: 50, rotate: 140, depth: 3 },
       { symbol: 'balloon-rosegold-satin', x: 223.1, y: 209.6, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 658.8, y: 172, size: 121, rotate: 0, depth: 4 },
-      // re-seated closer to the walls so the lower envelope keeps dropping toward them (R5-2);
+      // re-seated closer to the walls so the lower envelope keeps dropping toward them;
       // moved a touch further from the second peony's heart so it veils rather than covers it
       { symbol: 'balloon-champagne', x: 957, y: 194, size: 120, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 1208.7, y: 324, size: 104.5, rotate: 0, depth: 4 },
