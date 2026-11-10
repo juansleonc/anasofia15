@@ -86,7 +86,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     crownBias: 0.1,
     cornerBias: 1,
     seed: 15,
-    counts: { balloons: 20, fillers: 6, flowers: 9, leaves: 30 },
+    counts: { balloons: 21, fillers: 6, flowers: 11, leaves: 30 },
     sizeRange: [30, 80],
   },
   landscape: {
@@ -101,7 +101,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     crownBias: 0.3,
     cornerBias: 3,
     seed: 1219,
-    counts: { balloons: 32, fillers: 6, flowers: 17, leaves: 40 },
+    counts: { balloons: 33, fillers: 6, flowers: 21, leaves: 40 },
     sizeRange: [40, 116],
   },
 };
@@ -464,6 +464,8 @@ const BALLOON_SPINE_STEPS = 80;
 const SPINE_OFFSETS = [-0.45, 0.45];
 /** The axis balloon may also ride further out, above a flower cluster sitting on the axis. */
 const AXIS_OFFSETS = [...SPINE_OFFSETS, -0.9, -1.2];
+/** How far from the spine, in biggest-balloon sizes, the axis balloon may ride. */
+const AXIS_REACH = 0.55;
 
 /**
  * Spreads balloons along the left half of the spine one at a time, each into the open spot with
@@ -528,6 +530,9 @@ function placeBalloons(spec: ArchSpec, spine: Spine, flowers: ArchItem[], rng: (
         }
         for (const offset of t === 0.5 ? AXIS_OFFSETS : SPINE_OFFSETS) {
           const item = balloonAt(t, isBack, tone, offset, rotate, scale);
+          if (t === 0.5 && Math.abs(offset) * item.size > AXIS_REACH * maxSize) {
+            continue;
+          }
           const room = clearance(item, placed) - item.size / 2;
           scored.push({ item, score: room + crownPreference(t) + rng() * 0.05 * item.size });
         }
@@ -701,35 +706,62 @@ const CORNER_CLUSTER_RISE = 0.5;
 /** How far inside the spine, as a fraction of the local balloon size, a flower cluster nestles. */
 const FLOWER_INSET = 0.4;
 
-/** Candidate spots across the garland around spine position `t`, clamped so a flower of `size` stays on canvas above the band. */
-function flowerSpots(spec: ArchSpec, spine: Spine, t: number, size: number): Point[] {
+/** One flower in this many goes down each side column, below the crown. */
+const FLOWERS_PER_SIDE_COLUMN = 8;
+/** Side-column flowers are at most this share of the column width. */
+const SIDE_FLOWER_SHARE = 0.85;
+
+/**
+ * Clamps a flower of `size` centered at `point` wholly onto the canvas: a crown flower stays inset
+ * from the edges and above the band; a side-column flower stays within its column (never bled)
+ * and between the band and the fade.
+ */
+function keepFlowerInside(point: Point, size: number, spec: ArchSpec, inColumn: boolean): Point {
   const r = size / 2;
-  const margin = spec.inset;
+  // A hair past the radius keeps the flower strictly clear of the boundary despite rounding.
+  const edge = r * (1 + 1e-6);
+  if (!inColumn) {
+    return {
+      x: clamp(point.x, spec.inset + r, spec.width - spec.inset - r),
+      y: clamp(point.y, spec.inset + r, spec.band - edge),
+    };
+  }
+  const [minX, maxX] =
+    point.x < spec.width / 2 ? [edge, spec.gutter - edge] : [spec.width - spec.gutter + edge, spec.width - edge];
+  return { x: clamp(point.x, minX, maxX), y: clamp(point.y, spec.band, spec.fadeStart) };
+}
+
+/** Candidate spots across the garland around spine position `t`, each kept on canvas above the band. */
+function flowerSpots(spec: ArchSpec, spine: Spine, t: number, size: number): Point[] {
   const spots: Point[] = [];
   for (let step = -4; step <= 4; step++) {
     const sample = sampleSpine(spine, clamp(t + step * 0.012, 0, 1));
     for (const offset of [-0.4, -0.2, 0, 0.2, 0.4]) {
-      spots.push({
-        x: clamp(sample.x + sample.nx * offset * size, margin + r, spec.width - margin - r),
-        y: clamp(sample.y + sample.ny * offset * size, margin + r, spec.band - r * (1 + 1e-6)),
-      });
+      const spot = { x: sample.x + sample.nx * offset * size, y: sample.y + sample.ny * offset * size };
+      spots.push(keepFlowerInside(spot, size, spec, false));
     }
   }
   return spots;
 }
 
+/** How many flowers go down each side column; the rest make up the crown. */
+function sideFlowersPerColumn(spec: ArchSpec): number {
+  return Math.floor(spec.counts.flowers / FLOWERS_PER_SIDE_COLUMN);
+}
+
 /**
- * Bunches the flowers into clusters of two or three — one just below each top corner, the rest
- * spread evenly across the crown between them, and one centered on the axis — each about two
- * thirds the biggest balloon. Flowers are placed before the balloons, which then fit around them.
+ * Bunches the crown's flowers (all but the side-column ones) into clusters of two or three — one
+ * just below each top corner, the rest spread evenly across the crown between them, and one
+ * centered on the axis — each about two thirds the biggest balloon. Flowers are placed before the balloons, which then fit around them.
  * Each flower goes to the spot nearest its cluster's anchor (just inside the spine) where it
  * buries nothing, and every flower after a cluster's first stays within touching distance of it. Left flowers are mirrored to the right as a shifted symbol, and
  * the center cluster is built from on-axis flowers and mirrored pairs straddling the axis.
  * Round-robin over the four flower symbols, so a spec with at least 4 flowers uses all of them.
+ * Returns each placement as a group: a left flower with its twin, or a lone on-axis flower.
  */
-function placeFlowers(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem[] {
+function placeFlowers(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem[][] {
   const corners = spine.corners;
-  const count = spec.counts.flowers;
+  const count = spec.counts.flowers - 2 * sideFlowersPerColumn(spec);
   const minClusters = Math.max(2, Math.ceil(count / 3));
   // An odd flower count needs a center cluster to hold the one flower that has no mirror twin.
   const clusters = count % 2 === 1 && minClusters % 2 === 0 ? minClusters + 1 : minClusters;
@@ -737,18 +769,8 @@ function placeFlowers(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem
   const axis = spec.width / 2;
   const symbolShift = 1 + Math.floor(rng() * (FLOWER_SYMBOLS.length - 1));
   const placed: ArchItem[] = [];
-  const items: ArchItem[] = [];
+  const groups: ArchItem[][] = [];
   let symbolIndex = 0;
-
-  const insideCanvas = (flower: ArchItem): ArchItem => {
-    const r = flower.size / 2;
-    const margin = spec.inset;
-    return {
-      ...flower,
-      x: clamp(flower.x, margin + r, spec.width - margin - r),
-      y: clamp(flower.y, margin + r, spec.band - r * (1 + 1e-6)),
-    };
-  };
 
   const placeCluster = (t: number, pairs: number, onAxis: number): void => {
     const isCenter = t === 0.5;
@@ -786,16 +808,22 @@ function placeFlowers(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem
         rotate,
         layer: 3,
       }));
-      const twinOf = (flower: ArchItem): ArchItem | null =>
-        axial
-          ? null
-          : insideCanvas({
-              ...mirrorItem(flower, spec, rng),
-              symbol: shiftedSymbol(FLOWER_SYMBOLS, flower.symbol, symbolShift),
-            });
+      const twinOf = (flower: ArchItem): ArchItem | null => {
+        if (axial) {
+          return null;
+        }
+        const twin = mirrorItem(flower, spec, rng);
+        return {
+          ...twin,
+          ...keepFlowerInside(twin, twin.size, spec, false),
+          symbol: shiftedSymbol(FLOWER_SYMBOLS, flower.symbol, symbolShift),
+        };
+      };
       const placedNow = pickFitting(candidates, placed, twinOf);
+      if (placedNow.length > 0) {
+        groups.push(placedNow);
+      }
       members.push(...placedNow);
-      items.push(...placedNow);
       placed.push(...placedNow);
     }
   };
@@ -808,7 +836,7 @@ function placeFlowers(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem
     placeCluster(0.5, Math.floor(center / 2), center % 2);
   }
 
-  return items;
+  return groups;
 }
 
 /**
@@ -918,14 +946,134 @@ export function archFadeMask(spec: ArchSpec): string {
   return `linear-gradient(to bottom, var(--c-white) ${stopPercent}%, transparent 100%)`;
 }
 
+/** Overlap a flower aims for with each neighbor it is tucked against, as a fraction of the smaller size. */
+const TUCK_DEPTH = 0.15;
+/** How far, in its own sizes, an untucked flower may slide to find a tucked spot. */
+const SETTLE_REACH = 0.6;
+const SETTLE_RINGS = 8;
+const SETTLE_ANGLES = 24;
+
+function overlapsDeeply(a: ArchItem, b: ArchItem): boolean {
+  return Math.hypot(a.x - b.x, a.y - b.y) < (a.size + b.size) / 2 - TUCK_DEPTH * Math.min(a.size, b.size);
+}
+
+/** True when `flower` is pressed into at least one balloon and at least two solids among `items`. */
+function isTucked(flower: ArchItem, items: ArchItem[]): boolean {
+  const pressing = items.filter((other) => other !== flower && other.kind !== 'leaf' && overlapsDeeply(other, flower));
+  const balloons = pressing.filter((other) => other.kind === 'balloon').length;
+  return balloons >= 1 && pressing.length >= 2;
+}
+
+/**
+ * Tucks flowers down each side column, between the band and the fade, after the balloons and
+ * fillers are in: each goes into the seam that presses it into the most balloons, nearest its
+ * evenly spaced target height, and is mirrored exactly to the right column. Returns each left
+ * flower with its twin.
+ */
+function tuckSideFlowers(spec: ArchSpec, spine: Spine, solids: ArchItem[], rng: () => number): ArchItem[][] {
+  const perColumn = sideFlowersPerColumn(spec);
+  const symbolShift = 1 + Math.floor(rng() * (FLOWER_SYMBOLS.length - 1));
+  const groups: ArchItem[][] = [];
+  const left: ArchItem[] = [];
+  for (let k = 0; k < perColumn; k++) {
+    const size = Math.min(spec.sizeRange[1] * (0.6 + 0.06 * rng()), SIDE_FLOWER_SHARE * spec.gutter);
+    const rotateJitter = (rng() - 0.5) * 20;
+    const symbol = FLOWER_SYMBOLS[k % FLOWER_SYMBOLS.length];
+    const target = spec.band + ((k + 1) / (perColumn + 1)) * (spec.fadeStart - spec.band);
+    const placed = [...solids, ...groups.flat()];
+    const ranked: { item: ArchItem; contacts: number; distance: number }[] = [];
+    for (let y = spec.band; y <= spec.fadeStart; y += 3) {
+      const sample = sampleSpine(spine, spineFractionAtHeight(spine, y));
+      for (const offset of [-0.4, -0.2, 0, 0.2, 0.4]) {
+        const spot = keepFlowerInside({ x: sample.x + sample.nx * offset * size, y }, size, spec, true);
+        if (left.some((other) => Math.hypot(other.x - spot.x, other.y - spot.y) < size)) {
+          continue;
+        }
+        const item: ArchItem = {
+          symbol,
+          kind: 'flower',
+          ...spot,
+          size,
+          rotate: TANGENT_TILT * sample.angle + rotateJitter,
+          layer: 3,
+        };
+        const contacts = placed.filter((other) => other.kind === 'balloon' && overlapsDeeply(other, item)).length;
+        ranked.push({ item, contacts: Math.min(contacts, 2), distance: Math.abs(y - target) });
+      }
+    }
+    ranked.sort((a, b) => b.contacts - a.contacts || a.distance - b.distance);
+    const twinOf = (flower: ArchItem): ArchItem => {
+      const twin = {
+        ...flower,
+        x: spec.width - flower.x,
+        rotate: -flower.rotate,
+        symbol: shiftedSymbol(FLOWER_SYMBOLS, flower.symbol, symbolShift),
+      };
+      return { ...twin, ...keepFlowerInside(twin, twin.size, spec, true) };
+    };
+    const placedNow = pickFitting(ranked.map(({ item }) => item), placed, twinOf);
+    if (placedNow.length > 0) {
+      groups.push(placedNow);
+      left.push(placedNow[0]);
+    }
+  }
+  return groups;
+}
+
+/**
+ * Slides each flower group that is not tucked to the nearest spot, within `SETTLE_REACH` of its
+ * size, where every member is tucked and buries nothing. A twin mirrors its partner's move, so the
+ * pair stays balanced; a lone on-axis flower moves only vertically. Groups that find no such spot stay put.
+ */
+function settleFlowers(spec: ArchSpec, items: ArchItem[], groups: ArchItem[][]): ArchItem[] {
+  const out = [...items];
+  for (const group of groups) {
+    const slots = group.map((flower) => out.indexOf(flower));
+    if (group.every((flower) => isTucked(flower, out))) {
+      continue;
+    }
+    const [lead] = group;
+    const onAxis = group.length === 1;
+    const inColumn = lead.y >= spec.band;
+    const rest = out.filter((_, index) => !slots.includes(index));
+    for (let ring = 1; ring <= SETTLE_RINGS; ring++) {
+      const reach = (SETTLE_REACH * lead.size * ring) / SETTLE_RINGS;
+      const moved = Array.from({ length: SETTLE_ANGLES }, (_, step) => {
+        const angle = (2 * Math.PI * step) / SETTLE_ANGLES;
+        const dx = onAxis ? 0 : reach * Math.cos(angle);
+        const dy = reach * Math.sin(angle);
+        return group.map((flower, member) => ({
+          ...flower,
+          ...keepFlowerInside({ x: flower.x + (member === 0 ? dx : -dx), y: flower.y + dy }, flower.size, spec, inColumn),
+        }));
+      }).find((members) => {
+        const trial = [...rest, ...members];
+        return members.every(
+          (flower) => isTucked(flower, trial) && fitsAmong(flower, trial.filter((other) => other !== flower)),
+        );
+      });
+      if (moved) {
+        slots.forEach((slot, member) => {
+          out[slot] = moved[member];
+        });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
 export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
   const spine = buildSpine(spec);
   const leaves = placeLeaves(spec, spine, rng);
-  const flowers = placeFlowers(spec, spine, rng);
-  const solids = [...placeBalloons(spec, spine, flowers, rng), ...flowers];
+  const crownGroups = placeFlowers(spec, spine, rng);
+  const crownFlowers = crownGroups.flat();
+  const solids = [...placeBalloons(spec, spine, crownFlowers, rng), ...crownFlowers];
   const fillers = placeFillers(spec, spine, solids, rng);
-  const items = [...leaves, ...solids, ...fillers].sort((a, b) => a.layer - b.layer || a.y - b.y);
+  const sideGroups = tuckSideFlowers(spec, spine, [...solids, ...fillers], rng);
+  const settled = settleFlowers(spec, [...solids, ...fillers, ...sideGroups.flat()], [...crownGroups, ...sideGroups]);
+  const items = [...leaves, ...settled].sort((a, b) => a.layer - b.layer || a.y - b.y);
 
   return { width: spec.width, height: spec.height, items };
 }

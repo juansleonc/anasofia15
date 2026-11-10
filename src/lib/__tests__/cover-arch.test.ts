@@ -420,6 +420,35 @@ describe('flower prominence', () => {
     }
   });
 
+  // In the reference every rose is pressed into the garland: never floating, never resting only on other roses.
+  it('tucks every flower into a balloon and at least one more balloon or flower', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { items } = buildArch(spec);
+      const flowers = items.filter((item) => item.kind === 'flower');
+      const balloons = items.filter((item) => item.kind === 'balloon');
+      expect(flowers.length).toBeGreaterThan(0);
+      for (const flower of flowers) {
+        const balloonContacts = balloons.filter((balloon) => overlapsBy(flower, balloon, 0.1)).length;
+        const flowerContacts = flowers.filter((other) => other !== flower && overlapsBy(flower, other, 0.1)).length;
+        const where = `seed ${spec.seed} ${spec.width}x${spec.height}: flower at (${flower.x.toFixed(1)}, ${flower.y.toFixed(1)})`;
+        expect(balloonContacts, where).toBeGreaterThanOrEqual(1);
+        expect(balloonContacts + flowerContacts, where).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  it('carries flowers down both side columns, above the fade', () => {
+    for (const spec of SEEDED_SPECS) {
+      const minPerSide = spec.width === ARCH_SPECS.landscape.width ? 2 : 1;
+      const sideFlowers = buildArch(spec).items.filter(
+        (item) => item.kind === 'flower' && item.y >= spec.band && item.y <= spec.fadeStart,
+      );
+      const where = `seed ${spec.seed} ${spec.width}x${spec.height}`;
+      expect(sideFlowers.filter((item) => item.x < spec.width / 2).length, where).toBeGreaterThanOrEqual(minPerSide);
+      expect(sideFlowers.filter((item) => item.x > spec.width / 2).length, where).toBeGreaterThanOrEqual(minPerSide);
+    }
+  });
+
   it('keeps every flower wholly inside the canvas, never cut at an edge', () => {
     for (const spec of SEEDED_SPECS) {
       const flowers = buildArch(spec).items.filter((item) => item.kind === 'flower');
@@ -633,9 +662,9 @@ describe('ARCH_SPECS restraint', () => {
 
   it('still leaves both specs enough items for a full arch', () => {
     expect(ARCH_SPECS.portrait.counts.balloons).toBeGreaterThanOrEqual(20);
-    expect(ARCH_SPECS.portrait.counts.flowers).toBeGreaterThanOrEqual(9);
+    expect(ARCH_SPECS.portrait.counts.flowers).toBeGreaterThanOrEqual(11);
     expect(ARCH_SPECS.landscape.counts.balloons).toBeGreaterThanOrEqual(32);
-    expect(ARCH_SPECS.landscape.counts.flowers).toBeGreaterThanOrEqual(17);
+    expect(ARCH_SPECS.landscape.counts.flowers).toBeGreaterThanOrEqual(21);
   });
 });
 
@@ -780,6 +809,11 @@ function coveredFraction(item: ArchItem, others: ArchItem[]): number {
 
 function balloonArea(items: ArchItem[]): number {
   return items.reduce((sum, item) => sum + item.size * item.size, 0);
+}
+
+/** True when the discs of `a` and `b` overlap by at least `depth` times the smaller one's size. */
+function overlapsBy(a: ArchItem, b: ArchItem, depth: number): boolean {
+  return (a.size + b.size) / 2 - Math.hypot(a.x - b.x, a.y - b.y) >= depth * Math.min(a.size, b.size);
 }
 
 /** True when at least two of `flowers` sit within 1.2x their mean size of each other. */
