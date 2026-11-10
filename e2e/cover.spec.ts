@@ -530,7 +530,7 @@ test.describe('Cover section', () => {
   // Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is getting airier
   // in a parallel task, so the cover's own centre needed more presence: bigger type, a flourish,
   // and a tight ring of extra sparkles (below), rather than more clutter.
-  test('the celebrant name is large enough to fill the centre at 375 and grows further at 1440', async ({
+  test('the celebrant name is large enough to fill the centre at 375 and grows further on desktop', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
@@ -544,13 +544,18 @@ test.describe('Cover section', () => {
     // while leaving the one-line fit as the binding constraint.
     expect(nameFontSize375).toBeGreaterThanOrEqual(52);
 
-    await page.setViewportSize({ width: 1440, height: 800 });
-    await page.reload();
+    for (const viewport of [
+      { width: 1366, height: 768 },
+      { width: 1440, height: 800 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.reload();
 
-    const nameFontSize1440 = await page
-      .getByTestId('cover-celebrant-name')
-      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    expect(nameFontSize1440).toBeGreaterThanOrEqual(96);
+      const nameFontSizeDesktop = await page
+        .getByTestId('cover-celebrant-name')
+        .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      expect(nameFontSizeDesktop).toBeGreaterThanOrEqual(120);
+    }
   });
 
   test('the name is deep wine', async ({ page }) => {
