@@ -78,12 +78,12 @@ test.describe('Trivia section', () => {
       return { backgroundColor: computed.backgroundColor, color: computed.color };
     });
 
-    // Dark translucent glass (resting or hover alpha, both ≤ 0.1), never the UA's opaque
+    // Translucent glass (resting or hover alpha, both ≤ 0.1), never the UA's opaque
     // light button face.
     const alphaMatch = styles.backgroundColor.match(/^rgba\(255, 255, 255, (0\.\d+)\)$/);
     expect(alphaMatch).not.toBeNull();
     expect(Number(alphaMatch![1])).toBeLessThanOrEqual(0.1);
-    // Bright near-white label (#eef0f3), not the UA's dark default button text.
-    expect(styles.color).toBe('rgb(238, 240, 243)');
+    // Ink label (--c-ink, #4a2632), not the UA's dark default button text.
+    expect(styles.color).toBe('rgb(74, 38, 50)');
   });
 });

@@ -62,13 +62,11 @@ const totalQuestions = triviaQuestions.length;
 
   .trivia-question,
   .trivia-result {
-    background: var(--glass-bg);
-    border: var(--glass-border);
+    background: var(--card-bg);
+    border: var(--card-border);
     border-radius: 1.375rem;
     padding: 1.625rem 1.375rem;
-    box-shadow:
-      var(--glass-highlight),
-      0 18px 40px -24px rgba(0, 0, 0, 0.9);
+    box-shadow: var(--card-shadow);
   }
 
   .trivia-question[hidden],
@@ -91,14 +89,14 @@ const totalQuestions = triviaQuestions.length;
   }
 
   .trivia-progress__segment--active {
-    background: var(--c-silver);
+    background: var(--c-rose-400);
   }
 
   .trivia-counter {
     font-size: 0.6875rem;
     letter-spacing: 0.3em;
     text-transform: uppercase;
-    color: var(--c-gold-bright);
+    color: var(--c-rose-700);
   }
 
   .trivia-prompt {
@@ -106,7 +104,7 @@ const totalQuestions = triviaQuestions.length;
     font-size: 1.4375rem;
     line-height: 1.25;
     margin: 0.875rem 0 1.5rem;
-    color: var(--c-bright);
+    color: var(--c-ink);
   }
 
   .trivia-options {
@@ -124,7 +122,7 @@ const totalQuestions = triviaQuestions.length;
     border-radius: 0.875rem;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(201, 204, 209, 0.2);
-    color: var(--c-bright);
+    color: var(--c-ink);
     font-family: var(--font-body);
     font-weight: 500;
     font-size: 0.9375rem;
@@ -163,7 +161,7 @@ const totalQuestions = triviaQuestions.length;
     font-weight: 800;
     font-size: clamp(3.25rem, 15vw, 5.25rem);
     line-height: 1;
-    background: var(--gradient-silver);
+    background: var(--gradient-rose);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -173,14 +171,14 @@ const totalQuestions = triviaQuestions.length;
     font-size: 0.75rem;
     letter-spacing: 0.35em;
     text-transform: uppercase;
-    color: var(--c-gold-bright);
+    color: var(--c-rose-700);
     margin-top: 0.875rem;
   }
 
   .trivia-result__message {
     font-weight: 300;
     font-size: 1.0625rem;
-    color: var(--c-silver);
+    color: var(--c-ink-soft);
     margin-top: 1.125rem;
     line-height: 1.55;
   }
@@ -191,7 +189,7 @@ const totalQuestions = triviaQuestions.length;
     border-radius: 2.5rem;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(201, 204, 209, 0.24);
-    color: var(--c-silver);
+    color: var(--c-ink-soft);
     font-family: var(--font-body);
     font-weight: 600;
     font-size: 0.875rem;
@@ -210,7 +208,7 @@ const totalQuestions = triviaQuestions.length;
   import { triviaQuestions } from '../data/trivia';
 
   // Brief reveal window before advancing to the next question — the island's own choreography,
-  // not part of T14's atomic `answer()`.
+  // not part of `src/lib/trivia.ts`'s atomic `answer()`.
   const REVEAL_DELAY_MS = 900;
 
   const root = document.querySelector('[data-testid="trivia-game"]');

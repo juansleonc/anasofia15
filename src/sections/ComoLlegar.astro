@@ -13,7 +13,7 @@ const wazeUrl = buildWazeUrl(event.venue);
 <section class="como-llegar" data-testid="como-llegar" aria-label="Cómo llegar">
   <div class="como-llegar__header">
     <p class="como-llegar__eyebrow"><EyebrowEmoji emoji="📍" />Cómo llegar</p>
-    <h2 class="como-llegar__title text-gradient-silver">{event.venue.name}</h2>
+    <h2 class="como-llegar__title text-rose">{event.venue.name}</h2>
     <p class="como-llegar__locality">{event.venue.address}, {event.venue.locality} · {event.venue.country}</p>
   </div>
 
@@ -51,7 +51,7 @@ const wazeUrl = buildWazeUrl(event.venue);
     font-size: 0.75rem;
     letter-spacing: 0.5em;
     text-transform: uppercase;
-    color: var(--c-gold-bright);
+    color: var(--c-rose-700);
   }
 
   .como-llegar__title {
@@ -63,7 +63,7 @@ const wazeUrl = buildWazeUrl(event.venue);
   .como-llegar__locality {
     font-weight: 300;
     font-size: 0.9375rem;
-    color: var(--c-silver);
+    color: var(--c-ink-soft);
     opacity: 0.9;
     margin-top: 0.5rem;
   }
@@ -87,13 +87,13 @@ const wazeUrl = buildWazeUrl(event.venue);
   }
 
   .como-llegar__button--maps {
-    background: var(--gradient-silver);
-    color: var(--c-black);
+    background: var(--gradient-rose);
+    color: var(--c-white);
   }
 
   .como-llegar__button--waze {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(201, 204, 209, 0.24);
-    color: var(--c-silver);
+    color: var(--c-ink-soft);
   }
 </style>

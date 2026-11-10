@@ -17,9 +17,6 @@ importers:
       '@fontsource/playfair-display':
         specifier: ^5.3.0
         version: 5.3.0
-      '@fontsource/syne':
-        specifier: ^5.2.7
-        version: 5.2.7
       astro:
         specifier: ^7.1.1
         version: 7.1.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.2)(@types/node@26.1.1)(yaml@2.9.0)
@@ -536,9 +533,6 @@ packages:
 
   '@fontsource/playfair-display@5.3.0':
     resolution: {integrity: sha512-uJSABalvdWc10fEPppQjQocamT21LEyRfzzWfRfqbkPz+sRv+kKpYDKyluBUskvJREkJTos9epj1WjQROGu99Q==}
-
-  '@fontsource/syne@5.2.7':
-    resolution: {integrity: sha512-OgWgLPSbieiSfdFXgMs0l/rspIFzVoDZxw8wKj15n39epRqO5+Uv36c0MXNDcw2GuK/TIBgpC9G8VAgs+bVm7A==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2991,8 +2985,6 @@ snapshots:
   '@fontsource/inter@5.2.8': {}
 
   '@fontsource/playfair-display@5.3.0': {}
-
-  '@fontsource/syne@5.2.7': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

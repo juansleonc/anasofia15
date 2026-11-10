@@ -1,6 +1,6 @@
 ---
 // "Juguemos": header + the playable trivia game (delegated to TriviaIsland, which owns the
-// reveal/advance/restart client-side state machine built on T14's pure logic).
+// reveal/advance/restart client-side state machine built on the pure logic in `src/lib/trivia.ts`).
 import TriviaIsland from '../islands/TriviaIsland.astro';
 import EyebrowEmoji from '../components/EyebrowEmoji.astro';
 import { event } from '../data/event';
@@ -9,7 +9,7 @@ import { event } from '../data/event';
 <section class="trivia" data-testid="trivia" aria-label="Trivia">
   <div class="trivia__header">
     <p class="trivia__eyebrow"><EyebrowEmoji emoji="🎮" />Juguemos</p>
-    <h2 class="trivia__title text-gradient-silver">¿Cuánto conoces a {event.celebrantName}?</h2>
+    <h2 class="trivia__title text-rose">¿Cuánto conoces a {event.celebrantName}?</h2>
   </div>
   <TriviaIsland />
 </section>
@@ -28,7 +28,7 @@ import { event } from '../data/event';
     font-size: 0.75rem;
     letter-spacing: 0.5em;
     text-transform: uppercase;
-    color: var(--c-gold-bright);
+    color: var(--c-rose-700);
   }
 
   .trivia__title {

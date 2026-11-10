@@ -1,31 +1,37 @@
 /**
- * Design tokens — "Disco Night" theme: black + silver + gold.
+ * Design tokens — "Rosas y flores" theme: blush/rose watercolor palette.
  * CSS custom properties consumed by every section/component; do not hardcode raw hex values
  * or font-family strings elsewhere — reference these tokens instead.
  */
 
 :root {
   /* Palette */
-  --c-black: #0a0a0f;
-  --c-silver: #c9ccd1;
-  --c-gold: #d4af37;
-  --c-bright: #eef0f3; /* near-white — headings/body copy that must pop over black */
-  --c-gold-bright: #f0d987; /* luminous gold — eyebrows/small accents that must stay legible */
+  --c-bg: #fff7f5;
+  --c-bg-deep: #fbe9e7;
+  --c-rose-100: #fce4e8;
+  --c-rose-200: #f3c6d0;
+  --c-rose-300: #e8a3b4;
+  --c-rose-400: #d47f97;
+  --c-rose-600: #b5617a;
+  --c-rose-700: #9e4a63;
+  --c-ink: #4a2632;
+  --c-ink-soft: #7a4a58;
+  --c-leaf: #8fae8b;
+  --c-leaf-deep: #5f7f5b;
+  --c-white: #ffffff;
+  --c-error: #a3324a;
+  --c-success: #3f6b47;
 
-  /* Metallic gradients (text/surface accents over --c-black). Both stay bright end-to-end —
-     a gradient that fades into dark grey reads as washed-out over a black page. */
-  --gradient-silver: linear-gradient(180deg, #ffffff 0%, #b9bdc4 58%, #f4f5f7 100%);
-  --gradient-gold: linear-gradient(135deg, #fbf0c4 0%, #f0d987 30%, #d4af37 62%, #c39b2e 100%);
-
-  /* Glassy card surface (subtle luminous panel + hairline border over the starfield) */
-  --glass-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-  --glass-border: 1px solid rgba(200, 204, 212, 0.24);
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  /* Composite surfaces */
+  --gradient-rose: linear-gradient(135deg, #f3c6d0 0%, #e8a3b4 45%, #b5617a 100%);
+  --gradient-button: linear-gradient(135deg, #b5617a 0%, #9e4a63 100%);
+  --card-bg: rgba(255, 255, 255, 0.78);
+  --card-border: 1px solid rgba(158, 74, 99, 0.18);
+  --card-shadow: 0 18px 40px -24px rgba(158, 74, 99, 0.35);
 
   /* Typography */
   --font-cursive: 'Great Vibes', cursive;
-  --font-display: 'Syne', 'Inter', system-ui, sans-serif;
-  --font-serif-display: 'Playfair Display', 'Georgia', serif;
+  --font-display: 'Playfair Display', 'Georgia', serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 
   /* Motion */
@@ -44,8 +50,8 @@
 }
 
 body {
-  background-color: var(--c-black);
-  color: var(--c-silver);
+  background-color: var(--c-bg);
+  color: var(--c-ink);
   font-family: var(--font-body);
 }
 
@@ -53,21 +59,11 @@ body {
   font-family: var(--font-cursive);
 }
 
-.text-gradient-gold {
-  background: var(--gradient-gold);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.text-rose {
+  color: var(--c-rose-700);
 }
 
-.text-gradient-silver {
-  background: var(--gradient-silver);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Scroll-reveal (T21): the `.reveal-pending` class is added ONLY by JS, right before it starts
+/* Scroll-reveal: the `.reveal-pending` class is added ONLY by JS, right before it starts
    observing the element — so if JS fails to run at all, this rule never applies and content
    stays at its default full opacity/position. `.is-revealed` (also JS-added, on intersection)
    is what actually plays the fade/rise; `prefers-reduced-motion` shows content immediately with

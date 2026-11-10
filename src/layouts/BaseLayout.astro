@@ -4,9 +4,9 @@
 import '@fontsource/great-vibes/latin.css';
 import '@fontsource/inter/latin-400.css';
 import '@fontsource/inter/latin-700.css';
-import '@fontsource/syne/latin-700.css';
-import '@fontsource/syne/latin-800.css';
-import '@fontsource/playfair-display/latin-800.css';
+import '@fontsource/playfair-display/latin-400.css';
+import '@fontsource/playfair-display/latin-600.css';
+import '@fontsource/playfair-display/latin-400-italic.css';
 import greatVibesWoff2 from '@fontsource/great-vibes/files/great-vibes-latin-400-normal.woff2';
 import '../styles/tokens.css';
 import { withBase } from '../lib/base';
@@ -51,7 +51,7 @@ const ogImageUrl = new URL(withBase(siteConfig.og.imagePath), siteOrigin).toStri
 		<Starfield />
 		<slot />
 		<script>
-			// Scroll-reveal (T21): progressive enhancement only — see tokens.css for why the
+			// Scroll-reveal: progressive enhancement only — see tokens.css for why the
 			// `.reveal-pending`/`.is-revealed` classes are safe to add here without ever risking
 			// content that stays permanently hidden if this script fails partway through.
 			const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';

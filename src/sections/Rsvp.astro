@@ -1,6 +1,6 @@
 ---
 // "Confirma tu lugar": header + the RsvpForm island, which owns the idle -> submitting ->
-// success | error state machine wired to T18's pure validate/payload/guard logic.
+// success | error state machine wired to the pure validate/payload/guard logic in `src/lib/rsvp.ts`.
 import RsvpForm from '../islands/RsvpForm.astro';
 import EyebrowEmoji from '../components/EyebrowEmoji.astro';
 import { event } from '../data/event';
@@ -9,7 +9,7 @@ import { event } from '../data/event';
 <section class="rsvp" data-testid="rsvp" aria-label="RSVP">
   <div class="rsvp__header">
     <p class="rsvp__eyebrow"><EyebrowEmoji emoji="💌" />Confirma tu lugar</p>
-    <h2 class="rsvp__title text-gradient-silver">¿Nos acompañas?</h2>
+    <h2 class="rsvp__title text-rose">¿Nos acompañas?</h2>
   </div>
   <p class="rsvp__admission-note" data-testid="rsvp-admission-note">{event.admissionNote}</p>
   <RsvpForm />
@@ -29,7 +29,7 @@ import { event } from '../data/event';
     font-size: 0.75rem;
     letter-spacing: 0.5em;
     text-transform: uppercase;
-    color: var(--c-gold-bright);
+    color: var(--c-rose-700);
   }
 
   .rsvp__title {
@@ -41,7 +41,7 @@ import { event } from '../data/event';
   .rsvp__admission-note {
     font-weight: 300;
     font-size: 0.9375rem;
-    color: var(--c-silver);
+    color: var(--c-ink-soft);
     opacity: 0.85;
     text-align: center;
     margin: 0 auto 1.875rem;

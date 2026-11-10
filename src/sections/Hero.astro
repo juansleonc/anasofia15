@@ -76,7 +76,7 @@ const portraitSrc = withBase(siteConfig.portraitPath);
     font-size: 0.75rem;
     letter-spacing: 0.42em;
     text-transform: uppercase;
-    color: var(--c-gold-bright);
+    color: var(--c-rose-700);
   }
 
   .hero__portrait {
@@ -90,13 +90,13 @@ const portraitSrc = withBase(siteConfig.portraitPath);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at 35% 30%, #f4f5f7, var(--c-gold));
+    background: radial-gradient(circle at 35% 30%, #f4f5f7, var(--c-rose-700));
   }
 
   .hero__portrait-initials {
     font-size: 3.5rem;
     line-height: 1;
-    color: var(--c-black);
+    color: var(--c-ink);
   }
 
   .hero__name {
@@ -112,17 +112,7 @@ const portraitSrc = withBase(siteConfig.portraitPath);
     overflow: visible;
     display: inline-block;
     text-align: left;
-    background: linear-gradient(
-      105deg,
-      #ffffff 0%,
-      var(--c-bright) 14%,
-      var(--c-silver) 28%,
-      var(--c-gold-bright) 42%,
-      var(--c-gold) 52%,
-      #fbf0c4 62%,
-      var(--c-bright) 78%,
-      #ffffff 100%
-    );
+    background: var(--gradient-rose);
     background-size: 220% auto;
     -webkit-background-clip: text;
     background-clip: text;
@@ -149,7 +139,7 @@ const portraitSrc = withBase(siteConfig.portraitPath);
   .hero__divider {
     width: 90px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--c-gold-bright), transparent);
+    background: linear-gradient(90deg, transparent, var(--c-rose-400), transparent);
     box-shadow: 0 0 12px rgba(212, 175, 55, 0.45);
   }
 
@@ -158,6 +148,6 @@ const portraitSrc = withBase(siteConfig.portraitPath);
     font-size: 1rem;
     letter-spacing: 0.3em;
     text-transform: uppercase;
-    color: var(--c-bright);
+    color: var(--c-ink);
   }
 </style>

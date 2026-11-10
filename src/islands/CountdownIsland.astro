@@ -54,14 +54,12 @@ import { event } from '../data/event';
 
   .countdown-card {
     min-width: 0;
-    background: var(--glass-bg);
-    border: var(--glass-border);
+    background: var(--card-bg);
+    border: var(--card-border);
     border-radius: 1rem;
     padding: 1.375rem 0.25rem;
     backdrop-filter: blur(6px);
-    box-shadow:
-      var(--glass-highlight),
-      0 18px 40px -24px rgba(0, 0, 0, 0.9);
+    box-shadow: var(--card-shadow);
   }
 
   .countdown-card__value {
@@ -69,7 +67,7 @@ import { event } from '../data/event';
     font-size: clamp(1.625rem, 8vw, 3.375rem);
     font-weight: 700;
     line-height: 1;
-    background: var(--gradient-silver);
+    background: var(--gradient-rose);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -84,12 +82,12 @@ import { event } from '../data/event';
     font-size: 0.625rem;
     letter-spacing: 0.28em;
     text-transform: uppercase;
-    color: var(--c-gold-bright);
+    color: var(--c-rose-700);
   }
 
   .countdown-arrived {
     font-size: clamp(1.25rem, 6vw, 2rem);
-    color: var(--c-gold);
+    color: var(--c-rose-700);
     text-align: center;
   }
 </style>
