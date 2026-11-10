@@ -620,14 +620,60 @@ function veinPath(el: Element, minSubpaths: number): Element | undefined {
   );
 }
 
+const PETAL_FILL_IDS_BY_FLOWER: Record<string, string[]> = {
+  'rose-pink': roseRingGradientIds('rose-pink'),
+  'rose-cream': roseRingGradientIds('rose-cream'),
+  'peony-blush': peonyRingGradientIds('peony-blush'),
+  'peony-ivory': peonyRingGradientIds('peony-ivory'),
+  blossom: ['blossom-petal'],
+};
+
+/** A petal path's raw (numeric-pair) points, carried through every ancestor `transform` — its own
+ *  `rotate`, and any wrapping `<g transform="translate(…)">` — up to (but excluding) the flower's
+ *  own `<symbol>`, so the result sits in the symbol's own coordinate space no matter how the petal
+ *  is nested. */
+function petalPointsInSymbolSpace(symbolEl: Element, petal: Element): Point[] {
+  return rawPoints(petal.getAttribute('d') ?? '').map((point) => {
+    let p = point;
+    for (let el: Element | null = petal; el && el !== symbolEl; el = el.parentElement) {
+      const t = el.getAttribute('transform');
+      if (t) p = applyTransform(t, p);
+    }
+    return p;
+  });
+}
+
+/** A flower's outermost petal radius: the farthest any petal point (anchors and control points)
+ *  lies from the bloom centre — an intentional overestimate, since a cubic curve's true edge sits
+ *  inside its control polygon. */
+function outermostPetalRadius(id: string): number {
+  const el = symbol(id);
+  const [, , width, height] = viewBoxOf(el);
+  const center: Point = [width / 2, height / 2];
+  let max = 0;
+  for (const petal of petalPaths(el, PETAL_FILL_IDS_BY_FLOWER[id])) {
+    for (const point of petalPointsInSymbolSpace(el, petal)) {
+      max = Math.max(max, Math.hypot(point[0] - center[0], point[1] - center[1]));
+    }
+  }
+  return max;
+}
+
 describe('ArchSprite flower seat shadow', () => {
-  it('shares one soft rose-700 seat-shadow gradient fading from 28% to nothing', () => {
+  it('shares one soft rose-700 seat-shadow gradient fading to nothing before its own edge', () => {
     const seat = gradient('flower-seat-shadow');
     expect(seat.tagName.toLowerCase()).toBe('radialgradient');
     const stops = Array.from(seat.querySelectorAll('stop'));
     for (const style of stopColors(seat)) expect(style).toMatch(/var\(--c-rose-700\)/);
-    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.28);
-    expect(stops[stops.length - 1].getAttribute('stop-opacity')).toBe('0');
+    expect(Number(stops[0].getAttribute('stop-opacity'))).toBeCloseTo(0.26);
+    const midStop = stops.find((stop) => parseFloat(stop.getAttribute('offset') ?? '') === 55);
+    expect(midStop).not.toBeUndefined();
+    expect(Number(midStop!.getAttribute('stop-opacity'))).toBeCloseTo(0.12);
+    for (const stop of stops) {
+      if (parseFloat(stop.getAttribute('offset') ?? '') >= 88) {
+        expect(Number(stop.getAttribute('stop-opacity'))).toBe(0);
+      }
+    }
   });
 
   it.each(FLOWER_IDS)('%s starts with a seat-shadow ellipse offset down and right', (id) => {
@@ -639,31 +685,21 @@ describe('ArchSprite flower seat shadow', () => {
     expect(Number(first.getAttribute('cx'))).toBeGreaterThan(width / 2);
     expect(Number(first.getAttribute('cy'))).toBeGreaterThan(height / 2);
   });
-});
 
-describe('ArchSprite flower rim occlusion', () => {
-  it('shares one rose-700 rim-occlusion gradient, transparent up to 62% then 0.22 at the rim', () => {
-    const occ = gradient('flower-occlusion');
-    expect(occ.tagName.toLowerCase()).toBe('radialgradient');
-    const stops = Array.from(occ.querySelectorAll('stop'));
-    for (const style of stopColors(occ)) expect(style).toMatch(/var\(--c-rose-700\)/);
-    expect(Number(stops[0].getAttribute('stop-opacity'))).toBe(0);
-    const midStop = stops.find((stop) => parseFloat(stop.getAttribute('offset') ?? '') === 62);
-    expect(midStop).not.toBeUndefined();
-    expect(Number(midStop!.getAttribute('stop-opacity'))).toBe(0);
-    expect(Number(stops[stops.length - 1].getAttribute('stop-opacity'))).toBeCloseTo(0.22);
+  it.each(FLOWER_IDS)('%s paints no shadow beyond 1.06x its outermost petal', (id) => {
+    const el = symbol(id);
+    const seat = el.querySelector('ellipse[fill="url(#flower-seat-shadow)"]');
+    expect(seat).not.toBeNull();
+    const [, , width, height] = viewBoxOf(el);
+    const center: Point = [width / 2, height / 2];
+    const offset = Math.hypot(Number(seat!.getAttribute('cx')) - center[0], Number(seat!.getAttribute('cy')) - center[1]);
+    const reach = offset + Math.max(Number(seat!.getAttribute('rx')), Number(seat!.getAttribute('ry')));
+    expect(reach).toBeLessThanOrEqual(1.06 * outermostPetalRadius(id));
   });
 
-  it.each([...ROSE_IDS, ...PEONY_IDS])('%s ends with a rim-occlusion circle inside its inscribed circle', (id) => {
-    const el = symbol(id);
-    const last = el.lastElementChild!;
-    expect(last.tagName.toLowerCase()).toBe('circle');
-    expect(last.getAttribute('fill')).toBe('url(#flower-occlusion)');
-    const [, , width] = viewBoxOf(el);
-    const cx = Number(last.getAttribute('cx'));
-    const cy = Number(last.getAttribute('cy'));
-    const r = Number(last.getAttribute('r'));
-    expect(Math.hypot(cx - width / 2, cy - width / 2) + r).toBeLessThanOrEqual(width / 2);
+  it('no flower uses a rim-occlusion fill', () => {
+    expect(root.querySelector('#flower-occlusion')).toBeNull();
+    expect(root.querySelector('[fill="url(#flower-occlusion)"]')).toBeNull();
   });
 });
 
