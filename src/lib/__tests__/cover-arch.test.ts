@@ -281,6 +281,62 @@ describe('airy garland', () => {
   });
 });
 
+describe('smooth arch curve', () => {
+  // The crown flows into the side columns along one continuous rounded curve rather than turning
+  // a sharp corner, so balloons and flowers drop gradually toward the sides.
+  const SPINE_STEPS = 400;
+
+  it('never turns more than 12° between consecutive spine samples', () => {
+    for (const spec of SPECS) {
+      const points = spineSamples(spec, SPINE_STEPS);
+      let maxTurn = 0;
+      for (let i = 2; i < points.length; i++) {
+        const before = Math.atan2(points[i - 1].y - points[i - 2].y, points[i - 1].x - points[i - 2].x);
+        const after = Math.atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+        maxTurn = Math.max(maxTurn, Math.abs(wrapRadians(after - before)));
+      }
+      expect((maxTurn * 180) / Math.PI).toBeLessThanOrEqual(12);
+    }
+  });
+
+  it('rounds each top corner over a long stretch of the spine', () => {
+    const minFraction = new Map([
+      [ARCH_SPECS.portrait, 0.35],
+      [ARCH_SPECS.landscape, 0.2],
+    ]);
+    for (const spec of SPECS) {
+      const points = spineSamples(spec, SPINE_STEPS);
+      const span = cornerSpan(points.slice(0, SPINE_STEPS / 2 + 1), 75, 15);
+      expect(span / spec.width).toBeGreaterThanOrEqual(minFraction.get(spec)!);
+    }
+  });
+
+  it('keeps every visible item centered close to the spine', () => {
+    for (const spec of SEEDED_SPECS) {
+      const points = spineSamples(spec, 1200);
+      const visible = buildArch(spec).items.filter((item) => item.y <= spec.fadeStart);
+      expect(visible.length).toBeGreaterThan(0);
+      for (const item of visible) {
+        const distance = Math.min(...points.map((p) => Math.hypot(p.x - item.x, p.y - item.y)));
+        const where = `${item.kind} at (${item.x.toFixed(1)}, ${item.y.toFixed(1)})`;
+        expect(distance, where).toBeLessThanOrEqual(0.6 * spec.sizeRange[1]);
+      }
+    }
+  });
+
+  it('tilts flowers and leaves down the left curve counter-clockwise, and the right clockwise', () => {
+    for (const spec of SEEDED_SPECS) {
+      const items = buildArch(spec).items.filter((item) => item.kind !== 'balloon');
+      const outerLeft = items.filter((item) => item.x < spec.width * 0.15);
+      const outerRight = items.filter((item) => item.x > spec.width * 0.85);
+      expect(outerLeft.length).toBeGreaterThan(0);
+      expect(outerRight.length).toBeGreaterThan(0);
+      expect(meanRotate(outerLeft)).toBeLessThan(-8);
+      expect(meanRotate(outerRight)).toBeGreaterThan(8);
+    }
+  });
+});
+
 describe('flower prominence', () => {
   // The reference mockup's roses and peonies read almost as big as the balloons beside them,
   // sitting in front and clustered in twos and threes, rather than as small accents.
@@ -543,6 +599,36 @@ function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function spineSamples(spec: ArchSpec, steps: number): { x: number; y: number }[] {
+  return Array.from({ length: steps + 1 }, (_, i) => archSpinePoint(spec, i / steps));
+}
+
+function wrapRadians(angle: number): number {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
+}
+
+/**
+ * Arc length along `points` (bottom-left up toward the crown) from where the spine's tilt from
+ * horizontal first drops to `fromDeg` until it first drops to `toDeg`.
+ */
+function cornerSpan(points: { x: number; y: number }[], fromDeg: number, toDeg: number): number {
+  let length = 0;
+  let started = false;
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x;
+    const dy = points[i].y - points[i - 1].y;
+    const tilt = (Math.atan2(Math.abs(dy), Math.abs(dx)) * 180) / Math.PI;
+    if (!started && tilt <= fromDeg) started = true;
+    if (started && tilt <= toDeg) return length;
+    if (started) length += Math.hypot(dx, dy);
+  }
+  return length;
+}
+
+function meanRotate(items: ArchItem[]): number {
+  return items.reduce((sum, item) => sum + item.rotate, 0) / items.length;
 }
 
 function clampNumber(value: number, min: number, max: number): number {

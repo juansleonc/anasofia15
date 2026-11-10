@@ -2,10 +2,11 @@
 // the cover (see components/BalloonArch.astro, which owns the DOM/SVG rendering). Given a spec
 // it always returns the same positioned items, so the geometry is unit-testable without a DOM.
 //
-// Items are placed along a single ∩-shaped "spine" polyline: up the left side column, over the
-// crown, down the right side column. Only the left half is generated; the right half is its mirror
-// across the vertical axis (with small seeded jitter and swapped colour/symbol variants), and any
-// odd item out sits on the axis itself, so both sides always carry the same visual weight.
+// Items are placed along a single ∩-shaped "spine": up the left side column, round a wide corner
+// arc, over the crown, and back down the right side column. Only the left half is generated; the
+// right half is its mirror across the vertical axis (with small seeded jitter and swapped
+// colour/symbol variants), and any odd item out sits on the axis itself, so both sides always
+// carry the same visual weight.
 
 export type ArchItemKind = 'balloon' | 'flower' | 'leaf';
 
@@ -49,6 +50,8 @@ export interface ArchSpec {
   gutter: number;
   /** viewBox y the side columns reach down to (<= height). */
   sideDepth: number;
+  /** Radius of the arc each top corner of the spine rounds, in viewBox units. */
+  cornerRadius: number;
   /** viewBox y where the soft fade-out of the side columns starts; it always ends at `height`. */
   fadeStart: number;
   /** viewBox units every visible item keeps clear of the canvas edge, so the cover frame never clips it. */
@@ -77,7 +80,8 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     band: 190,
     gutter: 42,
     sideDepth: 455,
-    fadeStart: 250,
+    cornerRadius: 140,
+    fadeStart: 280,
     inset: 12,
     crownBias: 0.1,
     cornerBias: 1,
@@ -91,6 +95,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     band: 190,
     gutter: 230,
     sideDepth: 525,
+    cornerRadius: 300,
     fadeStart: 300,
     inset: 24,
     crownBias: 0.3,
@@ -127,95 +132,118 @@ interface SpineSample extends Point {
   /** Unit normal, perpendicular to the spine's local direction of travel. */
   nx: number;
   ny: number;
+  /** Direction of travel in degrees: −90 up the left column, 0 across the crown, 90 down the right. */
+  angle: number;
 }
+
+/** The spine as a dense polyline, with the cumulative arc length up to each of its points. */
+interface Spine {
+  points: Point[];
+  lengths: number[];
+  /** Spine fraction of each top corner's shoulder, where the garland is fullest. */
+  corners: [number, number];
+}
+
+/** Points each corner arc is drawn with — fine enough that no step turns more than ~2°. */
+const CORNER_ARC_STEPS = 48;
+/** Tilt from horizontal, in degrees, of the spot on each corner arc treated as its shoulder. */
+const SHOULDER_TILT = 40;
 
 /**
- * The ∩ spine: up the left side column, over the crown, down the right side column. Balloons,
- * and later flowers/leaves, are placed by sampling along it.
+ * The ∩ spine: up the left side column, round a quarter-circle corner of `cornerRadius`, across
+ * the crown, then the mirror image down the right side column. Balloons, flowers and leaves are
+ * placed by sampling along it.
  */
-function spinePoints(spec: ArchSpec): Point[] {
-  const { width, band, gutter, sideDepth } = spec;
-  return [
-    { x: gutter / 2, y: sideDepth },
-    { x: gutter / 2, y: band * 0.7 },
-    { x: width * 0.18, y: band * 0.5 },
-    { x: width / 2, y: band * 0.5 },
-    { x: width * 0.82, y: band * 0.5 },
-    { x: width - gutter / 2, y: band * 0.7 },
-    { x: width - gutter / 2, y: sideDepth },
-  ];
+function buildSpine(spec: ArchSpec): Spine {
+  const { width, band, gutter, sideDepth, cornerRadius: r } = spec;
+  const legX = gutter / 2;
+  const crownY = band * 0.5;
+  const centerX = legX + r;
+  const centerY = crownY + r;
+  const left: Point[] = [{ x: legX, y: sideDepth }];
+  for (let i = 0; i <= CORNER_ARC_STEPS; i++) {
+    const phi = Math.PI * (1 + (0.5 * i) / CORNER_ARC_STEPS);
+    left.push({ x: centerX + r * Math.cos(phi), y: centerY + r * Math.sin(phi) });
+  }
+  const right = left.map((p) => ({ x: width - p.x, y: p.y })).reverse();
+  const points = [...left, ...right];
+
+  const lengths = [0];
+  for (let i = 1; i < points.length; i++) {
+    lengths.push(lengths[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y));
+  }
+  const total = lengths[lengths.length - 1];
+  const knee = lengths[1 + Math.round(CORNER_ARC_STEPS * (1 - SHOULDER_TILT / 90))] / total;
+  return { points, lengths, corners: [knee, 1 - knee] };
 }
 
-/** Sample the polyline by arc length at t ∈ [0,1], with the local unit normal. */
-function sampleSpine(points: Point[], t: number): SpineSample {
-  const segLengths: number[] = [];
-  let total = 0;
-  for (let i = 0; i < points.length - 1; i++) {
-    const dx = points[i + 1].x - points[i].x;
-    const dy = points[i + 1].y - points[i].y;
-    const len = Math.hypot(dx, dy);
-    segLengths.push(len);
-    total += len;
-  }
-
-  const target = clamp(t, 0, 1) * total;
-  let acc = 0;
-  for (let i = 0; i < segLengths.length; i++) {
-    const isLast = i === segLengths.length - 1;
-    if (target <= acc + segLengths[i] || isLast) {
-      const p0 = points[i];
-      const p1 = points[i + 1];
-      const segLen = segLengths[i];
-      const segT = segLen === 0 ? 0 : clamp((target - acc) / segLen, 0, 1);
-      const dx = p1.x - p0.x;
-      const dy = p1.y - p0.y;
-      const len = Math.hypot(dx, dy) || 1;
-      return {
-        x: p0.x + dx * segT,
-        y: p0.y + dy * segT,
-        nx: -dy / len,
-        ny: dx / len,
-      };
+/** Sample the spine by arc length at t ∈ [0,1], with the local unit normal and direction. */
+function sampleSpine(spine: Spine, t: number): SpineSample {
+  const { points, lengths } = spine;
+  const target = clamp(t, 0, 1) * lengths[lengths.length - 1];
+  let lo = 0;
+  let hi = points.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (lengths[mid] <= target) {
+      lo = mid;
+    } else {
+      hi = mid;
     }
-    acc += segLengths[i];
   }
+  const p0 = points[lo];
+  const p1 = points[hi];
+  const segLen = lengths[hi] - lengths[lo];
+  const segT = segLen === 0 ? 0 : clamp((target - lengths[lo]) / segLen, 0, 1);
+  const dx = p1.x - p0.x;
+  const dy = p1.y - p0.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return {
+    x: p0.x + dx * segT,
+    y: p0.y + dy * segT,
+    nx: -dy / len,
+    ny: dx / len,
+    angle: (Math.atan2(dy, dx) * 180) / Math.PI,
+  };
+}
 
-  const last = points[points.length - 1];
-  return { x: last.x, y: last.y, nx: 0, ny: 1 };
+/** Spine fraction where the left side first climbs up to viewBox height `y`. */
+function spineFractionAtHeight(spine: Spine, y: number): number {
+  const { points, lengths } = spine;
+  const i = points.findIndex((p) => p.y <= y);
+  return lengths[Math.max(i, 0)] / lengths[lengths.length - 1];
 }
 
 /** A point on the spec's ∩ spine at arc-length fraction t ∈ [0,1] (0 = bottom-left, 1 = bottom-right). */
 export function archSpinePoint(spec: ArchSpec, t: number): { x: number; y: number } {
-  const { x, y } = sampleSpine(spinePoints(spec), t);
+  const { x, y } = sampleSpine(buildSpine(spec), t);
   return { x, y };
 }
+
+/** How much of the spine's local direction a flower or leaf leans into, so it follows the curve. */
+const TANGENT_TILT = 0.3;
 
 /** Big across the crown (t≈0.5), shrinking down the sides (t≈0 / t≈1). */
 function taper(t: number): number {
   return 0.45 + 0.55 * Math.sin(Math.PI * clamp(t, 0, 1));
 }
 
-/** Spine fraction where each side column turns into the crown — the arch's two top corners. */
-function cornerTs(points: Point[]): [number, number] {
-  let total = 0;
-  for (let i = 0; i < points.length - 1; i++) {
-    total += Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
-  }
-  const knee = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) / total;
-  return [knee, 1 - knee];
-}
+/** Spine fraction over which the pull toward each corner's shoulder falls off. */
+const CORNER_BUMP_WIDTH = 0.12;
 
-/** 1 at either top corner, falling off smoothly along the spine. */
-function cornerBump(t: number, corners: [number, number]): number {
-  const width = 0.12;
+/** 1 at either top corner, falling off smoothly along the spine over `width`. */
+function cornerBump(t: number, corners: [number, number], width = CORNER_BUMP_WIDTH): number {
   const left = (t - corners[0]) / width;
   const right = (t - corners[1]) / width;
   return Math.max(Math.exp(-left * left), Math.exp(-right * right));
 }
 
+/** Spine fraction over which balloons swell to full size around each corner's shoulder. */
+const SIZE_BUMP_WIDTH = 0.08;
+
 /** Balloon size profile: biggest at the corners, still generous mid-crown, smallest down the sides. */
 function balloonTaper(t: number, corners: [number, number]): number {
-  return 0.45 + 0.55 * Math.max(0.35 * Math.sin(Math.PI * clamp(t, 0, 1)), cornerBump(t, corners));
+  return 0.45 + 0.55 * Math.max(0.35 * Math.sin(Math.PI * clamp(t, 0, 1)), cornerBump(t, corners, SIZE_BUMP_WIDTH));
 }
 
 /**
@@ -418,14 +446,14 @@ const BALLOON_SPINE_STEPS = 80;
  * (big) and in front (smaller accents); each is mirrored to the right, and an odd one out goes on
  * the axis. The side columns only reach a quarter of the way into the masked-out fade.
  */
-function placeBalloons(spec: ArchSpec, points: Point[], flowers: ArchItem[], rng: () => number): ArchItem[] {
+function placeBalloons(spec: ArchSpec, spine: Spine, flowers: ArchItem[], rng: () => number): ArchItem[] {
   const count = spec.counts.balloons;
   const half = Math.floor(count / 2);
   const maxSize = spec.sizeRange[1];
   const sizeSpan = spec.sizeRange[1] - spec.sizeRange[0];
   const leftTones = shuffledTones(half, rng);
   const rightTones = shuffledTones(half, rng, half);
-  const corners = cornerTs(points);
+  const corners = spine.corners;
   const lowest = spec.fadeStart + 0.25 * (spec.sideDepth - spec.fadeStart);
   const preference = (t: number): number =>
     maxSize * (spec.crownBias * Math.sqrt(Math.sin(Math.PI * t)) + spec.cornerBias * cornerBump(t, corners));
@@ -438,7 +466,7 @@ function placeBalloons(spec: ArchSpec, points: Point[], flowers: ArchItem[], rng
     rotate: number,
     scale: number,
   ): ArchItem => {
-    const sample = sampleSpine(points, t);
+    const sample = sampleSpine(spine, t);
     const size = (spec.sizeRange[0] + sizeSpan * balloonTaper(t, corners)) * (isBack ? 1 : 0.75) * scale;
     const offset = offsetFrac * size;
     return fitInside(
@@ -465,7 +493,7 @@ function placeBalloons(spec: ArchSpec, points: Point[], flowers: ArchItem[], rng
     return [1, 0.7, 0.5].flatMap((scale) => {
       const scored: { item: ArchItem; score: number }[] = [];
       for (const t of ts) {
-        if (sampleSpine(points, t).y > lowest) {
+        if (sampleSpine(spine, t).y > lowest) {
           continue;
         }
         for (const offset of [-0.45, 0.45]) {
@@ -479,8 +507,8 @@ function placeBalloons(spec: ArchSpec, points: Point[], flowers: ArchItem[], rng
   };
 
   const leftTs = Array.from({ length: BALLOON_SPINE_STEPS + 1 }, (_, i) => (LEFT_HALF_END * i) / BALLOON_SPINE_STEPS);
-  const isSide = (t: number): boolean => sampleSpine(points, t).y >= spec.band;
-  const reachable = leftTs.filter((t) => sampleSpine(points, t).y <= lowest);
+  const isSide = (t: number): boolean => sampleSpine(spine, t).y >= spec.band;
+  const reachable = leftTs.filter((t) => sampleSpine(spine, t).y <= lowest);
   // The side column gets its share of balloons by spine length; the crown gets the rest.
   const sideCount = Math.round((half * reachable.filter(isSide).length) / reachable.length);
   const items: ArchItem[] = [];
@@ -524,11 +552,11 @@ function inClearZone(point: Point, spec: ArchSpec): boolean {
  * balloon to either side of the spine (never on it, so the spine keeps its soft gaps), skipping the masked-out bottom, the text clear
  * zone and anything off-canvas.
  */
-function fillerSpots(spec: ArchSpec, points: Point[]): Point[] {
+function fillerSpots(spec: ArchSpec, spine: Spine): Point[] {
   const halfWidth = spec.sizeRange[1] / 3;
   const spots: Point[] = [];
   for (let i = 0; i <= FILLER_SPINE_STEPS; i++) {
-    const sample = sampleSpine(points, i / FILLER_SPINE_STEPS);
+    const sample = sampleSpine(spine, i / FILLER_SPINE_STEPS);
     for (const offset of [-halfWidth, halfWidth]) {
       spots.push({ x: sample.x + sample.nx * offset, y: sample.y + sample.ny * offset });
     }
@@ -546,7 +574,7 @@ function fillerSpots(spec: ArchSpec, points: Point[]): Point[] {
  * floating free. Every left filler gets a mirrored twin, re-sized to the hole it lands in; an odd
  * count puts its odd one out on the axis.
  */
-function placeFillers(spec: ArchSpec, points: Point[], solids: ArchItem[], rng: () => number): ArchItem[] {
+function placeFillers(spec: ArchSpec, spine: Spine, solids: ArchItem[], rng: () => number): ArchItem[] {
   const maxSize = spec.sizeRange[1];
   const minSize = 0.3 * maxSize;
   const fillerMax = 0.6 * maxSize;
@@ -554,7 +582,7 @@ function placeFillers(spec: ArchSpec, points: Point[], solids: ArchItem[], rng: 
   const isOnAxis = (spot: Point): boolean => Math.abs(spot.x - axis) < 1e-6;
   const leftTones = shuffledTones(spec.counts.fillers, rng);
   const rightTones = shuffledTones(spec.counts.fillers, rng, 1);
-  const spots = fillerSpots(spec, points)
+  const spots = fillerSpots(spec, spine)
     .filter((spot) => spot.x < axis || isOnAxis(spot))
     .map((spot) => (isOnAxis(spot) ? { x: axis, y: spot.y } : spot));
   const placed = [...solids];
@@ -633,18 +661,18 @@ function clusterSizes(count: number, clusters: number): { sides: number[]; cente
   return { sides, center: hasCenter ? perCluster + spare : 0 };
 }
 
-/** How far down the side columns, in spine fraction, the corner flower clusters sit below the corners — leaving the corners themselves to the big balloons. */
-const CORNER_CLUSTER_DROP = 0.04;
+/** How far above the band, in biggest-balloon widths, the spine passes where each corner flower cluster sits — low on the shoulder, yet still in the crown. */
+const CORNER_CLUSTER_RISE = 0.5;
 /** How far inside the spine, as a fraction of the local balloon size, a flower cluster nestles. */
 const FLOWER_INSET = 0.4;
 
 /** Candidate spots across the garland around spine position `t`, clamped so a flower of `size` stays on canvas above the band. */
-function flowerSpots(spec: ArchSpec, points: Point[], t: number, size: number): Point[] {
+function flowerSpots(spec: ArchSpec, spine: Spine, t: number, size: number): Point[] {
   const r = size / 2;
   const margin = spec.inset;
   const spots: Point[] = [];
   for (let step = -4; step <= 4; step++) {
-    const sample = sampleSpine(points, clamp(t + step * 0.012, 0, 1));
+    const sample = sampleSpine(spine, clamp(t + step * 0.012, 0, 1));
     for (const offset of [-0.4, -0.2, 0, 0.2, 0.4]) {
       spots.push({
         x: clamp(sample.x + sample.nx * offset * size, margin + r, spec.width - margin - r),
@@ -664,8 +692,8 @@ function flowerSpots(spec: ArchSpec, points: Point[], t: number, size: number): 
  * the center cluster is built from on-axis flowers and mirrored pairs straddling the axis.
  * Round-robin over the four flower symbols, so a spec with at least 4 flowers uses all of them.
  */
-function placeFlowers(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
-  const corners = cornerTs(points);
+function placeFlowers(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem[] {
+  const corners = spine.corners;
   const count = spec.counts.flowers;
   const minClusters = Math.max(2, Math.ceil(count / 3));
   // An odd flower count needs a center cluster to hold the one flower that has no mirror twin.
@@ -690,9 +718,11 @@ function placeFlowers(spec: ArchSpec, points: Point[], rng: () => number): ArchI
   const placeCluster = (t: number, pairs: number, onAxis: number): void => {
     const isCenter = t === 0.5;
     const localBalloon = spec.sizeRange[0] + (spec.sizeRange[1] - spec.sizeRange[0]) * balloonTaper(t, corners);
-    const sample = sampleSpine(points, t);
+    const sample = sampleSpine(spine, t);
     const inward = FLOWER_INSET * localBalloon;
     const anchor = { x: sample.x + sample.nx * inward, y: sample.y + sample.ny * inward };
+    // The center cluster favors spots close to the axis over ones straight below it, so it stays centered.
+    const across = isCenter ? 2 : 1;
     const members: ArchItem[] = [];
     for (let m = 0; m < onAxis + pairs; m++) {
       const axial = m < onAxis;
@@ -704,14 +734,14 @@ function placeFlowers(spec: ArchSpec, points: Point[], rng: () => number): ArchI
           (group.length === 0 || group.some((other) => Math.hypot(spot.x - other.x, spot.y - other.y) <= 1.1 * size))
         );
       };
-      const allSpots = flowerSpots(spec, points, t, size).map((spot) => (axial ? { x: axis, y: spot.y } : spot));
+      const allSpots = flowerSpots(spec, spine, t, size).map((spot) => (axial ? { x: axis, y: spot.y } : spot));
       const spots = allSpots.filter((spot) => (axial || spot.x < axis) && spread(spot));
       const ranked = (spots.length > 0 ? spots : allSpots.slice(0, 1))
-        .map((spot) => ({ spot, distance: Math.hypot(spot.x - anchor.x, spot.y - anchor.y) }))
+        .map((spot) => ({ spot, distance: Math.hypot(across * (spot.x - anchor.x), spot.y - anchor.y) }))
         .sort((a, b) => a.distance - b.distance);
 
       const symbol = FLOWER_SYMBOLS[symbolIndex++ % FLOWER_SYMBOLS.length];
-      const rotate = (rng() - 0.5) * 20;
+      const rotate = TANGENT_TILT * sample.angle + (rng() - 0.5) * 20;
       const candidates = ranked.map(({ spot }): ArchItem => ({
         symbol,
         kind: 'flower',
@@ -735,7 +765,7 @@ function placeFlowers(spec: ArchSpec, points: Point[], rng: () => number): ArchI
     }
   };
 
-  const first = corners[0] - CORNER_CLUSTER_DROP;
+  const first = spineFractionAtHeight(spine, spec.band - CORNER_CLUSTER_RISE * spec.sizeRange[1]);
   sides.forEach((size, c) => {
     placeCluster(first + ((1 - 2 * first) * c) / (clusters - 1), size, 0);
   });
@@ -752,14 +782,14 @@ function placeFlowers(spec: ArchSpec, points: Point[], rng: () => number): ArchI
  * shifted leaf symbol; an odd one out sits on the axis. Round-robin over the leaf symbols, so a
  * spec with at least 3 leaves uses all of them.
  */
-function placeLeaves(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
+function placeLeaves(spec: ArchSpec, spine: Spine, rng: () => number): ArchItem[] {
   const count = spec.counts.leaves;
   const half = Math.floor(count / 2);
   const maxSize = spec.sizeRange[1];
   const symbolShift = 1 + Math.floor(rng() * (LEAF_SYMBOLS.length - 1));
 
   const leafAt = (t: number, symbol: ArchSymbol): ArchItem => {
-    const sample = sampleSpine(points, t);
+    const sample = sampleSpine(spine, t);
     const size = taperedBalloonSize(spec, t) * (0.4 + rng() * 0.3);
     // Outward = away from the arch's interior (the left side column fans left, the crown fans
     // up), so the leaves read as sprigs trailing past the balloons, not tucked inside.
@@ -770,7 +800,7 @@ function placeLeaves(spec: ArchSpec, points: Point[], rng: () => number): ArchIt
       x: clamp(sample.x + sample.nx * offset, -maxSize, spec.width + maxSize),
       y: clamp(sample.y + sample.ny * offset, -maxSize, spec.height),
       size,
-      rotate: (rng() - 0.5) * 30,
+      rotate: TANGENT_TILT * sample.angle + (rng() - 0.5) * 30,
       layer: 0,
     };
   };
@@ -855,11 +885,11 @@ export function archFadeMask(spec: ArchSpec): string {
 
 export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
-  const points = spinePoints(spec);
-  const leaves = placeLeaves(spec, points, rng);
-  const flowers = placeFlowers(spec, points, rng);
-  const solids = [...placeBalloons(spec, points, flowers, rng), ...flowers];
-  const fillers = placeFillers(spec, points, solids, rng);
+  const spine = buildSpine(spec);
+  const leaves = placeLeaves(spec, spine, rng);
+  const flowers = placeFlowers(spec, spine, rng);
+  const solids = [...placeBalloons(spec, spine, flowers, rng), ...flowers];
+  const fillers = placeFillers(spec, spine, solids, rng);
   const items = [...leaves, ...solids, ...fillers].sort((a, b) => a.layer - b.layer || a.y - b.y);
 
   return { width: spec.width, height: spec.height, items };
