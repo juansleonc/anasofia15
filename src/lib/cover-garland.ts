@@ -38,8 +38,13 @@ export interface GarlandLayout {
   height: number;
   /** viewBox y where the layout's soft fade-out starts; it is fully transparent at `height`. */
   fadeStart: number;
-  /** The text zone, kept free of every item: x in [x0, x1] and y >= top. */
-  clear: { x0: number; x1: number; top: number };
+  /**
+   * The text zone, kept free of every item. Below `top` it is the rectangle x in [x0, x1]; above
+   * `top` it narrows to the arch pocket, whose floor rises from `top` at the walls to `crown` at
+   * the centre (crown < top), so the crown of the garland can dip down toward the text at the
+   * sides while staying high above it in the middle.
+   */
+  clear: { x0: number; x1: number; top: number; crown: number };
   items: readonly GarlandItem[];
 }
 
@@ -54,7 +59,7 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
     width: 400,
     height: 400,
     fadeStart: 340,
-    clear: { x0: 48, x1: 352, top: 264 },
+    clear: { x0: 38, x1: 362, top: 264, crown: 208 },
     items: [
       { symbol: 'leaf-gold', x: 100, y: 40, size: 70, rotate: -30, depth: 0 },
       { symbol: 'leaf-eucalyptus', x: 18, y: 120, size: 90, rotate: -60, depth: 0 },
@@ -62,14 +67,13 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'leaf-gold', x: 290, y: 10, size: 70, rotate: 25, depth: 0 },
       { symbol: 'leaf-eucalyptus', x: 384, y: 120, size: 90, rotate: 60, depth: 0 },
       { symbol: 'leaf-olive', x: 380, y: 180, size: 80, rotate: 110, depth: 0 },
-      { symbol: 'leaf-olive', x: 145, y: 228, size: 60, rotate: 170, depth: 0 },
-      { symbol: 'leaf-gold', x: 262, y: 230, size: 58, rotate: 190, depth: 0 },
-      { symbol: 'leaf-olive', x: 12, y: 345, size: 120, rotate: 185, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 8, y: 320, size: 100, rotate: 200, depth: 0 },
-      { symbol: 'leaf-gold', x: 16, y: 300, size: 80, rotate: 160, depth: 0 },
-      { symbol: 'leaf-olive', x: 386, y: 345, size: 120, rotate: 175, depth: 0 },
-      { symbol: 'leaf-eucalyptus', x: 394, y: 320, size: 100, rotate: 160, depth: 0 },
-      { symbol: 'leaf-gold', x: 384, y: 300, size: 80, rotate: 200, depth: 0 },
+      // re-seated further out so they clear the widened [38, 362] wall below y=264
+      { symbol: 'leaf-olive', x: 4, y: 345, size: 120, rotate: 185, depth: 0 },
+      { symbol: 'leaf-eucalyptus', x: -4, y: 320, size: 100, rotate: 200, depth: 0 },
+      { symbol: 'leaf-gold', x: 4, y: 300, size: 80, rotate: 160, depth: 0 },
+      { symbol: 'leaf-olive', x: 396, y: 345, size: 120, rotate: 175, depth: 0 },
+      { symbol: 'leaf-eucalyptus', x: 404, y: 320, size: 100, rotate: 160, depth: 0 },
+      { symbol: 'leaf-gold', x: 396, y: 300, size: 80, rotate: 200, depth: 0 },
       { symbol: 'leaf-gold', x: 160.7, y: 56.3, size: 70, rotate: -60, depth: 0 },
       { symbol: 'leaf-olive', x: 183.3, y: 64.3, size: 70, rotate: 60, depth: 0 },
       { symbol: 'leaf-olive', x: 239.8, y: 53.6, size: 70, rotate: -15, depth: 0 },
@@ -82,32 +86,35 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'balloon-pink', x: 152, y: 116, size: 132, rotate: -4, depth: 2 },
       { symbol: 'balloon-rosegold', x: 258, y: 128, size: 118, rotate: 0, depth: 2 },
       { symbol: 'balloon-pink', x: 356, y: 162, size: 128, rotate: 0, depth: 2 },
-      { symbol: 'balloon-rosegold-satin', x: 112, y: 202, size: 88, rotate: 0, depth: 2 },
-      { symbol: 'balloon-champagne', x: 208, y: 210, size: 76, rotate: 0, depth: 2 },
-      { symbol: 'balloon-pink', x: 298, y: 200, size: 88, rotate: 0, depth: 2 },
-      { symbol: 'balloon-pink', x: 4, y: 240, size: 96, rotate: 0, depth: 2 },
-      { symbol: 'balloon-champagne-satin', x: 396, y: 242, size: 96, rotate: 0, depth: 2 },
-      { symbol: 'balloon-rosegold', x: 16, y: 300, size: 64, rotate: 0, depth: 2 },
-      { symbol: 'balloon-pink', x: 386, y: 300, size: 64, rotate: 0, depth: 2 },
+      { symbol: 'balloon-rosegold-satin', x: 112, y: 176, size: 80, rotate: 0, depth: 2 },
+      // crown's centre row lifted & split into smaller balloons nested higher, so the pocket above
+      // the text stays clear instead of the old flat band
+      { symbol: 'balloon-champagne', x: 170, y: 160, size: 54, rotate: 0, depth: 2 },
+      { symbol: 'balloon-pink', x: 230, y: 154, size: 50, rotate: 0, depth: 2 },
+      { symbol: 'balloon-rosegold', x: 200, y: 182, size: 40, rotate: 0, depth: 2 },
+      { symbol: 'balloon-pink', x: 298, y: 176, size: 80, rotate: 0, depth: 2 },
+      { symbol: 'balloon-pink', x: -2, y: 218, size: 88, rotate: 0, depth: 2 },
+      { symbol: 'balloon-champagne-satin', x: 402, y: 218, size: 88, rotate: 0, depth: 2 },
+      { symbol: 'balloon-rosegold', x: 4, y: 284, size: 60, rotate: 0, depth: 2 },
+      { symbol: 'balloon-pink', x: 396, y: 284, size: 60, rotate: 0, depth: 2 },
       { symbol: 'peony-blush', x: 100, y: 92, size: 74, rotate: 0, depth: 3 },
       { symbol: 'rose-pink', x: 212, y: 86, size: 66, rotate: 8, depth: 3 },
       { symbol: 'rose-cream', x: 318, y: 98, size: 74, rotate: 0, depth: 3 },
-      { symbol: 'blossom', x: 52, y: 222, size: 58, rotate: -10, depth: 3 },
-      { symbol: 'rose-cream', x: 352, y: 232, size: 58, rotate: 0, depth: 3 },
-      { symbol: 'rose-pink', x: 24, y: 278, size: 44, rotate: 0, depth: 3 },
-      { symbol: 'blossom', x: 380, y: 282, size: 44, rotate: 0, depth: 3 },
+      { symbol: 'blossom', x: 52, y: 204, size: 58, rotate: -10, depth: 3 },
+      { symbol: 'rose-cream', x: 348, y: 200, size: 50, rotate: 0, depth: 3 },
+      { symbol: 'rose-pink', x: 10, y: 258, size: 40, rotate: 0, depth: 3 },
+      { symbol: 'blossom', x: 390, y: 258, size: 40, rotate: 0, depth: 3 },
       { symbol: 'balloon-rosegold-satin', x: 196, y: 160, size: 58, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 258, y: 186, size: 52, rotate: 0, depth: 4 },
-      { symbol: 'balloon-rosegold-satin', x: 80, y: 238, size: 46, rotate: 0, depth: 4 },
-      { symbol: 'balloon-champagne', x: 324, y: 238, size: 46, rotate: 0, depth: 4 },
-      { symbol: 'leaf-olive', x: 230, y: 230, size: 48, rotate: 200, depth: 4 },
+      { symbol: 'balloon-rosegold-satin', x: 80, y: 208, size: 42, rotate: 0, depth: 4 },
+      { symbol: 'balloon-champagne', x: 324, y: 208, size: 42, rotate: 0, depth: 4 },
     ],
   },
   landscape: {
     width: 1440,
     height: 640,
     fadeStart: 560,
-    clear: { x0: 360, x1: 1080, top: 324 },
+    clear: { x0: 360, x1: 1080, top: 324, crown: 230 },
     items: [
       { symbol: 'leaf-gold', x: 254.2, y: 56, size: 132, rotate: -15, depth: 0 },
       { symbol: 'leaf-eucalyptus', x: 41.5, y: 188, size: 149.6, rotate: -65, depth: 0 },
@@ -116,9 +123,6 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'leaf-gold', x: 1167.2, y: 56, size: 123.2, rotate: 25, depth: 0 },
       { symbol: 'leaf-eucalyptus', x: 1421.4, y: 208, size: 140.8, rotate: 65, depth: 0 },
       { symbol: 'leaf-olive', x: 1416.2, y: 256, size: 132, rotate: 100, depth: 0 },
-      { symbol: 'leaf-olive', x: 352.8, y: 262.4, size: 105.6, rotate: 165, depth: 0 },
-      { symbol: 'leaf-gold', x: 669.2, y: 244, size: 105.6, rotate: 175, depth: 0 },
-      { symbol: 'leaf-olive', x: 928.6, y: 256, size: 123.2, rotate: 185, depth: 0 },
       { symbol: 'leaf-gold', x: 1141.3, y: 392, size: 132, rotate: 210, depth: 0 },
       { symbol: 'leaf-gold', x: 197.1, y: 448, size: 149.6, rotate: 160, depth: 0 },
       { symbol: 'leaf-olive', x: 72.6, y: 528, size: 211.2, rotate: 185, depth: 0 },
@@ -143,13 +147,19 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'balloon-champagne', x: 1260.6, y: 100, size: 181.5, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 18.7, y: 292, size: 165, rotate: 0, depth: 1 },
       { symbol: 'balloon-rosegold', x: 1400.6, y: 284, size: 165, rotate: 0, depth: 1 },
-      { symbol: 'balloon-rosegold', x: 412.9, y: 264, size: 66, rotate: 0, depth: 1 },
+      { symbol: 'balloon-rosegold', x: 412.9, y: 246, size: 66, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 1040.6, y: 260, size: 60.5, rotate: 0, depth: 1 },
       { symbol: 'balloon-rosegold-satin', x: 41.5, y: 96, size: 132, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 1431.8, y: 112, size: 143, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 361.1, y: 153.6, size: 247.5, rotate: -4, depth: 2 },
-      { symbol: 'balloon-champagne', x: 529.1, y: 228, size: 209, rotate: 0, depth: 2 },
-      { symbol: 'balloon-rosegold', x: 790.6, y: 206.4, size: 192.5, rotate: 0, depth: 2 },
+      // centre-bottom balloons lifted & split into smaller ones nested higher, so the pocket above
+      // the text stays clear instead of the old flat band
+      { symbol: 'balloon-champagne', x: 500, y: 190, size: 120, rotate: 0, depth: 2 },
+      { symbol: 'balloon-pink', x: 600, y: 180, size: 108, rotate: 0, depth: 2 },
+      { symbol: 'balloon-rosegold', x: 560, y: 195, size: 90, rotate: 0, depth: 2 },
+      { symbol: 'balloon-rosegold', x: 790, y: 174, size: 120, rotate: 0, depth: 2 },
+      { symbol: 'balloon-champagne', x: 860, y: 192, size: 96, rotate: 0, depth: 2 },
+      { symbol: 'balloon-pink', x: 712, y: 188, size: 86, rotate: 0, depth: 2 },
       { symbol: 'balloon-champagne-satin', x: 1162, y: 188, size: 214.5, rotate: 0, depth: 2 },
       { symbol: 'balloon-rosegold', x: 256.3, y: 289.6, size: 181.5, rotate: 0, depth: 2 },
       { symbol: 'balloon-champagne-satin', x: 116.2, y: 404, size: 187, rotate: 0, depth: 2 },
@@ -166,7 +176,7 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'rose-pink', x: 311.3, y: 56, size: 96, rotate: 0, depth: 3 },
       { symbol: 'balloon-rosegold-satin', x: 223.1, y: 209.6, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-rosegold-satin', x: 658.8, y: 172, size: 121, rotate: 0, depth: 4 },
-      { symbol: 'balloon-champagne', x: 980.4, y: 216, size: 115.5, rotate: 0, depth: 4 },
+      { symbol: 'balloon-champagne', x: 980.4, y: 192, size: 115.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 1208.7, y: 324, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne-satin', x: 1348.8, y: 432, size: 104.5, rotate: 0, depth: 4 },
       { symbol: 'balloon-champagne', x: 150.4, y: 486.4, size: 68.2, rotate: 0, depth: 4 },

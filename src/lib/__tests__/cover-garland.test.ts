@@ -52,10 +52,10 @@ describe('text clearance', () => {
     expect(balloons.filter((b) => b.y > reach).map(label)).toEqual([]);
   });
 
-  it('the portrait clear zone spans the middle 76% below at most 0.68 of the width', () => {
+  it('the portrait clear zone spans the middle 81% below at most 0.68 of the width', () => {
     const { width, clear } = GARLAND.portrait;
-    expect(clear.x0).toBeCloseTo(0.12 * width, 6);
-    expect(clear.x1).toBeCloseTo(0.88 * width, 6);
+    expect(clear.x0).toBeCloseTo(0.095 * width, 6);
+    expect(clear.x1).toBeCloseTo(0.905 * width, 6);
     expect(clear.top).toBeLessThanOrEqual(0.68 * width);
   });
 
@@ -75,8 +75,41 @@ describe('text clearance', () => {
         `--arch-clear-portrait:${(p.clear.x1 - p.clear.x0) / p.width};` +
         `--arch-clear-landscape:${(l.clear.x1 - l.clear.x0) / l.width};`,
     );
-    expect(garlandCoverVars()).toContain('--arch-clear-portrait:0.76;');
+    expect(garlandCoverVars()).toContain('--arch-clear-portrait:0.81;');
     expect(garlandCoverVars()).toContain('--arch-clear-landscape:0.5;');
+  });
+
+  it.each(LAYOUTS)('%s: the arch pocket crown sits high at the centre, below top', (_name, layout) => {
+    const { width, clear } = layout;
+    expect(clear.crown).toBeLessThan(clear.top);
+    if (layout === GARLAND.portrait) {
+      expect(clear.crown).toBeGreaterThanOrEqual(0.5 * width);
+      expect(clear.crown).toBeLessThanOrEqual(0.56 * width);
+    } else {
+      expect(clear.crown).toBeGreaterThanOrEqual(0.15 * width);
+      expect(clear.crown).toBeLessThanOrEqual(0.18 * width);
+    }
+  });
+
+  /** The arch pocket's floor: high (crown) at the centre, parabolic out to `top` at the walls. */
+  function pocketFloor(layout: GarlandLayout, x: number): number {
+    const { x0, x1, top, crown } = layout.clear;
+    const u = (x - layout.width / 2) / ((x1 - x0) / 2);
+    return crown + (top - crown) * u * u;
+  }
+
+  it.each(LAYOUTS)('%s: no item enters the arch pocket above the text', (_name, layout) => {
+    const { x0, x1 } = layout.clear;
+    const mid = layout.width / 2;
+    const intruders = layout.items.filter((item) => {
+      const box = visBox(item);
+      const lo = Math.max(box.l, x0);
+      const hi = Math.min(box.r, x1);
+      if (lo >= hi) return false;
+      const nearestX = Math.min(Math.max(mid, lo), hi);
+      return box.b > pocketFloor(layout, nearestX);
+    });
+    expect(intruders.map(label)).toEqual([]);
   });
 
   it.each(LAYOUTS)('%s: paint order never steps back a depth', (_name, layout) => {
