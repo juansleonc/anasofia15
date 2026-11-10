@@ -25,29 +25,31 @@ const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: strin
   data-testid="balloon-arch"
   aria-hidden="true"
 >
-  {
-    layouts.map(({ name, layout, mask }) => (
-      <svg
-        class="balloon-arch__layout"
-        data-arch-layout={name}
-        viewBox={`0 0 ${layout.width} ${layout.height}`}
-        style={`mask-image:${mask};-webkit-mask-image:${mask}`}
-      >
-        {layout.items.map((item) => (
-          <use
-            href={`#${item.symbol}`}
-            data-arch-item={item.kind}
-            data-arch-symbol={item.symbol}
-            x={item.x - item.size / 2}
-            y={item.y - item.size / 2}
-            width={item.size}
-            height={item.size}
-            transform={`rotate(${item.rotate} ${item.x} ${item.y})`}
-          />
-        ))}
-      </svg>
-    ))
-  }
+  <div class="balloon-arch__shadow" data-testid="balloon-arch-shadow">
+    {
+      layouts.map(({ name, layout, mask }) => (
+        <svg
+          class="balloon-arch__layout"
+          data-arch-layout={name}
+          viewBox={`0 0 ${layout.width} ${layout.height}`}
+          style={`mask-image:${mask};-webkit-mask-image:${mask}`}
+        >
+          {layout.items.map((item) => (
+            <use
+              href={`#${item.symbol}`}
+              data-arch-item={item.kind}
+              data-arch-symbol={item.symbol}
+              x={item.x - item.size / 2}
+              y={item.y - item.size / 2}
+              width={item.size}
+              height={item.size}
+              transform={`rotate(${item.rotate} ${item.x} ${item.y})`}
+            />
+          ))}
+        </svg>
+      ))
+    }
+  </div>
 </div>
 
 <style>
@@ -63,6 +65,17 @@ const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: strin
      per-component style scoping. */
   .balloon-arch--clipped {
     clip-path: inset(var(--cover-frame-inset) round var(--cover-frame-radius));
+  }
+
+  /* The one arch-wide drop-shadow (depth for the arch as a whole, no per-item filters). Lives on
+     its own wrapper rather than `.balloon-arch` itself: that element also carries the frame
+     clip-path above, and a `filter` + `clip-path` pair on the SAME box can have the filter's
+     blur/offset region collapsed to the (pre-clip) box edge instead of being allowed to render
+     past it and then get cut cleanly at the frame — losing the shadow instead of just bounding
+     it. Putting the filter on a child keeps the shadow's own rendering correct; the ancestor's
+     clip-path still bounds the final pixels to the frame as intended. */
+  .balloon-arch__shadow {
+    filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--c-rose-700) 16%, transparent));
   }
 
   .balloon-arch__layout {

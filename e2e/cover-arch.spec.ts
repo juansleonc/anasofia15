@@ -185,6 +185,29 @@ test.describe('Balloon arch', () => {
     expect(clipPath).toContain('round');
   });
 
+  test('the arch casts one shadow, items cast none', async ({ page }) => {
+    await page.goto('./');
+
+    const containerFilter = await page
+      .getByTestId('balloon-arch-shadow')
+      .evaluate((el) => getComputedStyle(el).filter);
+    expect(containerFilter).toContain('drop-shadow');
+
+    const itemAndSvgFilters = await page.evaluate(() => {
+      const nodes = [
+        ...document.querySelectorAll('[data-arch-item], svg[data-arch-layout]'),
+      ];
+      return nodes.map((el) => getComputedStyle(el).filter);
+    });
+    expect(itemAndSvgFilters.length).toBeGreaterThan(0);
+    expect(itemAndSvgFilters.every((value) => value === 'none')).toBe(true);
+
+    const svgFilterElementCount = await page.evaluate(
+      () => document.querySelectorAll('filter').length,
+    );
+    expect(svgFilterElementCount).toBe(0);
+  });
+
   test('the cover loads with no raster image requests', async ({ page }) => {
     const imageRequests: string[] = [];
     page.on('request', (request) => {
