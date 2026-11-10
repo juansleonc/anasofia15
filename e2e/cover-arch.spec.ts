@@ -174,15 +174,25 @@ test.describe('Balloon arch', () => {
     }
   });
 
-  test('the arch is clipped to the frame', async ({ page }) => {
+  test('the arch stays bounded by the cover, with no horizontal overflow', async ({ page }) => {
     await page.goto('./');
 
-    const clipPath = await page
-      .getByTestId('balloon-arch')
-      .evaluate((el) => getComputedStyle(el).clipPath);
+    // With no frame to clip to, the arch is bounded by the cover itself instead.
+    const coverBox = await page.getByTestId('cover').boundingBox();
+    const archBox = await page.getByTestId('balloon-arch').boundingBox();
+    expect(coverBox).not.toBeNull();
+    expect(archBox).not.toBeNull();
+    const EDGE_TOLERANCE_PX = 1;
+    expect(archBox!.x).toBeGreaterThanOrEqual(coverBox!.x - EDGE_TOLERANCE_PX);
+    expect(archBox!.x + archBox!.width).toBeLessThanOrEqual(
+      coverBox!.x + coverBox!.width + EDGE_TOLERANCE_PX,
+    );
 
-    expect(clipPath).toContain('inset(');
-    expect(clipPath).toContain('round');
+    const overflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
   });
 
   test('the arch casts one shadow, items cast none', async ({ page }) => {

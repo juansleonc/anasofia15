@@ -51,14 +51,17 @@
     }
   }
 
+  /* Soft round glint rather than a hard-edged chip: a radial-gradient glow fading from the
+     champagne color to transparent, no flat fill/edge — matches the Nov 2026 feedback pass that
+     replaced the cover's idle sparkle "flecks" with the same kind of soft light. */
   .petal-fall :global(.petal-fall__fleck) {
     position: absolute;
     top: -10%;
     left: var(--petal-x);
     width: var(--petal-size);
-    height: calc(var(--petal-size) * 0.45);
-    background: var(--petal-color);
-    border-radius: 1px;
+    height: var(--petal-size);
+    background: radial-gradient(circle, var(--petal-color) 0%, transparent 72%);
+    border-radius: 50%;
     opacity: 0.9;
     animation-name: fleck-fall;
     animation-timing-function: linear;

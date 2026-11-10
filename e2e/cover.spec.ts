@@ -187,8 +187,10 @@ test.describe('Cover section', () => {
       };
     });
 
-    expect(styles.backgroundImage).toContain('rgb(154, 68, 98)');
+    // Anchored on the darker wine stop only (not the lighter one) so the white label clears
+    // 7:1 contrast against it — see palette.test.ts for the measured ratio.
     expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
+    expect(styles.backgroundImage).not.toContain('rgb(154, 68, 98)');
     expect(styles.borderTopColor).toBe('rgb(205, 168, 105)');
     expect(styles.borderRightColor).toBe('rgb(205, 168, 105)');
     expect(styles.borderBottomColor).toBe('rgb(205, 168, 105)');
@@ -213,8 +215,8 @@ test.describe('Cover section', () => {
 
     const gradientCount = (styles.backgroundImage.match(/[a-z-]+-gradient\(/gi) ?? []).length;
     expect(gradientCount).toBeGreaterThanOrEqual(2);
-    expect(styles.backgroundImage).toContain('rgb(154, 68, 98)');
     expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
+    expect(styles.backgroundImage).not.toContain('rgb(154, 68, 98)');
 
     // Split the resolved `box-shadow` on top-level commas only — a layer's own colour may be an
     // `rgba(...)` with internal commas, so a naive `.split(',')` would cut a layer in half.
@@ -241,6 +243,40 @@ test.describe('Cover section', () => {
     expect(outerLayers.length).toBeGreaterThanOrEqual(2);
 
     expect(styles.borderTopWidth).toBeGreaterThanOrEqual(2);
+  });
+
+  test('the open button is large enough to read easily on a short phone screen', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('./');
+
+    const button = page.getByRole('button', { name: 'Abrir invitación' });
+    const box = await button.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(240);
+    expect(box!.height).toBeGreaterThanOrEqual(56);
+
+    const fontSize = await button.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(fontSize).toBeGreaterThanOrEqual(20);
+  });
+
+  test('the open button label grows larger on a wide desktop viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('./');
+
+    const phoneFontSize = await page
+      .getByRole('button', { name: 'Abrir invitación' })
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await page.reload();
+
+    const desktopFontSize = await page
+      .getByRole('button', { name: 'Abrir invitación' })
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+
+    expect(desktopFontSize).toBeGreaterThan(phoneFontSize);
   });
 
   test('the open button label reads as premium serif with a visible keyboard focus', async ({
@@ -313,71 +349,11 @@ test.describe('Cover section', () => {
     }
   });
 
-  test('a thin gold frame surrounds the cover', async ({ page }) => {
+  test('does not render a gold frame around the cover', async ({ page }) => {
     await page.goto('./');
 
-    const frame = page.getByTestId('cover-frame');
-    await expect(frame).toHaveAttribute('aria-hidden', 'true');
-
-    const styles = await frame.evaluate((el) => {
-      const computed = getComputedStyle(el);
-      return {
-        pointerEvents: computed.pointerEvents,
-        borderTopColor: computed.borderTopColor,
-        borderRightColor: computed.borderRightColor,
-        borderBottomColor: computed.borderBottomColor,
-        borderLeftColor: computed.borderLeftColor,
-        borderTopWidth: parseFloat(computed.borderTopWidth),
-        borderRadius: parseFloat(computed.borderTopLeftRadius),
-      };
-    });
-
-    expect(styles.pointerEvents).toBe('none');
-    expect(styles.borderTopColor).toBe('rgb(205, 168, 105)');
-    expect(styles.borderRightColor).toBe('rgb(205, 168, 105)');
-    expect(styles.borderBottomColor).toBe('rgb(205, 168, 105)');
-    expect(styles.borderLeftColor).toBe('rgb(205, 168, 105)');
-    expect(styles.borderTopWidth).toBeGreaterThanOrEqual(0.5);
-    expect(styles.borderTopWidth).toBeLessThanOrEqual(2.5);
-    expect(styles.borderRadius).toBeGreaterThanOrEqual(12);
+    await expect(page.getByTestId('cover-frame')).toHaveCount(0);
   });
-
-  for (const viewport of [
-    { width: 375, height: 667 },
-    { width: 390, height: 844 },
-    { width: 1440, height: 800 },
-  ]) {
-    test(`the frame sits inside the viewport and around the text at ${viewport.width}x${viewport.height}`, async ({
-      page,
-    }) => {
-      await page.setViewportSize(viewport);
-      await page.goto('./');
-
-      const frameBox = await page.getByTestId('cover-frame').boundingBox();
-      expect(frameBox).not.toBeNull();
-      const frame = frameBox!;
-
-      expect(frame.x).toBeGreaterThanOrEqual(4);
-      expect(frame.x).toBeLessThanOrEqual(32);
-      expect(viewport.width - (frame.x + frame.width)).toBeGreaterThanOrEqual(4);
-      expect(viewport.width - (frame.x + frame.width)).toBeLessThanOrEqual(32);
-      expect(frame.y).toBeGreaterThanOrEqual(4);
-      expect(frame.y).toBeLessThanOrEqual(32);
-      expect(frame.y + frame.height).toBeLessThanOrEqual(viewport.height);
-
-      const margin = 8;
-      for (const testId of ['cover-title-lead', 'cover-celebrant-name', 'open-invitation-button']) {
-        const box = await page.getByTestId(testId).boundingBox();
-        expect(box).not.toBeNull();
-        const rect = box!;
-
-        expect(rect.x).toBeGreaterThanOrEqual(frame.x + margin);
-        expect(rect.x + rect.width).toBeLessThanOrEqual(frame.x + frame.width - margin);
-        expect(rect.y).toBeGreaterThanOrEqual(frame.y + margin);
-        expect(rect.y + rect.height).toBeLessThanOrEqual(frame.y + frame.height - margin);
-      }
-    });
-  }
 
   test('the cover has depth and warm ambient light', async ({ page }) => {
     await page.goto('./');
@@ -398,13 +374,33 @@ test.describe('Cover section', () => {
       return {
         pointerEvents: computed.pointerEvents,
         backgroundImage: computed.backgroundImage,
-        clipPath: computed.clipPath,
       };
     });
     expect(lightStyles.pointerEvents).toBe('none');
     const lightGradientCount = (lightStyles.backgroundImage.match(/[a-z-]+-gradient\(/gi) ?? []).length;
     expect(lightGradientCount).toBeGreaterThanOrEqual(2);
-    expect(lightStyles.clipPath).toContain('inset(');
+
+    // With no frame to clip to, the light layer is bounded by the cover itself instead — no
+    // inset rounding, just the cover's own box — and never spills past it horizontally.
+    const coverBox = await page.getByTestId('cover').boundingBox();
+    const lightBox = await light.boundingBox();
+    expect(coverBox).not.toBeNull();
+    expect(lightBox).not.toBeNull();
+    const EDGE_TOLERANCE_PX = 1;
+    expect(lightBox!.x).toBeGreaterThanOrEqual(coverBox!.x - EDGE_TOLERANCE_PX);
+    expect(lightBox!.y).toBeGreaterThanOrEqual(coverBox!.y - EDGE_TOLERANCE_PX);
+    expect(lightBox!.x + lightBox!.width).toBeLessThanOrEqual(
+      coverBox!.x + coverBox!.width + EDGE_TOLERANCE_PX,
+    );
+    expect(lightBox!.y + lightBox!.height).toBeLessThanOrEqual(
+      coverBox!.y + coverBox!.height + EDGE_TOLERANCE_PX,
+    );
+
+    const overflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
 
     // Sits behind the arch: earlier in document order than the balloon-arch container (both are
     // absolutely positioned at the same stacking level, so paint order follows DOM order).
@@ -471,6 +467,127 @@ test.describe('Cover section', () => {
       expect(hitsName).toBe(true);
     });
   }
+
+  // Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is getting airier
+  // in a parallel task, so the cover's own centre needed more presence: bigger type, a flourish,
+  // and a tight ring of extra sparkles (below), rather than more clutter.
+  test('the celebrant name is large enough to fill the centre at 375 and grows further at 1440', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('./');
+
+    const nameFontSize375 = await page
+      .getByTestId('cover-celebrant-name')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(nameFontSize375).toBeGreaterThanOrEqual(60);
+
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await page.reload();
+
+    const nameFontSize1440 = await page
+      .getByTestId('cover-celebrant-name')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(nameFontSize1440).toBeGreaterThanOrEqual(96);
+  });
+
+  test('the lead line is large enough to read at 375 and scales up further on desktop', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('./');
+
+    const leadFontSize375 = await page
+      .getByTestId('cover-title-lead')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(leadFontSize375).toBeGreaterThanOrEqual(20);
+
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await page.reload();
+
+    const leadFontSize1440 = await page
+      .getByTestId('cover-title-lead')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(leadFontSize1440).toBeGreaterThan(leadFontSize375);
+  });
+
+  test('a champagne flourish divider sits between the name and the button', async ({ page }) => {
+    await page.goto('./');
+
+    const flourish = page.getByTestId('cover-flourish');
+    await expect(flourish).toHaveAttribute('aria-hidden', 'true');
+
+    const domOrder = await page.evaluate(() => {
+      const name = document.querySelector('[data-testid="cover-celebrant-name"]');
+      const flourishEl = document.querySelector('[data-testid="cover-flourish"]');
+      const button = document.querySelector('[data-testid="open-invitation-button"]');
+      if (!name || !flourishEl || !button) return null;
+      return {
+        nameBeforeFlourish: !!(
+          name.compareDocumentPosition(flourishEl) & Node.DOCUMENT_POSITION_FOLLOWING
+        ),
+        flourishBeforeButton: !!(
+          flourishEl.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING
+        ),
+      };
+    });
+    expect(domOrder).toEqual({ nameBeforeFlourish: true, flourishBeforeButton: true });
+
+    const nameBox = await page.getByTestId('cover-celebrant-name').boundingBox();
+    const flourishBox = await flourish.boundingBox();
+    const buttonBox = await page.getByRole('button', { name: 'Abrir invitación' }).boundingBox();
+    expect(nameBox).not.toBeNull();
+    expect(flourishBox).not.toBeNull();
+    expect(buttonBox).not.toBeNull();
+
+    // Vertically between the two — the divider's own box starts at/after the name's bottom edge
+    // and ends at/before the button's top edge.
+    expect(flourishBox!.y).toBeGreaterThanOrEqual(nameBox!.y + nameBox!.height - 1);
+    expect(flourishBox!.y + flourishBox!.height).toBeLessThanOrEqual(buttonBox!.y + 1);
+  });
+
+  test('a few extra soft sparkles concentrate in a ring around the title block', async ({ page }) => {
+    await page.goto('./');
+
+    const ring = page.getByTestId('cover-title-sparkles');
+    await expect(ring).toHaveAttribute('aria-hidden', 'true');
+
+    const items = page.locator('[data-title-sparkle]');
+    const itemCount = await items.count();
+    expect(itemCount).toBeGreaterThanOrEqual(3);
+
+    const kinds = await items.evaluateAll((elements) =>
+      elements.map((el) => el.getAttribute('data-title-sparkle')),
+    );
+    for (const kind of kinds) {
+      // Reuses the existing soft kinds only — no square chip, and bokeh would just blur over the
+      // letters at this tight a radius.
+      expect(['glow', 'star']).toContain(kind);
+    }
+
+    const h1Box = await page.locator('h1.cover__title').boundingBox();
+    const ringBox = await ring.boundingBox();
+    expect(h1Box).not.toBeNull();
+    expect(ringBox).not.toBeNull();
+
+    // Loosely centred on the title block, not drifted off into a corner of the page.
+    const TOLERANCE_PX = 80;
+    expect(ringBox!.x).toBeGreaterThanOrEqual(h1Box!.x - TOLERANCE_PX);
+    expect(ringBox!.x + ringBox!.width).toBeLessThanOrEqual(h1Box!.x + h1Box!.width + TOLERANCE_PX);
+    expect(ringBox!.y).toBeGreaterThanOrEqual(h1Box!.y - TOLERANCE_PX);
+    expect(ringBox!.y + ringBox!.height).toBeLessThanOrEqual(h1Box!.y + h1Box!.height + TOLERANCE_PX);
+  });
+
+  test('the title sparkle ring freezes under prefers-reduced-motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('./');
+
+    const stillAnimated = await page.evaluate(() => {
+      const items = document.querySelectorAll('[data-title-sparkle]');
+      return [...items].filter((el) => getComputedStyle(el).animationName !== 'none').length;
+    });
+    expect(stillAnimated).toBe(0);
+  });
 
   test('the cover stays within its render budget', async ({ page }) => {
     await page.goto('./');

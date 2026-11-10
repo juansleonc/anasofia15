@@ -6,25 +6,13 @@
 // accessible content and never intercepts clicks on the title/button it sits above.
 import { ARCH_SPECS, archFadeMask, buildArch, type ArchLayout } from '../lib/cover-arch';
 
-// `clipToFrame` is opt-in so the arch stays reusable outside a framed cover (e.g. a future
-// section without `.cover__frame`'s --cover-frame-inset/--cover-frame-radius vars).
-interface Props {
-  clipToFrame?: boolean;
-}
-
-const { clipToFrame = false } = Astro.props;
-
 const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: string }[] = [
   { name: 'portrait', layout: buildArch(ARCH_SPECS.portrait), mask: archFadeMask(ARCH_SPECS.portrait) },
   { name: 'landscape', layout: buildArch(ARCH_SPECS.landscape), mask: archFadeMask(ARCH_SPECS.landscape) },
 ];
 ---
 
-<div
-  class:list={['balloon-arch', { 'balloon-arch--clipped': clipToFrame }]}
-  data-testid="balloon-arch"
-  aria-hidden="true"
->
+<div class="balloon-arch" data-testid="balloon-arch" aria-hidden="true">
   <div class="balloon-arch__shadow" data-testid="balloon-arch-shadow">
     {
       layouts.map(({ name, layout, mask }) => (
@@ -60,20 +48,8 @@ const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: strin
     pointer-events: none;
   }
 
-  /* Relies on --cover-frame-inset/--cover-frame-radius inheriting from the ancestor `.cover`
-     section's frame vars — CSS custom properties cascade through the DOM regardless of Astro's
-     per-component style scoping. */
-  .balloon-arch--clipped {
-    clip-path: inset(var(--cover-frame-inset) round var(--cover-frame-radius));
-  }
-
   /* The one arch-wide drop-shadow (depth for the arch as a whole, no per-item filters). Lives on
-     its own wrapper rather than `.balloon-arch` itself: that element also carries the frame
-     clip-path above, and a `filter` + `clip-path` pair on the SAME box can have the filter's
-     blur/offset region collapsed to the (pre-clip) box edge instead of being allowed to render
-     past it and then get cut cleanly at the frame — losing the shadow instead of just bounding
-     it. Putting the filter on a child keeps the shadow's own rendering correct; the ancestor's
-     clip-path still bounds the final pixels to the frame as intended. */
+     its own wrapper rather than `.balloon-arch` itself, matching the per-item symbol layout. */
   .balloon-arch__shadow {
     filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--c-rose-700) 16%, transparent));
   }

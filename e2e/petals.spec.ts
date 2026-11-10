@@ -84,6 +84,29 @@ test.describe('Petal fall on open', () => {
     }
   });
 
+  test('the shower\'s gold flecks are soft round glints, never hard-edged square chips', async ({
+    page,
+  }) => {
+    await page.goto('./');
+
+    await page.getByRole('button', { name: 'Abrir invitación' }).click();
+
+    const flecks = page.getByTestId('petal-fall').locator('.petal-fall__fleck');
+    const fleckCount = await flecks.count();
+    expect(fleckCount).toBeGreaterThanOrEqual(1);
+
+    const styles = await flecks.evaluateAll((elements) =>
+      elements.map((el) => {
+        const computed = getComputedStyle(el);
+        return { borderRadius: computed.borderRadius, backgroundImage: computed.backgroundImage };
+      }),
+    );
+    for (const style of styles) {
+      expect(style.borderRadius).not.toBe('0px');
+      expect(style.backgroundImage).toContain('radial-gradient');
+    }
+  });
+
   test('petals are cleared from the DOM once the shower settles', async ({ page }) => {
     await page.goto('./');
 

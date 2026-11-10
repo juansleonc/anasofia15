@@ -161,6 +161,35 @@ describe('palette discipline', () => {
     expect(contrast).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('white keeps at least 7:1 contrast on the open-invitation button label background, sheen included', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    // The design-review feedback asked for the label to sit on the darker wine stop specifically
+    // (not the lighter one) for stronger contrast — assert the raw ratio first.
+    expect(contrastRatio('#ffffff', tokens['--c-wine-700'])).toBeGreaterThanOrEqual(7);
+
+    // Then prove the sheen painted over it (the button's actual background, per Cover.astro) never
+    // drags that ratio back under 7:1 — same worst-case-alpha compositing as the 4.5:1 check above,
+    // just against the darker stop the button now anchors on.
+    const sheenAlphaMatch = tokensCss.match(/--button-sheen-alpha:\s*([\d.]+)%/);
+    expect(sheenAlphaMatch).not.toBeNull();
+    const sheenAlpha = parseFloat(sheenAlphaMatch![1]) / 100;
+
+    const white = hexToRgb('#ffffff');
+    const wine700 = hexToRgb(tokens['--c-wine-700']);
+    const composite: [number, number, number] = [
+      white[0] * sheenAlpha + wine700[0] * (1 - sheenAlpha),
+      white[1] * sheenAlpha + wine700[1] * (1 - sheenAlpha),
+      white[2] * sheenAlpha + wine700[2] * (1 - sheenAlpha),
+    ];
+    const compositeLuminance = relativeLuminance(composite);
+    const whiteLuminance = relativeLuminance(white);
+    const contrast = (whiteLuminance + 0.05) / (compositeLuminance + 0.05);
+
+    expect(contrast).toBeGreaterThanOrEqual(7);
+  });
+
   it('the name stays readable on the warm glow', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);

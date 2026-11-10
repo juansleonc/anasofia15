@@ -34,7 +34,14 @@
   /* Composite surfaces */
   --gradient-rose: linear-gradient(135deg, #f3c6d0 0%, #e8a3b4 45%, #b5617a 100%);
   --gradient-button: linear-gradient(135deg, #b5617a 0%, #9e4a63 100%);
-  --gradient-button-wine: linear-gradient(180deg, #9a4462 0%, #6e2440 100%);
+  /* Anchored on the darker wine stop only (not the lighter #9a4462) — the Nov 2026 design-review
+     pass asked for stronger label contrast; the lighter stop alone fell under the 7:1 bar the
+     label needs (see palette.test.ts), so the relief gradient now stays within the darker range. */
+  --gradient-button-wine: linear-gradient(
+    180deg,
+    var(--c-wine-700) 0%,
+    color-mix(in srgb, var(--c-wine-700) 80%, var(--c-ink)) 100%
+  );
   --shadow-button-wine: 0 12px 26px -12px rgba(110, 36, 64, 0.55);
   /* Foil sheen laid over the wine gradient (button relief) — kept low enough that white label
      text stays >= 4.5:1 on the lightened backdrop (proved in palette.test.ts). */
