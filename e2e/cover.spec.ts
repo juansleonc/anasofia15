@@ -169,7 +169,7 @@ test.describe('Cover section', () => {
     await expect(page.getByRole('button', { name: 'Abrir invitación' })).toBeVisible();
   });
 
-  test('the open button is a dusty-rose pill with a champagne-gold border', async ({ page }) => {
+  test('the open button is a wine/rose gradient pill with a champagne-gold border', async ({ page }) => {
     await page.goto('./');
 
     const button = page.getByRole('button', { name: 'Abrir invitación' });
@@ -187,12 +187,11 @@ test.describe('Cover section', () => {
       };
     });
 
-    // Lighter dusty-rose fill (round-3 feedback: the wine fill read as too heavy/dark against the
-    // pastel palette) — bottom stop is the bare --c-rose-700 token; no wine rgb survives. See
-    // palette.test.ts for the measured contrast/luminance.
+    // Rose at the top deepening to wine at the bottom; palette.test.ts proves the white label's
+    // contrast on every stop.
     expect(styles.backgroundImage).toContain('rgb(158, 74, 99)');
-    expect(styles.backgroundImage).not.toContain('rgb(110, 36, 64)');
-    expect(styles.backgroundImage).not.toContain('rgb(154, 68, 98)');
+    expect(styles.backgroundImage).toContain('rgb(154, 68, 98)');
+    expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
     expect(styles.borderTopColor).toBe('rgb(205, 168, 105)');
     expect(styles.borderRightColor).toBe('rgb(205, 168, 105)');
     expect(styles.borderBottomColor).toBe('rgb(205, 168, 105)');
@@ -203,6 +202,9 @@ test.describe('Cover section', () => {
   });
 
   test('the open button has relief', async ({ page }) => {
+    // Read the resting relief: while the pulse runs, the computed shadow is an interpolated
+    // animation value re-serialised in another colour space.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./');
 
     const button = page.getByRole('button', { name: 'Abrir invitación' });
@@ -217,9 +219,7 @@ test.describe('Cover section', () => {
 
     const gradientCount = (styles.backgroundImage.match(/[a-z-]+-gradient\(/gi) ?? []).length;
     expect(gradientCount).toBeGreaterThanOrEqual(2);
-    expect(styles.backgroundImage).toContain('rgb(158, 74, 99)');
-    expect(styles.backgroundImage).not.toContain('rgb(110, 36, 64)');
-    expect(styles.backgroundImage).not.toContain('rgb(154, 68, 98)');
+    expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
 
     // Split the resolved `box-shadow` on top-level commas only — a layer's own colour may be an
     // `rgba(...)` with internal commas, so a naive `.split(',')` would cut a layer in half.
@@ -245,52 +245,25 @@ test.describe('Cover section', () => {
     expect(insetLayers.length).toBeGreaterThanOrEqual(2);
     expect(outerLayers.length).toBeGreaterThanOrEqual(2);
 
-    expect(styles.borderTopWidth).toBeGreaterThanOrEqual(2);
-  });
-
-  // Round-3 feedback follow-up: the relief's inset/outer shadows and the label's text-shadow used
-  // to mix in `--c-wine-700`, leaving a dark wine undertone under the lighter rose fill even after
-  // the fill itself moved off wine. Every shadow layer must now resolve away from both retired
-  // wine rgb values.
-  test('no box-shadow or text-shadow layer on the open button resolves to the old wine tone', async ({
-    page,
-  }) => {
-    await page.goto('./');
-
-    const button = page.getByRole('button', { name: 'Abrir invitación' });
-    const styles = await button.evaluate((el) => {
-      const computed = getComputedStyle(el);
-      return { boxShadow: computed.boxShadow, textShadow: computed.textShadow };
-    });
-
-    const splitTopLevelLayers = (value: string): string[] => {
-      const layers: string[] = [];
-      let depth = 0;
-      let current = '';
-      for (const char of value) {
-        if (char === '(') depth += 1;
-        if (char === ')') depth -= 1;
-        if (char === ',' && depth === 0) {
-          layers.push(current.trim());
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      if (current.trim()) layers.push(current.trim());
-      return layers;
+    // The drop layers (those cast downward, as opposed to the flat gold ring) are deep wine.
+    // Engines serialise a `color-mix()` either as `rgba(r, g, b, a)` or as
+    // `color(srgb r g b / a)` with 0-1 channels, so both forms are read back to 0-255.
+    const layerRgb = (layer: string): number[] | null => {
+      const rgb = layer.match(/rgba?\((\d+), (\d+), (\d+)/);
+      if (rgb) return rgb.slice(1, 4).map(Number);
+      const srgb = layer.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)/);
+      return srgb ? srgb.slice(1, 4).map((channel) => Math.round(Number(channel) * 255)) : null;
     };
-
-    const retiredWineRgbs = ['rgb(110, 36, 64)', 'rgb(154, 68, 98)'];
-    const layers = [
-      ...splitTopLevelLayers(styles.boxShadow),
-      ...splitTopLevelLayers(styles.textShadow),
-    ];
-    for (const layer of layers) {
-      for (const wineRgb of retiredWineRgbs) {
-        expect(layer).not.toContain(wineRgb);
-      }
+    const dropLayers = outerLayers.filter((layer) => {
+      const offsets = layer.match(/(-?[\d.]+)px (-?[\d.]+)px/);
+      return !!offsets && Number(offsets[2]) > 0;
+    });
+    expect(dropLayers.length).toBeGreaterThanOrEqual(2);
+    for (const layer of dropLayers) {
+      expect(layerRgb(layer)).toEqual([110, 36, 64]);
     }
+
+    expect(styles.borderTopWidth).toBeGreaterThanOrEqual(2);
   });
 
   test('the open button is large enough to read easily on a short phone screen, without crowding it', async ({
@@ -302,7 +275,7 @@ test.describe('Cover section', () => {
     const button = page.getByRole('button', { name: 'Abrir invitación' });
     const box = await button.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.width).toBeGreaterThanOrEqual(240);
+    expect(box!.width).toBeGreaterThanOrEqual(264);
     // Roomy, but never wider than 80% of a narrow viewport.
     expect(box!.width).toBeLessThanOrEqual(0.8 * 375);
     expect(box!.height).toBeGreaterThanOrEqual(56);
@@ -311,7 +284,7 @@ test.describe('Cover section', () => {
     expect(fontSize).toBeGreaterThanOrEqual(20);
   });
 
-  test('the open button label grows larger and the pill taller on a wide desktop viewport', async ({
+  test('the open button label grows larger and the pill wider and taller on a wide desktop viewport', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
@@ -331,6 +304,7 @@ test.describe('Cover section', () => {
 
     const box = await button.boundingBox();
     expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(340);
     expect(box!.height).toBeGreaterThanOrEqual(60);
   });
 
@@ -530,7 +504,7 @@ test.describe('Cover section', () => {
   // Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is getting airier
   // in a parallel task, so the cover's own centre needed more presence: bigger type, a flourish,
   // and a tight ring of extra sparkles (below), rather than more clutter.
-  test('the celebrant name is large enough to fill the centre at 375 and grows further at 1440', async ({
+  test('the celebrant name is large enough to fill the centre at 375 and grows further on desktop', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
@@ -544,34 +518,59 @@ test.describe('Cover section', () => {
     // while leaving the one-line fit as the binding constraint.
     expect(nameFontSize375).toBeGreaterThanOrEqual(52);
 
-    await page.setViewportSize({ width: 1440, height: 800 });
-    await page.reload();
+    for (const viewport of [
+      { width: 1366, height: 768 },
+      { width: 1440, height: 800 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.reload();
 
-    const nameFontSize1440 = await page
-      .getByTestId('cover-celebrant-name')
-      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    expect(nameFontSize1440).toBeGreaterThanOrEqual(96);
+      const nameFontSizeDesktop = await page
+        .getByTestId('cover-celebrant-name')
+        .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      expect(nameFontSizeDesktop).toBeGreaterThanOrEqual(120);
+    }
   });
 
-  test('the lead line is large enough to read at 375 and scales up further on desktop', async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
+  test('the name is deep wine', async ({ page }) => {
     await page.goto('./');
 
-    const leadFontSize375 = await page
-      .getByTestId('cover-title-lead')
-      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    expect(leadFontSize375).toBeGreaterThanOrEqual(20);
-
-    await page.setViewportSize({ width: 1440, height: 800 });
-    await page.reload();
-
-    const leadFontSize1440 = await page
-      .getByTestId('cover-title-lead')
-      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-    expect(leadFontSize1440).toBeGreaterThan(leadFontSize375);
+    const color = await page
+      .getByTestId('cover-celebrant-name')
+      .evaluate((el) => getComputedStyle(el).color);
+    expect(color).toBe('rgb(110, 36, 64)');
   });
+
+  for (const { viewport, minLeadPx } of [
+    { viewport: { width: 375, height: 667 }, minLeadPx: 23 },
+    { viewport: { width: 1440, height: 800 }, minLeadPx: 34 },
+  ]) {
+    test(`the lead line is large and centred with the name at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      const measured = await page.evaluate(() => {
+        const centreX = (selector: string) => {
+          const rect = document.querySelector(selector)!.getBoundingClientRect();
+          return rect.left + rect.width / 2;
+        };
+        const lead = document.querySelector('[data-testid="cover-title-lead"]') as HTMLElement;
+        return {
+          leadFontSize: parseFloat(getComputedStyle(lead).fontSize),
+          coverCentre: centreX('[data-testid="cover"]'),
+          leadCentre: centreX('[data-testid="cover-title-lead"]'),
+          nameCentre: centreX('[data-testid="cover-celebrant-name"]'),
+        };
+      });
+
+      expect(measured.leadFontSize).toBeGreaterThanOrEqual(minLeadPx);
+      expect(Math.abs(measured.leadCentre - measured.coverCentre)).toBeLessThanOrEqual(2);
+      expect(Math.abs(measured.nameCentre - measured.coverCentre)).toBeLessThanOrEqual(2);
+    });
+  }
 
   // Nov 2026 fix-cover pass: the name used to wrap onto two lines ("Ana" / "Sofía") at narrow
   // viewports because its font-size clamp grew independently of the room it had to fit in.

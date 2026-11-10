@@ -60,18 +60,6 @@ function contrastRatio(hexA: string, hexB: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-// Mirrors CSS `color-mix(in srgb, A <ratioA*100>%, B)` — the shorthand form where only the first
-// color's percentage is given and the rest goes to the second color.
-function mixRgb(hexA: string, ratioA: number, hexB: string): [number, number, number] {
-  const a = hexToRgb(hexA);
-  const b = hexToRgb(hexB);
-  return [
-    a[0] * ratioA + b[0] * (1 - ratioA),
-    a[1] * ratioA + b[1] * (1 - ratioA),
-    a[2] * ratioA + b[2] * (1 - ratioA),
-  ];
-}
-
 function contrastWithWhiteRgb(rgb: [number, number, number]): number {
   const whiteLuminance = relativeLuminance(hexToRgb('#ffffff'));
   const luminance = relativeLuminance(rgb);
@@ -146,31 +134,43 @@ describe('palette discipline', () => {
     });
   });
 
-  it('white text keeps at least 4.5:1 contrast on both rose button fill stops', () => {
+  // Resolves the open button's fill gradient into its ordered stop tokens, so the contrast checks
+  // below follow the gradient as declared instead of re-stating its stops.
+  function buttonFillStops(tokensCss: string): string[] {
+    const declaration = tokensCss.match(/--gradient-button-wine-rose:\s*linear-gradient\(([^;]*)\);/);
+    expect(declaration).not.toBeNull();
+    return [...declaration![1].matchAll(/var\((--c-[\w-]+)\)/g)].map((match) => match[1]);
+  }
+
+  it('the open button fill runs rose to deep wine, built only from palette tokens', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
-    const tokens = parseCustomPropertyHexes(tokensCss);
 
-    // Darker stop: the gradient's bottom stop is the bare --c-rose-700 token.
-    expect(contrastRatio('#ffffff', tokens['--c-rose-700'])).toBeGreaterThanOrEqual(4.5);
-
-    // Lighter stop: --gradient-button-rose's top stop, 30% --c-rose-600 mixed into --c-rose-700 —
-    // mirror that same mix from the tokens here rather than re-declaring a literal.
-    const topStop = mixRgb(tokens['--c-rose-600'], 0.3, tokens['--c-rose-700']);
-    expect(contrastWithWhiteRgb(topStop)).toBeGreaterThanOrEqual(4.5);
+    expect(buttonFillStops(tokensCss)).toEqual(['--c-rose-700', '--c-wine-500', '--c-wine-700']);
   });
 
-  it('white stays at least 4.5:1 under the button sheen', () => {
+  it('white label text keeps at least 4.5:1 on every button fill stop', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+    const stops = buttonFillStops(tokensCss);
+
+    expect(stops.length).toBeGreaterThanOrEqual(3);
+    for (const stop of stops) {
+      expect(contrastRatio('#ffffff', tokens[stop])).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('white stays at least 4.5:1 under the 10% button sheen', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
 
     const sheenAlphaMatch = tokensCss.match(/--button-sheen-alpha:\s*([\d.]+)%/);
     expect(sheenAlphaMatch).not.toBeNull();
     const sheenAlpha = parseFloat(sheenAlphaMatch![1]) / 100;
+    expect(sheenAlpha).toBe(0.1);
 
-    // The sheen is a white layer painted at `sheenAlpha` over the button's rose background, so the
-    // worst-case backdrop for the white label text is the gradient's lighter (top) stop composited
-    // with white at that alpha (source-over), not the darker bottom stop.
-    const topStop = mixRgb(tokens['--c-rose-600'], 0.3, tokens['--c-rose-700']);
+    // The sheen is a white layer painted at `sheenAlpha` over the fill, so the worst-case backdrop
+    // for the label is the lightest (top) stop composited with white at that alpha (source-over).
+    const topStop = hexToRgb(tokens[buttonFillStops(tokensCss)[0]]);
     const white = hexToRgb('#ffffff');
     const composite: [number, number, number] = [
       white[0] * sheenAlpha + topStop[0] * (1 - sheenAlpha),
@@ -181,34 +181,39 @@ describe('palette discipline', () => {
     expect(contrastWithWhiteRgb(composite)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("keeps the button fill's darkest stop lighter than the old wine tone, still legible", () => {
+  it("the button fill's darkest stop is a deep wine", () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
 
-    // Band: lower bound is lighter than wine-700 (luminance ≈ 0.04); upper bound is where white
-    // text would drop under 4.5:1 against the bare stop.
-    const luminance = relativeLuminance(hexToRgb(tokens['--c-rose-700']));
-    expect(luminance).toBeGreaterThanOrEqual(0.1);
-    expect(luminance).toBeLessThanOrEqual(0.183);
+    const luminances = buttonFillStops(tokensCss).map((stop) => relativeLuminance(hexToRgb(tokens[stop])));
+    expect(luminances.length).toBeGreaterThanOrEqual(3);
+    expect(Math.min(...luminances)).toBeLessThanOrEqual(0.06);
   });
 
-  it("keeps the open button's relief off the retired wine token (round-3 follow-up)", () => {
-    // The fill moved off wine in an earlier pass (N11), but the relief's inset/outer shadows and
-    // the label's text-shadow still mixed in `--c-wine-700`, leaving a dark wine undertone under
-    // the lighter rose fill — the thing round-3 feedback called "heavy". None of the button rules
-    // may reference either retired wine token any more.
+  it("the open button's relief layers use wine tokens", () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const coverAstro = readFileSync(join(SRC_DIR, 'sections', 'Cover.astro'), 'utf8');
 
-    expect(coverAstro).not.toContain('--c-wine-500');
-    expect(coverAstro).not.toContain('--c-wine-700');
+    const wineShadow = tokensCss.match(/--shadow-button-wine:([^;]*);/);
+    expect(wineShadow).not.toBeNull();
+    expect(wineShadow![1]).toContain('var(--c-wine-700)');
+
+    // Both the resting relief and its pressed twin.
+    const reliefStacks = [...coverAstro.matchAll(/--cover-button-shadow:([^;]*);/g)].map((match) => match[1]);
+    expect(reliefStacks).toHaveLength(2);
+    for (const stack of reliefStacks) {
+      expect(stack).toContain('var(--shadow-button-wine)');
+      expect(stack).toContain('var(--c-wine-700)');
+      expect(stack).not.toContain('var(--c-rose-700)');
+    }
   });
 
-  it('the name stays readable on the warm glow', () => {
+  it('the deep wine name reads strongly on the warm glow', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
 
     expect(
-      contrastRatio(tokens['--c-rose-700'], tokens['--c-champagne-100']),
-    ).toBeGreaterThanOrEqual(4.5);
+      contrastRatio(tokens['--c-wine-700'], tokens['--c-champagne-100']),
+    ).toBeGreaterThanOrEqual(7);
   });
 });

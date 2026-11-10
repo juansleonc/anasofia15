@@ -34,19 +34,18 @@
   /* Composite surfaces */
   --gradient-rose: linear-gradient(135deg, #f3c6d0 0%, #e8a3b4 45%, #b5617a 100%);
   --gradient-button: linear-gradient(135deg, #b5617a 0%, #9e4a63 100%);
-  /* Round-3 feedback pass: the wine fill read as too heavy/dark against the pastel palette, so
-     the open-invitation button moved to a dusty-rose fill — rose-700 (the celebrant name's own
-     colour) is the darkest stop, lightened at the top by a 30% rose-600 mix, and still clears
-     4.5:1 for white label text on both stops (proved in palette.test.ts). */
-  --gradient-button-rose: linear-gradient(
+  /* Open-invitation button fill: rose at the top deepening to wine. Gold stays on the rim and
+     bevel only, so white label text clears 4.5:1 on every stop (proved in palette.test.ts). */
+  --gradient-button-wine-rose: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--c-rose-600) 30%, var(--c-rose-700)) 0%,
-    var(--c-rose-700) 100%
+    var(--c-rose-700) 0%,
+    var(--c-wine-500) 45%,
+    var(--c-wine-700) 100%
   );
-  --shadow-button-rose: 0 10px 24px -12px color-mix(in srgb, var(--c-rose-700) 45%, transparent);
-  /* Foil sheen laid over the rose gradient (button relief) — lowered from 12% to 6% (softer sheen
-     for the lighter fill) while white label text still stays >= 4.5:1 (proved in palette.test.ts). */
-  --button-sheen-alpha: 6%;
+  --shadow-button-wine: 0 14px 30px -12px color-mix(in srgb, var(--c-wine-700) 55%, transparent);
+  /* Foil sheen laid over the button fill; white label text still stays >= 4.5:1 on the top stop
+     under it (proved in palette.test.ts). */
+  --button-sheen-alpha: 10%;
   --gradient-button-sheen: linear-gradient(
     180deg,
     color-mix(in srgb, var(--c-white) var(--button-sheen-alpha), transparent) 0%,
