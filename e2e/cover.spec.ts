@@ -813,6 +813,6 @@ test.describe('Cover section', () => {
     expect(budget).not.toBeNull();
     expect(budget!.archItemCount).toBeLessThanOrEqual(200);
     expect(budget!.coverElementCount).toBeLessThanOrEqual(320);
-    expect(budget!.runningAnimationCount).toBeLessThanOrEqual(50);
+    expect(budget!.runningAnimationCount).toBeLessThanOrEqual(46);
   });
 });

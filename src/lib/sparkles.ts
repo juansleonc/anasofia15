@@ -316,3 +316,64 @@ export function scatterSparkles(options: ScatterSparklesOptions): Sparkle[] {
 
   return sparkles;
 }
+
+/** Fixed width of every falling foil ribbon, in px — only its length varies. */
+export const RIBBON_WIDTH_PX = 3;
+
+/** Diameter of every falling glitter speck, in px. */
+const GLITTER_SIZE_PX = 5;
+
+export type ConfettiKind = 'ribbon' | 'glitter';
+
+export interface ConfettiPiece {
+  kind: ConfettiKind;
+  /** 6..94 — horizontal spawn position as a percentage of the cover width. */
+  xPct: number;
+  /** A ribbon's length (≥ 3× RIBBON_WIDTH_PX), or a glitter speck's diameter. */
+  lengthPx: number;
+  /** 9000..15000ms — one slow fall from the garland's lower edge to the bottom of the cover. */
+  durationMs: number;
+  /** -durationMs..0 — negative, so the shower is already mid-fall when the page loads. */
+  delayMs: number;
+  /** -30..30px — horizontal drift over one fall. */
+  driftPx: number;
+  /** 180..540deg — total spin over one fall. */
+  spinDeg: number;
+  /** 30..90 — where the piece rests, as a percentage of the cover height, under reduced motion. */
+  restYPct: number;
+}
+
+export interface FallingConfettiOptions {
+  ribbons: number;
+  glitter: number;
+  seed: number;
+}
+
+/**
+ * Gold foil ribbons and glitter specks falling gently from the garland (see
+ * components/CoverConfettiFall.astro, which owns the DOM and the single shared keyframe). Ribbons
+ * come first, then glitter, each with its own seeded spawn, timing, drift and spin.
+ */
+export function fallingConfetti(options: FallingConfettiOptions): ConfettiPiece[] {
+  const random = seededRandom(options.seed);
+  const ribbons = Math.max(0, Math.floor(options.ribbons));
+  const glitter = Math.max(0, Math.floor(options.glitter));
+  const pieces: ConfettiPiece[] = [];
+
+  for (let i = 0; i < ribbons + glitter; i++) {
+    const kind: ConfettiKind = i < ribbons ? 'ribbon' : 'glitter';
+    const durationMs = 9000 + random() * 6000;
+    pieces.push({
+      kind,
+      xPct: 6 + random() * 88,
+      lengthPx: kind === 'ribbon' ? RIBBON_WIDTH_PX * (3 + random() * 2) : GLITTER_SIZE_PX,
+      durationMs,
+      delayMs: -random() * durationMs,
+      driftPx: (random() - 0.5) * 60,
+      spinDeg: 180 + random() * 360,
+      restYPct: 30 + random() * 60,
+    });
+  }
+
+  return pieces;
+}

@@ -4,6 +4,7 @@
 // on `window`, which `islands/MusicToggle.astro` listens for to start playback — a loose
 // window-event handshake so neither file needs to import or duplicate the other's audio element.
 import BalloonArch from '../components/BalloonArch.astro';
+import CoverConfettiFall from '../components/CoverConfettiFall.astro';
 import CoverLowerGlitter from '../components/CoverLowerGlitter.astro';
 import CoverSparkles from '../components/CoverSparkles.astro';
 import PetalFall from '../islands/PetalFall.astro';
@@ -65,6 +66,7 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
   <BalloonArch />
   <CoverSparkles />
   <CoverLowerGlitter />
+  <CoverConfettiFall />
   <div class="cover__content">
     <div class="cover__glow" data-testid="cover-glow" aria-hidden="true"></div>
     <h1 class="cover__title">

@@ -3,6 +3,8 @@ import {
   scatterSparkles,
   ringSparkles,
   lowerGlitter,
+  fallingConfetti,
+  RIBBON_WIDTH_PX,
   MAX_SPARKLES,
   MIN_DISTANCE_PCT,
   LOWER_REGION_START_PCT,
@@ -307,5 +309,61 @@ describe('lowerGlitter', () => {
         expect(distance).toBeGreaterThanOrEqual(LOWER_MIN_DISTANCE_PCT);
       }
     }
+  });
+});
+
+describe('fallingConfetti', () => {
+  function pieces(seed = 1515) {
+    return fallingConfetti({ ribbons: 12, glitter: 6, seed });
+  }
+
+  it('returns the requested ribbons first, then the glitter specks', () => {
+    const confetti = pieces();
+    expect(confetti).toHaveLength(18);
+    expect(confetti.filter((piece) => piece.kind === 'ribbon')).toHaveLength(12);
+    expect(confetti.filter((piece) => piece.kind === 'glitter')).toHaveLength(6);
+  });
+
+  it('returns nothing for non-positive counts', () => {
+    expect(fallingConfetti({ ribbons: 0, glitter: -2, seed: 1 })).toHaveLength(0);
+  });
+
+  it('falls gently: 9-15s per fall, already mid-fall at load', () => {
+    for (const piece of pieces()) {
+      expect(piece.durationMs).toBeGreaterThanOrEqual(9000);
+      expect(piece.durationMs).toBeLessThanOrEqual(15000);
+      expect(piece.delayMs).toBeLessThanOrEqual(0);
+      expect(piece.delayMs).toBeGreaterThanOrEqual(-piece.durationMs);
+    }
+  });
+
+  it('spawns across the cover with a small drift and a half-to-one-and-a-half turn spin', () => {
+    for (const piece of pieces()) {
+      expect(piece.xPct).toBeGreaterThanOrEqual(6);
+      expect(piece.xPct).toBeLessThanOrEqual(94);
+      expect(Math.abs(piece.driftPx)).toBeLessThanOrEqual(30);
+      expect(piece.spinDeg).toBeGreaterThanOrEqual(180);
+      expect(piece.spinDeg).toBeLessThanOrEqual(540);
+    }
+  });
+
+  it('rests each piece between 30% and 90% of the cover for reduced motion', () => {
+    for (const piece of pieces()) {
+      expect(piece.restYPct).toBeGreaterThanOrEqual(30);
+      expect(piece.restYPct).toBeLessThanOrEqual(90);
+    }
+  });
+
+  it('keeps every ribbon at least three times as long as it is wide', () => {
+    const ribbons = pieces().filter((piece) => piece.kind === 'ribbon');
+    expect(ribbons).toHaveLength(12);
+    for (const ribbon of ribbons) {
+      expect(ribbon.lengthPx / RIBBON_WIDTH_PX).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('is deterministic for a seed and varies with it', () => {
+    expect(pieces(1515)).toEqual(pieces(1515));
+    expect(pieces(1515)).not.toEqual(pieces(42));
   });
 });

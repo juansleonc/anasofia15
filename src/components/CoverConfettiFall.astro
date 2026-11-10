@@ -1,0 +1,109 @@
+---
+// Gold foil ribbons and glitter specks falling gently from the garland's lower edge toward the
+// bottom of the cover. SSR'd from the seeded `fallingConfetti` layout, so there is no client
+// script. The layer is a size container, so the one shared keyframe can move every piece in `cqh`
+// (a share of the cover's height) using transform and opacity only. Under reduced motion each
+// piece stops at its own seeded resting height instead, so the cover still reads as festive.
+import { fallingConfetti, RIBBON_WIDTH_PX } from '../lib/sparkles';
+
+const RIBBON_COUNT = 12;
+const GLITTER_COUNT = 6;
+const SEED = 1515;
+
+const pieces = fallingConfetti({ ribbons: RIBBON_COUNT, glitter: GLITTER_COUNT, seed: SEED });
+
+function round(value: number): string {
+  return value.toFixed(2);
+}
+---
+
+<div class="cover-confetti" data-testid="cover-confetti" aria-hidden="true">
+  {
+    pieces.map((piece) => {
+      const vars =
+        `--confetti-x:${round(piece.xPct)}%;` +
+        `--confetti-length:${round(piece.lengthPx)}px;` +
+        `--confetti-duration:${Math.round(piece.durationMs)}ms;` +
+        `--confetti-delay:${Math.round(piece.delayMs)}ms;` +
+        `--confetti-drift:${round(piece.driftPx)}px;` +
+        `--confetti-spin:${round(piece.spinDeg)}deg;` +
+        `--confetti-rest:${round(piece.restYPct)}cqh;`;
+      return (
+        <span
+          class={`cover-confetti__piece cover-confetti__${piece.kind}`}
+          data-confetti={piece.kind}
+          style={vars}
+        />
+      );
+    })
+  }
+</div>
+
+<style define:vars={{ ribbonWidth: `${RIBBON_WIDTH_PX}px` }}>
+  .cover-confetti {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    container-type: size;
+  }
+
+  .cover-confetti__piece {
+    position: absolute;
+    top: 0;
+    left: var(--confetti-x);
+    opacity: 0;
+    animation: cover-confetti-fall var(--confetti-duration) linear var(--confetti-delay) infinite;
+  }
+
+  .cover-confetti__ribbon {
+    width: var(--ribbonWidth);
+    height: var(--confetti-length);
+    border-radius: 1px;
+    background-image: linear-gradient(
+      180deg,
+      var(--c-champagne-300),
+      var(--c-champagne-500) 55%,
+      var(--c-champagne-700)
+    );
+  }
+
+  /* A soft speck of light, never a hard chip. */
+  .cover-confetti__glitter {
+    width: var(--confetti-length);
+    height: var(--confetti-length);
+    border-radius: 50%;
+    background-image: radial-gradient(
+      circle,
+      var(--c-white) 0%,
+      var(--c-champagne-300) 45%,
+      transparent 72%
+    );
+  }
+
+  @keyframes cover-confetti-fall {
+    0% {
+      transform: translate(0, 22cqh) rotate(0deg);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.9;
+    }
+    85% {
+      opacity: 0.75;
+    }
+    100% {
+      transform: translate(var(--confetti-drift), 95cqh) rotate(var(--confetti-spin));
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover-confetti__piece {
+      animation: none;
+      opacity: 0.7;
+      transform: translateY(var(--confetti-rest)) rotate(var(--confetti-spin));
+    }
+  }
+</style>
