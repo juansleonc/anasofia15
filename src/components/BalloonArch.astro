@@ -4,21 +4,22 @@
 // time via an aspect-ratio media query below. Every item is a <use> of a symbol defined once in
 // ArchSprite.astro. Purely decorative — aria-hidden and pointer-events: none — so it carries no
 // accessible content and never intercepts clicks on the title/button it sits above.
-import { ARCH_SPECS, buildArch, type ArchLayout } from '../lib/cover-arch';
+import { ARCH_SPECS, archFadeMask, buildArch, type ArchLayout } from '../lib/cover-arch';
 
-const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout }[] = [
-  { name: 'portrait', layout: buildArch(ARCH_SPECS.portrait) },
-  { name: 'landscape', layout: buildArch(ARCH_SPECS.landscape) },
+const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: string }[] = [
+  { name: 'portrait', layout: buildArch(ARCH_SPECS.portrait), mask: archFadeMask(ARCH_SPECS.portrait) },
+  { name: 'landscape', layout: buildArch(ARCH_SPECS.landscape), mask: archFadeMask(ARCH_SPECS.landscape) },
 ];
 ---
 
 <div class="balloon-arch" data-testid="balloon-arch" aria-hidden="true">
   {
-    layouts.map(({ name, layout }) => (
+    layouts.map(({ name, layout, mask }) => (
       <svg
         class="balloon-arch__layout"
         data-arch-layout={name}
         viewBox={`0 0 ${layout.width} ${layout.height}`}
+        style={`mask-image:${mask};-webkit-mask-image:${mask}`}
       >
         {layout.items.map((item) => (
           <use

@@ -56,10 +56,10 @@ export interface ArchLayout {
 export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
   portrait: {
     width: 400,
-    height: 300,
-    band: 150,
+    height: 470,
+    band: 160,
     gutter: 34,
-    sideDepth: 290,
+    sideDepth: 455,
     fadeStart: 250,
     seed: 15,
     counts: { balloons: 22, flowers: 10, leaves: 16 },
@@ -67,10 +67,10 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
   },
   landscape: {
     width: 1440,
-    height: 360,
-    band: 180,
-    gutter: 220,
-    sideDepth: 350,
+    height: 540,
+    band: 190,
+    gutter: 230,
+    sideDepth: 525,
     fadeStart: 300,
     seed: 1219,
     counts: { balloons: 34, flowers: 14, leaves: 24 },

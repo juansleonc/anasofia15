@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { ARCH_SPECS } from '../src/lib/cover-arch';
 
 // The decorative balloon-and-flower arch that frames the cover: two seeded SVG layouts, one per
 // aspect ratio (see src/lib/cover-arch.ts for the geometry), with only one shown at a time via a
@@ -22,6 +23,19 @@ async function visibleLayoutAttrs(page: Page, attr: string): Promise<(string | n
     if (!visible) return [];
     return [...visible.querySelectorAll(`[${attribute}]`)].map((el) => el.getAttribute(attribute));
   }, attr);
+}
+
+async function visibleSvgMask(page: Page): Promise<{ rect: Rect; maskImage: string }> {
+  return page.evaluate(() => {
+    const layouts = [...document.querySelectorAll('svg[data-arch-layout]')];
+    const visible = layouts.find((svg) => getComputedStyle(svg).display !== 'none');
+    if (!visible) return { rect: { x: 0, y: 0, width: 0, height: 0 }, maskImage: '' };
+    const style = getComputedStyle(visible);
+    const rect = visible.getBoundingClientRect();
+    const maskImage =
+      style.getPropertyValue('mask-image') || style.getPropertyValue('-webkit-mask-image');
+    return { rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }, maskImage };
+  });
 }
 
 async function visibleItemRects(page: Page): Promise<Rect[]> {
@@ -122,6 +136,32 @@ test.describe('Balloon arch', () => {
           expect(rectsIntersect(archRect, target)).toBe(false);
         }
       }
+    }
+  });
+
+  test('side columns fade out instead of being cut', async ({ page }) => {
+    for (const viewport of [PHONE, DESKTOP]) {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const { rect: svgRect, maskImage } = await visibleSvgMask(page);
+      expect(maskImage).toContain('linear-gradient');
+      // "transparent" is normalized to its rgba() equivalent by the browser; the gradient must
+      // still end fully transparent at the 100% stop (the old hard-clip line).
+      expect(maskImage.endsWith('rgba(0, 0, 0, 0) 100%)')).toBe(true);
+
+      const spec = viewport === PHONE ? ARCH_SPECS.portrait : ARCH_SPECS.landscape;
+      const fadeStartPx = svgRect.y + svgRect.height * (spec.fadeStart / spec.height);
+
+      const rects = await visibleItemRects(page);
+      const leftStrip = viewport.width * 0.15;
+      const rightStrip = viewport.width * 0.85;
+      const outerItems = rects.filter((rect) => {
+        const centerX = rect.x + rect.width / 2;
+        return centerX <= leftStrip || centerX >= rightStrip;
+      });
+
+      expect(outerItems.some((rect) => rect.y + rect.height > fadeStartPx)).toBe(true);
     }
   });
 
