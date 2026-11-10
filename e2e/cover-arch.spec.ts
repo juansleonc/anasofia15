@@ -195,6 +195,46 @@ test.describe('Balloon arch', () => {
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth);
   });
 
+  test('the arch stays bounded by the cover bottom, with a soft end', async ({ page }) => {
+    for (const viewport of [
+      { width: 900, height: 1000 },
+      { width: 768, height: 1024 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+
+      const coverBox = await page.getByTestId('cover').boundingBox();
+      const archBox = await page.getByTestId('balloon-arch').boundingBox();
+      expect(coverBox).not.toBeNull();
+      expect(archBox).not.toBeNull();
+
+      const EDGE_TOLERANCE_PX = 1;
+      expect(archBox!.y + archBox!.height).toBeLessThanOrEqual(
+        coverBox!.y + coverBox!.height + EDGE_TOLERANCE_PX,
+      );
+
+      // Unlock the page (bypassing the click/animation) and scroll so the first viewport row below
+      // the cover is on screen, then probe a point just under the cover's bottom edge: with no clip,
+      // the tall arch still paints there and resolves to an arch descendant instead of whatever
+      // section follows the cover in the document.
+      const belowCoverHit = await page.evaluate((coverBottom) => {
+        document.body.classList.remove('scroll-locked');
+        window.scrollTo(0, coverBottom);
+        const probeX = window.innerWidth / 2;
+        const probeY = 5;
+        const el = document.elementFromPoint(probeX, probeY);
+        return el ? el.closest('[data-testid="balloon-arch"]') !== null : false;
+      }, coverBox!.y + coverBox!.height);
+      expect(belowCoverHit).toBe(false);
+
+      const archMask = await page.getByTestId('balloon-arch').evaluate((el) => {
+        const style = getComputedStyle(el);
+        return style.getPropertyValue('mask-image') || style.getPropertyValue('-webkit-mask-image');
+      });
+      expect(archMask).toContain('linear-gradient');
+    }
+  });
+
   test('the arch casts one shadow, items cast none', async ({ page }) => {
     await page.goto('./');
 
