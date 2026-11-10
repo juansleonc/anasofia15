@@ -113,4 +113,49 @@ describe('buildArch', () => {
       }
     }
   });
+
+  it('keeps every item circle clear of the text zone below the band', () => {
+    const extraSeeds = [2, 100, 4242, 777777, 9];
+    const specs = [
+      ...SPECS,
+      ...SPECS.flatMap((spec) => extraSeeds.map((seed) => ({ ...spec, seed }))),
+    ];
+    for (const spec of specs) {
+      const { items } = buildArch(spec);
+      for (const item of items) {
+        const r = item.size / 2;
+        const nearestX = clampNumber(item.x, spec.gutter, spec.width - spec.gutter);
+        const nearestY = clampNumber(item.y, spec.band, spec.height);
+        const distance = Math.hypot(item.x - nearestX, item.y - nearestY);
+        expect(distance).toBeGreaterThanOrEqual(r);
+      }
+    }
+  });
+
+  it('really descends both side columns down to near sideDepth', () => {
+    for (const spec of SPECS) {
+      const { items } = buildArch(spec);
+      const leftThird = spec.width / 3;
+      const rightThird = (spec.width * 2) / 3;
+      const minY = spec.sideDepth - spec.sizeRange[1];
+      const leftDescends = items.some((item) => item.x < leftThird && item.y >= minY);
+      const rightDescends = items.some((item) => item.x > rightThird && item.y >= minY);
+      expect(leftDescends).toBe(true);
+      expect(rightDescends).toBe(true);
+    }
+  });
+
+  it('spans the crown from past the left gutter to past the right gutter', () => {
+    for (const spec of SPECS) {
+      const { items } = buildArch(spec);
+      const crownLeft = items.some((item) => item.x < spec.gutter && item.y < spec.band);
+      const crownRight = items.some((item) => item.x > spec.width - spec.gutter && item.y < spec.band);
+      expect(crownLeft).toBe(true);
+      expect(crownRight).toBe(true);
+    }
+  });
 });
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}

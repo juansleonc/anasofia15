@@ -295,6 +295,52 @@ function placeLeaves(spec: ArchSpec, points: Point[], rng: () => number): ArchIt
   return items;
 }
 
+/**
+ * Pulls an item's circle back out of the text clear zone — the full-width rectangle below the
+ * crown, between the two side columns — rather than rejecting it, so counts stay exact. Items
+ * whose circle doesn't intersect the clear zone pass through untouched.
+ */
+function clampOutOfClearZone(item: ArchItem, spec: ArchSpec): ArchItem {
+  const left = spec.gutter;
+  const right = spec.width - spec.gutter;
+  const top = spec.band;
+  const bottom = spec.height;
+  const r = item.size / 2;
+
+  const nearestX = clamp(item.x, left, right);
+  const nearestY = clamp(item.y, top, bottom);
+  const distance = Math.hypot(item.x - nearestX, item.y - nearestY);
+  if (distance >= r) {
+    return item;
+  }
+
+  // Pull back whichever way is the shortest move: up above the band, or sideways out past a
+  // gutter — the three edges of the clear rectangle an item could be straddling. A tiny margin
+  // keeps the result strictly clear of the boundary despite floating-point rounding.
+  const margin = r * 1e-6;
+  const candidates: Point[] = [
+    { x: item.x, y: top - r - margin },
+    { x: left - r - margin, y: item.y },
+    { x: right + r + margin, y: item.y },
+  ];
+  let best = candidates[0];
+  let bestDistance = Math.hypot(item.x - best.x, item.y - best.y);
+  for (const candidate of candidates.slice(1)) {
+    const candidateDistance = Math.hypot(item.x - candidate.x, item.y - candidate.y);
+    if (candidateDistance < bestDistance) {
+      best = candidate;
+      bestDistance = candidateDistance;
+    }
+  }
+
+  const maxSize = spec.sizeRange[1];
+  return {
+    ...item,
+    x: clamp(best.x, -maxSize, spec.width + maxSize),
+    y: clamp(best.y, -maxSize, spec.height),
+  };
+}
+
 export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
   const points = spinePoints(spec);
@@ -302,7 +348,9 @@ export function buildArch(spec: ArchSpec): ArchLayout {
     ...placeLeaves(spec, points, rng),
     ...placeBalloons(spec, points, rng),
     ...placeFlowers(spec, points, rng),
-  ].sort((a, b) => a.layer - b.layer || a.y - b.y);
+  ]
+    .map((item) => clampOutOfClearZone(item, spec))
+    .sort((a, b) => a.layer - b.layer || a.y - b.y);
 
   return { width: spec.width, height: spec.height, items };
 }
