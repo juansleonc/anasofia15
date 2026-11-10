@@ -51,7 +51,7 @@
 </style>
 
 <script>
-  import { createPetals, showerDurationMs, type Petal } from '../lib/petals';
+  import { createPetals, showerDurationMs, type Particle } from '../lib/petals';
   import { OPEN_INVITATION_EVENT } from '../lib/events';
 
   const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
@@ -71,7 +71,7 @@
       return ROSE_TOKEN_NAMES.map((name) => styles.getPropertyValue(name).trim()).filter(Boolean);
     }
 
-    function createPetalElement(petal: Petal): HTMLSpanElement {
+    function createPetalElement(petal: Particle): HTMLSpanElement {
       const span = document.createElement('span');
       span.className = 'petal-fall__petal';
       span.style.setProperty('--petal-x', `${petal.xPct}%`);

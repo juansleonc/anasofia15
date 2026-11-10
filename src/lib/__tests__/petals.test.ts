@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createPetals, showerDurationMs, MAX_PETALS, type Petal } from '../petals';
+import { createPetals, createFlecks, showerDurationMs, MAX_PETALS, MAX_FLECKS, type Particle } from '../petals';
 
 // Deterministic LCG so every run exercises the same sequence of generated petals.
 function seededRandom(seed: number): () => number {
@@ -11,9 +11,14 @@ function seededRandom(seed: number): () => number {
 }
 
 const PALETTE = ['#FCE4E8', '#F3C6D0', '#E8A3B4'];
+const FLECK_PALETTE = ['#E6C99A', '#CDA869', '#A07E46'];
 
-function shower(count: number, seed = 11): Petal[] {
+function shower(count: number, seed = 11): Particle[] {
   return createPetals({ count, palette: PALETTE, random: seededRandom(seed) });
+}
+
+function flecks(count: number, seed = 11): Particle[] {
+  return createFlecks({ count, palette: FLECK_PALETTE, random: seededRandom(seed) });
 }
 
 describe('createPetals', () => {
@@ -117,5 +122,94 @@ describe('showerDurationMs', () => {
     const expected = petals.reduce((max, p) => Math.max(max, p.delayMs + p.durationMs), 0);
     expect(showerDurationMs(petals)).toBe(expected);
     expect(showerDurationMs(petals)).toBeGreaterThan(0);
+  });
+
+  it('is the latest delay-plus-duration across a mixed petals-and-flecks array', () => {
+    const mixed = [...shower(25), ...flecks(22)];
+    const expected = mixed.reduce((max, p) => Math.max(max, p.delayMs + p.durationMs), 0);
+    expect(showerDurationMs(mixed)).toBe(expected);
+    expect(showerDurationMs(mixed)).toBeGreaterThan(0);
+  });
+});
+
+describe('createFlecks', () => {
+  it('returns exactly the requested number of flecks when under the cap', () => {
+    expect(flecks(20)).toHaveLength(20);
+  });
+
+  it('caps the fleck count for mobile performance', () => {
+    expect(flecks(500)).toHaveLength(MAX_FLECKS);
+  });
+
+  it('returns no flecks for a non-positive count', () => {
+    expect(flecks(0)).toHaveLength(0);
+    expect(flecks(-3)).toHaveLength(0);
+  });
+
+  it('staggers fleck start times within the first 1.2s', () => {
+    const all = flecks(25);
+    expect(all).not.toHaveLength(0);
+    for (const fleck of all) {
+      expect(fleck.delayMs).toBeGreaterThanOrEqual(0);
+      expect(fleck.delayMs).toBeLessThanOrEqual(1200);
+    }
+  });
+
+  it('gives every fleck a quick fall duration', () => {
+    const all = flecks(25);
+    expect(all).not.toHaveLength(0);
+    for (const fleck of all) {
+      expect(fleck.durationMs).toBeGreaterThanOrEqual(3500);
+      expect(fleck.durationMs).toBeLessThanOrEqual(6000);
+    }
+  });
+
+  it('varies fleck size within a small confetti-like range', () => {
+    const all = flecks(25);
+    expect(all).not.toHaveLength(0);
+    for (const fleck of all) {
+      expect(fleck.sizePx).toBeGreaterThanOrEqual(4);
+      expect(fleck.sizePx).toBeLessThanOrEqual(9);
+    }
+  });
+
+  it('gives every fleck a side-to-side sway amplitude', () => {
+    const all = flecks(25);
+    expect(all).not.toHaveLength(0);
+    for (const fleck of all) {
+      expect(fleck.swayPx).toBeGreaterThanOrEqual(10);
+      expect(fleck.swayPx).toBeLessThanOrEqual(40);
+    }
+  });
+
+  it('gives every fleck a full-turn starting rotation', () => {
+    const all = flecks(25);
+    expect(all).not.toHaveLength(0);
+    for (const fleck of all) {
+      expect(fleck.rotateDeg).toBeGreaterThanOrEqual(0);
+      expect(fleck.rotateDeg).toBeLessThanOrEqual(360);
+    }
+  });
+
+  it('colors every fleck from the given palette, never a color outside it', () => {
+    const all = flecks(25);
+    expect(all).not.toHaveLength(0);
+    for (const fleck of all) {
+      expect(FLECK_PALETTE).toContain(fleck.color);
+    }
+  });
+
+  it('is deterministic for a given injected random source', () => {
+    const first = createFlecks({ count: 15, palette: FLECK_PALETTE, random: seededRandom(42) });
+    const second = createFlecks({ count: 15, palette: FLECK_PALETTE, random: seededRandom(42) });
+    expect(first).toEqual(second);
+  });
+
+  it('defaults to built-in randomness when no random source is injected', () => {
+    const all = createFlecks({ count: 10, palette: FLECK_PALETTE });
+    expect(all).toHaveLength(10);
+    for (const fleck of all) {
+      expect(FLECK_PALETTE).toContain(fleck.color);
+    }
   });
 });
