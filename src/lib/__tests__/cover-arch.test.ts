@@ -321,6 +321,89 @@ describe('flower prominence', () => {
   });
 });
 
+describe('mirror balance', () => {
+  // The two sides of the arch carry the same visual weight: the right half is the left half
+  // mirrored across the vertical axis, with only small jitter and swapped colour/symbol variants.
+  function sides(spec: ArchSpec): { left: ArchItem[]; right: ArchItem[] } {
+    const { items } = buildArch(spec);
+    const axis = spec.width / 2;
+    return { left: items.filter((item) => item.x < axis), right: items.filter((item) => item.x > axis) };
+  }
+
+  function meanSize(items: ArchItem[]): number {
+    return items.reduce((sum, item) => sum + item.size, 0) / items.length;
+  }
+
+  function withinRatio(a: number, b: number, tolerance: number): boolean {
+    return Math.abs(a - b) / Math.max(a, b) <= tolerance;
+  }
+
+  it('puts the same number of balloons on each side, give or take one', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { left, right } = sides(spec);
+      const leftBalloons = left.filter((item) => item.kind === 'balloon').length;
+      const rightBalloons = right.filter((item) => item.kind === 'balloon').length;
+      expect(leftBalloons).toBeGreaterThan(0);
+      expect(Math.abs(leftBalloons - rightBalloons)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('gives each side the same total item area, within 10%', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { left, right } = sides(spec);
+      expect(left.length).toBeGreaterThan(0);
+      expect(withinRatio(balloonArea(left), balloonArea(right), 0.1)).toBe(true);
+    }
+  });
+
+  it('gives each side the same mean item size, within 10%', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { left, right } = sides(spec);
+      expect(left.length).toBeGreaterThan(0);
+      expect(right.length).toBeGreaterThan(0);
+      expect(withinRatio(meanSize(left), meanSize(right), 0.1)).toBe(true);
+    }
+  });
+
+  it('mirrors every left item with a right item of the same kind', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { left, right } = sides(spec);
+      const tolerance = 0.06 * spec.width;
+      expect(left.length).toBeGreaterThan(0);
+      for (const item of left) {
+        const mirrored = right.some(
+          (other) =>
+            other.kind === item.kind &&
+            Math.abs(spec.width - other.x - item.x) <= tolerance &&
+            Math.abs(other.y - item.y) <= tolerance,
+        );
+        expect(mirrored, `${item.kind} at (${item.x.toFixed(1)}, ${item.y.toFixed(1)})`).toBe(true);
+      }
+    }
+  });
+
+  it('crowns the arch with a flower cluster centered on the axis', () => {
+    for (const spec of SEEDED_SPECS) {
+      const flowers = buildArch(spec).items.filter((item) => item.kind === 'flower');
+      const axis = spec.width / 2;
+      const center = flowers.filter((item) => Math.abs(item.x - axis) < spec.width * 0.1);
+      expect(hasCluster(center)).toBe(true);
+      const meanX = center.reduce((sum, item) => sum + item.x, 0) / center.length;
+      expect(Math.abs(meanX - axis)).toBeLessThanOrEqual(spec.width * 0.02);
+    }
+  });
+
+  it('varies the mirrored side rather than copying it exactly', () => {
+    for (const spec of SEEDED_SPECS) {
+      const { left, right } = sides(spec);
+      const signature = (items: ArchItem[]): string[] =>
+        items.map((item) => `${item.kind}:${item.symbol}:${item.tone ?? ''}`).sort();
+      expect(left.length).toBeGreaterThan(0);
+      expect(signature(right)).not.toEqual(signature(left));
+    }
+  });
+});
+
 describe('ARCH_SPECS fullness', () => {
   it('keeps both specs full enough for a dense, overlapping crown', () => {
     expect(ARCH_SPECS.portrait.counts.balloons).toBeGreaterThanOrEqual(30);

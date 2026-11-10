@@ -3,8 +3,9 @@
 // it always returns the same positioned items, so the geometry is unit-testable without a DOM.
 //
 // Items are placed along a single ∩-shaped "spine" polyline: up the left side column, over the
-// crown, down the right side column. This module spreads balloons, flowers and leaves along it;
-// a clear-zone clamp for the title/button joins in later work.
+// crown, down the right side column. Only the left half is generated; the right half is its mirror
+// across the vertical axis (with small seeded jitter and swapped colour/symbol variants), and any
+// odd item out sits on the axis itself, so both sides always carry the same visual weight.
 
 export type ArchItemKind = 'balloon' | 'flower' | 'leaf';
 
@@ -89,7 +90,7 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
     sideDepth: 525,
     fadeStart: 300,
     crownBias: 8,
-    cornerBias: 26,
+    cornerBias: 34,
     seed: 1219,
     counts: { balloons: 46, fillers: 16, flowers: 13, leaves: 34 },
     sizeRange: [54, 124],
@@ -241,13 +242,14 @@ function warpByDensity(u: number, density: (t: number) => number): number {
 }
 
 /**
- * Round-robin tones across `count` slots, then seeded-shuffle the slots so the mix is guaranteed
- * (each tone gets floor(count/3) or ceil(count/3)) rather than left to an independent random pick.
+ * Round-robin tones across `count` slots, starting at the `start`-th tone, then seeded-shuffle the
+ * slots so the mix is guaranteed (each tone gets floor(count/3) or ceil(count/3)) rather than left
+ * to an independent random pick. Consecutive blocks with chained `start`s split one round-robin.
  */
-function shuffledTones(count: number, rng: () => number): ArchTone[] {
+function shuffledTones(count: number, rng: () => number, start = 0): ArchTone[] {
   const tones: ArchTone[] = [];
   for (let i = 0; i < count; i++) {
-    tones.push(BALLOON_TONES[i % BALLOON_TONES.length]);
+    tones.push(BALLOON_TONES[(start + i) % BALLOON_TONES.length]);
   }
   for (let i = tones.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -273,52 +275,90 @@ function toneSymbol(tone: ArchTone, occurrence: number): ArchSymbol {
   }
 }
 
+/** Gives each balloon its finish in order, so every metallic tone alternates chrome and satin. */
+function withFinishes(balloons: ArchItem[]): ArchItem[] {
+  const occurrences: Record<ArchTone, number> = { pink: 0, rosegold: 0, champagne: 0 };
+  return balloons.map((item) =>
+    item.tone === undefined ? item : { ...item, symbol: toneSymbol(item.tone, occurrences[item.tone]++) },
+  );
+}
+
+/** How far a mirrored item may drift from the exact mirror spot, as a fraction of its size. */
+const MIRROR_POSITION_JITTER = 0.04;
+/** How much a mirrored item's size may differ from its left twin's, as a fraction. */
+const MIRROR_SIZE_JITTER = 0.08;
+/** Spine fraction the left half stops short of, so no left item lands on or past the axis. */
+const LEFT_HALF_END = 0.49;
+
+/** The symbol `shift` steps along `symbols` from `symbol` — the right side's variant of a left item. */
+function shiftedSymbol(symbols: readonly ArchSymbol[], symbol: ArchSymbol, shift: number): ArchSymbol {
+  return symbols[(symbols.indexOf(symbol) + shift) % symbols.length];
+}
+
 /**
- * Spreads balloons evenly along the spine (with seeded jitter), tapering their size down the
- * sides, in two paint layers (big back balloons, smaller front accents).
+ * The right-side twin of a left item: reflected across the vertical axis (x → width − x, rotation
+ * negated), nudged by a little seeded jitter in position and size.
+ */
+function mirrorItem(item: ArchItem, spec: ArchSpec, rng: () => number): ArchItem {
+  const nudge = (): number => (rng() - 0.5) * 2 * MIRROR_POSITION_JITTER * item.size;
+  const x = spec.width - item.x + nudge();
+  const y = item.y + nudge();
+  return {
+    ...item,
+    x: Math.max(x, spec.width / 2 + 1e-6),
+    y,
+    size: item.size * (1 + (rng() - 0.5) * 2 * MIRROR_SIZE_JITTER),
+    rotate: -item.rotate,
+  };
+}
+
+/**
+ * Spreads balloons evenly along the left half of the spine (with seeded jitter), tapering their
+ * size down the side, in two paint layers (big back balloons, smaller front accents); mirrors each
+ * to the right, and puts an odd one out at the crown's center.
  */
 function placeBalloons(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
   const count = spec.counts.balloons;
+  const half = Math.floor(count / 2);
   const maxSize = spec.sizeRange[1];
   const sizeSpan = spec.sizeRange[1] - spec.sizeRange[0];
-  const tones = shuffledTones(count, rng);
-  const toneOccurrences: Record<ArchTone, number> = { pink: 0, rosegold: 0, champagne: 0 };
-  const items: ArchItem[] = [];
+  const leftTones = shuffledTones(half, rng);
+  const rightTones = shuffledTones(half, rng, half);
   const corners = cornerTs(points);
   const density = (t: number): number =>
     1 + spec.crownBias * Math.sqrt(Math.sin(Math.PI * t)) + spec.cornerBias * cornerBump(t, corners);
 
-  for (let i = 0; i < count; i++) {
-    const base = count <= 1 ? 0.5 : warpByDensity(i / (count - 1), density);
-    const jitter = (rng() - 0.5) * (0.6 / Math.max(count, 1));
-    const t = clamp(base + jitter, 0, 1);
-
+  const balloonAt = (t: number, isBack: boolean, tone: ArchTone): ArchItem => {
     const sample = sampleSpine(points, t);
-    const isBack = i % 2 === 0;
-    const layer: 1 | 2 = isBack ? 1 : 2;
     const size = (spec.sizeRange[0] + sizeSpan * balloonTaper(t, corners)) * (isBack ? 1 : 0.75);
-
     const side = rng() < 0.5 ? -1 : 1;
     const offset = side * (0.15 + 0.45 * rng()) * (1 + 0.6 * cornerBump(t, corners)) * size;
-    const rawX = sample.x + sample.nx * offset;
-    const rawY = sample.y + sample.ny * offset;
-
-    const tone = tones[i];
-    const occurrence = toneOccurrences[tone]++;
-
-    items.push({
-      symbol: toneSymbol(tone, occurrence),
+    return {
+      symbol: toneSymbol(tone, 0),
       kind: 'balloon',
       tone,
-      x: clamp(rawX, -maxSize, spec.width + maxSize),
-      y: clamp(rawY, -maxSize, spec.height),
+      x: clamp(sample.x + sample.nx * offset, -maxSize, spec.width + maxSize),
+      y: clamp(sample.y + sample.ny * offset, -maxSize, spec.height),
       size,
       rotate: (rng() - 0.5) * 20,
-      layer,
-    });
+      layer: isBack ? 1 : 2,
+    };
+  };
+
+  const items: ArchItem[] = [];
+  for (let i = 0; i < half; i++) {
+    const base = half <= 1 ? 0 : 0.5 * warpByDensity(i / (half - 0.5), (u) => density(u / 2));
+    const jitter = (rng() - 0.5) * (0.6 / count);
+    const left = clampOutOfClearZone(balloonAt(clamp(base + jitter, 0, LEFT_HALF_END), i % 2 === 0, leftTones[i]), spec);
+    const right = clampOutOfClearZone(mirrorItem(left, spec, rng), spec);
+    items.push(left, { ...right, tone: rightTones[i] });
+  }
+  if (count % 2 === 1) {
+    const tone = BALLOON_TONES[(2 * half) % BALLOON_TONES.length];
+    items.push(clampOutOfClearZone({ ...balloonAt(0.5, true, tone), x: spec.width / 2 }, spec));
   }
 
-  return items;
+  return withFinishes(items);
 }
 
 const FILLER_SPINE_STEPS = 120;
@@ -358,48 +398,71 @@ function fillerSpots(spec: ArchSpec, points: Point[]): Point[] {
 
 /**
  * Second pass of small balloons tucked into the garland's gaps, greedily: each filler goes to the
- * band spot furthest from any balloon or flower edge (the biggest visible hole), sized to just
- * overlap that edge so it plugs the hole while touching the garland rather than floating free.
+ * left-half or on-axis band spot furthest from any balloon or flower edge (the biggest visible
+ * hole), sized to just overlap that edge so it plugs the hole while touching the garland rather
+ * than floating free. Every left filler gets a mirrored twin, re-sized to the hole it lands in.
  */
 function placeFillers(spec: ArchSpec, points: Point[], solids: ArchItem[], rng: () => number): ArchItem[] {
-  const count = spec.counts.fillers;
   const maxSize = spec.sizeRange[1];
   const minSize = 0.3 * maxSize;
   const fillerMax = 0.6 * maxSize;
-  const tones = shuffledTones(count, rng);
-  const toneOccurrences: Record<ArchTone, number> = { pink: 0, rosegold: 0, champagne: 0 };
-  const spots = fillerSpots(spec, points);
+  const axis = spec.width / 2;
+  const isOnAxis = (spot: Point): boolean => Math.abs(spot.x - axis) < 1e-6;
+  const leftTones = shuffledTones(spec.counts.fillers, rng);
+  const rightTones = shuffledTones(spec.counts.fillers, rng, 1);
+  const spots = fillerSpots(spec, points)
+    .filter((spot) => spot.x < axis || isOnAxis(spot))
+    .map((spot) => (isOnAxis(spot) ? { x: axis, y: spot.y } : spot));
   const placed = [...solids];
   const items: ArchItem[] = [];
+  let remaining = spec.counts.fillers;
+  let leftCount = 0;
+  let rightCount = 0;
 
-  for (let i = 0; i < count && spots.length > 0; i++) {
-    let best = { spot: spots[0], gap: clearance(spots[0], placed) };
-    for (const spot of spots.slice(1)) {
+  const fillerAt = (spot: Point, gap: number, tone: ArchTone): ArchItem => ({
+    symbol: toneSymbol(tone, 0),
+    kind: 'balloon',
+    tone,
+    x: clamp(spot.x, -maxSize, spec.width + maxSize),
+    y: clamp(spot.y, -maxSize, spec.height),
+    size: clamp(2.2 * gap, minSize, fillerMax),
+    rotate: (rng() - 0.5) * 20,
+    layer: 2,
+  });
+
+  while (remaining > 0) {
+    const candidates = remaining >= 2 ? spots : spots.filter(isOnAxis);
+    let best: { spot: Point; gap: number } | null = null;
+    for (const spot of candidates) {
       const gap = clearance(spot, placed);
-      if (gap > best.gap) {
+      if (best === null || gap > best.gap) {
         best = { spot, gap };
       }
     }
+    if (best === null) {
+      break;
+    }
 
-    const size = clamp(2.2 * best.gap, minSize, fillerMax);
-    const { x, y } = best.spot;
-
-    const tone = tones[i];
-    const filler: ArchItem = {
-      symbol: toneSymbol(tone, toneOccurrences[tone]++),
-      kind: 'balloon',
-      tone,
-      x: clamp(x, -maxSize, spec.width + maxSize),
-      y: clamp(y, -maxSize, spec.height),
-      size,
-      rotate: (rng() - 0.5) * 20,
-      layer: 2,
-    };
+    const filler = clampOutOfClearZone(fillerAt(best.spot, best.gap, leftTones[leftCount++]), spec);
     items.push(filler);
     placed.push(filler);
+    remaining -= 1;
+    if (isOnAxis(best.spot)) {
+      continue;
+    }
+
+    const mirrored = mirrorItem(filler, spec, rng);
+    const twin = clampOutOfClearZone(
+      { ...mirrored, tone: rightTones[rightCount], size: clamp(2.2 * clearance(mirrored, placed), minSize, fillerMax) },
+      spec,
+    );
+    rightCount += 1;
+    items.push(twin);
+    placed.push(twin);
+    remaining -= 1;
   }
 
-  return items;
+  return withFinishes(items);
 }
 
 /** The balloon size the taper would give at `t`, before any per-item scaling. */
@@ -408,21 +471,20 @@ function taperedBalloonSize(spec: ArchSpec, t: number): number {
 }
 
 /**
- * How many flowers each cluster gets: an even split, with the remainder going to the two corner
- * clusters first, then the middle one, so the corners always carry the fullest bunches.
+ * How many flowers each left cluster (and so its mirrored twin) gets, plus the center cluster on
+ * the axis: an even split, with spare pairs going to the corner clusters first, then inward, so
+ * the corners always carry the fullest bunches. The center cluster takes whatever is left.
  */
-function clusterSizes(count: number, clusters: number): number[] {
-  const sizes = new Array<number>(clusters).fill(Math.floor(count / clusters));
-  const priority = [0, clusters - 1, Math.floor((clusters - 1) / 2)];
-  for (let i = 0; i < clusters; i++) {
-    if (!priority.includes(i)) {
-      priority.push(i);
-    }
+function clusterSizes(count: number, clusters: number): { sides: number[]; center: number } {
+  const perCluster = Math.floor(count / clusters);
+  const sides = new Array<number>(Math.floor(clusters / 2)).fill(perCluster);
+  const hasCenter = clusters % 2 === 1;
+  let spare = count - 2 * perCluster * sides.length - (hasCenter ? perCluster : 0);
+  for (let i = 0; spare >= 2 && sides.length > 0; i = (i + 1) % sides.length) {
+    sides[i] += 1;
+    spare -= 2;
   }
-  for (let i = 0; i < count % clusters; i++) {
-    sizes[priority[i]] += 1;
-  }
-  return sizes;
+  return { sides, center: hasCenter ? perCluster + spare : 0 };
 }
 
 /** Candidate spots across the garland around spine position `t`, clamped so a flower of `size` stays on canvas above the band. */
@@ -442,39 +504,60 @@ function flowerSpots(spec: ArchSpec, points: Point[], t: number, size: number): 
 }
 
 /**
- * Bunches the flowers into clusters of two or three — one at each top corner and the rest spread
- * evenly across the crown between them — sized close to the local balloons. Each flower goes to
- * the nearby spot with the most clearance from the balloons and flowers already placed (nestled
- * into a gap), and every flower after a cluster's first stays within touching distance of it.
+ * Bunches the flowers into clusters of two or three — one at each top corner, the rest spread
+ * evenly across the crown between them, and one centered on the axis — sized close to the local
+ * balloons. Each flower goes to the nearby spot with the most clearance from the balloons and
+ * flowers already placed (nestled into a gap), and every flower after a cluster's first stays
+ * within touching distance of it. Left flowers are mirrored to the right as a shifted symbol, and
+ * the center cluster is built from on-axis flowers and mirrored pairs straddling the axis.
  * Round-robin over the four flower symbols, so a spec with at least 4 flowers uses all of them.
  */
 function placeFlowers(spec: ArchSpec, points: Point[], balloons: ArchItem[], rng: () => number): ArchItem[] {
-  const count = spec.counts.flowers;
   const corners = cornerTs(points);
-  const clusters = Math.max(2, Math.ceil(count / 3));
-  const sizes = clusterSizes(count, clusters);
+  const count = spec.counts.flowers;
+  const minClusters = Math.max(2, Math.ceil(count / 3));
+  // An odd flower count needs a center cluster to hold the one flower that has no mirror twin.
+  const clusters = count % 2 === 1 && minClusters % 2 === 0 ? minClusters + 1 : minClusters;
+  const { sides, center } = clusterSizes(count, clusters);
+  const axis = spec.width / 2;
+  const symbolShift = 1 + Math.floor(rng() * (FLOWER_SYMBOLS.length - 1));
   const placed = [...balloons];
   const items: ArchItem[] = [];
+  let symbolIndex = 0;
 
-  for (let c = 0; c < clusters; c++) {
-    const t = corners[0] + ((corners[1] - corners[0]) * c) / (clusters - 1);
+  const insideCanvas = (flower: ArchItem): ArchItem => {
+    const r = flower.size / 2;
+    return {
+      ...flower,
+      x: clamp(flower.x, r, spec.width - r),
+      y: clamp(flower.y, r, spec.band - r * (1 + 1e-6)),
+    };
+  };
+
+  const placeCluster = (t: number, pairs: number, onAxis: number): void => {
+    const isCenter = t === 0.5;
     const localBalloon = spec.sizeRange[0] + (spec.sizeRange[1] - spec.sizeRange[0]) * balloonTaper(t, corners);
     const members: ArchItem[] = [];
-    for (let m = 0; m < sizes[c]; m++) {
+    for (let m = 0; m < onAxis + pairs; m++) {
+      const axial = m < onAxis;
       const size = localBalloon * (0.63 + 0.2 * rng());
-      const spots = flowerSpots(spec, points, t, size).filter((spot) =>
-        members.every((other) => Math.hypot(spot.x - other.x, spot.y - other.y) >= 0.6 * size) &&
-        (members.length === 0 ||
-          members.some((other) => Math.hypot(spot.x - other.x, spot.y - other.y) <= 1.1 * size)),
-      );
+      const spread = (spot: Point): boolean => {
+        const group = isCenter && !axial ? [...members, { x: spec.width - spot.x, y: spot.y }] : members;
+        return (
+          group.every((other) => Math.hypot(spot.x - other.x, spot.y - other.y) >= 0.6 * size) &&
+          (group.length === 0 || group.some((other) => Math.hypot(spot.x - other.x, spot.y - other.y) <= 1.1 * size))
+        );
+      };
+      const allSpots = flowerSpots(spec, points, t, size).map((spot) => (axial ? { x: axis, y: spot.y } : spot));
+      const spots = allSpots.filter((spot) => (axial || spot.x < axis) && spread(spot));
       const best = spots.reduce<{ spot: Point; gap: number } | null>((acc, spot) => {
         const gap = clearance(spot, placed);
         return acc === null || gap > acc.gap ? { spot, gap } : acc;
       }, null);
-      const spot = best?.spot ?? flowerSpots(spec, points, t, size)[0];
+      const spot = best?.spot ?? allSpots[0];
 
       const flower: ArchItem = {
-        symbol: FLOWER_SYMBOLS[items.length % FLOWER_SYMBOLS.length],
+        symbol: FLOWER_SYMBOLS[symbolIndex++ % FLOWER_SYMBOLS.length],
         kind: 'flower',
         x: spot.x,
         y: spot.y,
@@ -482,46 +565,70 @@ function placeFlowers(spec: ArchSpec, points: Point[], balloons: ArchItem[], rng
         rotate: (rng() - 0.5) * 20,
         layer: 3,
       };
-      members.push(flower);
-      items.push(flower);
-      placed.push(flower);
+      const placedNow = axial
+        ? [flower]
+        : [
+            flower,
+            insideCanvas({
+              ...mirrorItem(flower, spec, rng),
+              symbol: shiftedSymbol(FLOWER_SYMBOLS, flower.symbol, symbolShift),
+            }),
+          ];
+      members.push(...placedNow);
+      items.push(...placedNow);
+      placed.push(...placedNow);
     }
+  };
+
+  sides.forEach((size, c) => {
+    placeCluster(corners[0] + ((corners[1] - corners[0]) * c) / (clusters - 1), size, 0);
+  });
+  if (center > 0) {
+    placeCluster(0.5, Math.floor(center / 2), center % 2);
   }
 
   return items;
 }
 
 /**
- * Scatters leaves behind the balloons, offset further outward from the spine than any other
- * item so they fan out past the arch's edge (round-robin over the two leaf symbols, so a spec
- * with at least 2 leaves uses both).
+ * Scatters leaves behind the balloons along the left half of the spine, offset further outward
+ * than any other item so they fan out past the arch's edge, then mirrors each to the right as a
+ * shifted leaf symbol; an odd one out sits on the axis. Round-robin over the leaf symbols, so a
+ * spec with at least 3 leaves uses all of them.
  */
 function placeLeaves(spec: ArchSpec, points: Point[], rng: () => number): ArchItem[] {
   const count = spec.counts.leaves;
+  const half = Math.floor(count / 2);
   const maxSize = spec.sizeRange[1];
-  const items: ArchItem[] = [];
+  const symbolShift = 1 + Math.floor(rng() * (LEAF_SYMBOLS.length - 1));
 
-  for (let i = 0; i < count; i++) {
-    const base = count <= 1 ? 0.5 : i / (count - 1);
-    const jitter = (rng() - 0.5) * (0.5 / Math.max(count, 1));
-    const t = clamp(base + jitter, 0, 1);
-
+  const leafAt = (t: number, symbol: ArchSymbol): ArchItem => {
     const sample = sampleSpine(points, t);
     const size = taperedBalloonSize(spec, t) * (0.4 + rng() * 0.3);
-    // Outward = away from the arch's interior: left half of the spine fans left, right half
-    // fans right, so the leaves read as sprigs trailing past the balloons, not tucked inside.
-    const outwardSide = t < 0.5 ? -1 : 1;
-    const offset = outwardSide * (0.5 + rng() * 0.3) * size;
-
-    items.push({
-      symbol: LEAF_SYMBOLS[i % LEAF_SYMBOLS.length],
+    // Outward = away from the arch's interior (the left side column fans left, the crown fans
+    // up), so the leaves read as sprigs trailing past the balloons, not tucked inside.
+    const offset = -(0.5 + rng() * 0.3) * size;
+    return {
+      symbol,
       kind: 'leaf',
       x: clamp(sample.x + sample.nx * offset, -maxSize, spec.width + maxSize),
       y: clamp(sample.y + sample.ny * offset, -maxSize, spec.height),
       size,
       rotate: (rng() - 0.5) * 30,
       layer: 0,
-    });
+    };
+  };
+
+  const items: ArchItem[] = [];
+  for (let i = 0; i < half; i++) {
+    const base = half <= 1 ? 0 : (0.5 * i) / (half - 0.5);
+    const jitter = (rng() - 0.5) * (0.5 / count);
+    const left = clampOutOfClearZone(leafAt(clamp(base + jitter, 0, LEFT_HALF_END), LEAF_SYMBOLS[i % LEAF_SYMBOLS.length]), spec);
+    const right = clampOutOfClearZone(mirrorItem(left, spec, rng), spec);
+    items.push(left, { ...right, symbol: shiftedSymbol(LEAF_SYMBOLS, left.symbol, symbolShift) });
+  }
+  if (count % 2 === 1) {
+    items.push({ ...leafAt(0.5, LEAF_SYMBOLS[half % LEAF_SYMBOLS.length]), x: spec.width / 2 });
   }
 
   return items;
@@ -594,12 +701,10 @@ export function buildArch(spec: ArchSpec): ArchLayout {
   const rng = seededRandom(spec.seed);
   const points = spinePoints(spec);
   const leaves = placeLeaves(spec, points, rng);
-  const balloons = placeBalloons(spec, points, rng).map((item) => clampOutOfClearZone(item, spec));
+  const balloons = placeBalloons(spec, points, rng);
   const solids = [...balloons, ...placeFlowers(spec, points, balloons, rng)];
-  const fillers = placeFillers(spec, points, solids, rng).map((item) => clampOutOfClearZone(item, spec));
-  const items = [...leaves.map((item) => clampOutOfClearZone(item, spec)), ...solids, ...fillers].sort(
-    (a, b) => a.layer - b.layer || a.y - b.y,
-  );
+  const fillers = placeFillers(spec, points, solids, rng);
+  const items = [...leaves, ...solids, ...fillers].sort((a, b) => a.layer - b.layer || a.y - b.y);
 
   return { width: spec.width, height: spec.height, items };
 }
