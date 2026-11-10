@@ -25,10 +25,10 @@ test.describe('Cover falling confetti', () => {
     expect(Math.abs(confettiBox!.height - coverBox!.height)).toBeLessThanOrEqual(1);
   });
 
-  test('holds 12 foil ribbons and no falling glitter specks', async ({ page }) => {
+  test('holds 8 foil ribbons and no falling glitter specks', async ({ page }) => {
     await page.goto('./');
 
-    await expect(page.locator('[data-confetti="ribbon"]')).toHaveCount(12);
+    await expect(page.locator('[data-confetti="ribbon"]')).toHaveCount(8);
     await expect(page.locator('[data-confetti="glitter"]')).toHaveCount(0);
   });
 
@@ -45,7 +45,7 @@ test.describe('Cover falling confetti', () => {
         };
       }),
     );
-    expect(ribbons).toHaveLength(12);
+    expect(ribbons).toHaveLength(8);
     for (const ribbon of ribbons) {
       expect(ribbon.height / ribbon.width).toBeGreaterThanOrEqual(3);
       expect(ribbon.backgroundImage).toContain('linear-gradient');
@@ -93,7 +93,7 @@ test.describe('Cover falling confetti', () => {
         return { animationName: style.animationName, opacity: parseFloat(style.opacity) };
       }),
     );
-    expect(pieces).toHaveLength(12);
+    expect(pieces).toHaveLength(8);
     for (const piece of pieces) {
       expect(piece.animationName).toBe('none');
       expect(piece.opacity).toBeGreaterThan(0);
