@@ -16,14 +16,20 @@ const EYEBROWS = [
     text: 'La cuenta regresiva',
     emoji: '⏳',
   },
-  { section: 'detalles', selector: '.detalles__eyebrow', text: 'Los detalles', emoji: '✨' },
+  { section: 'detalles', selector: '.detalles__eyebrow', text: 'Los detalles', emoji: '🌸' },
+  {
+    section: 'rueda-colores',
+    selector: '.color-wheel-section__eyebrow',
+    text: 'Para ellas',
+    emoji: '👗',
+  },
   {
     section: 'como-llegar',
     selector: '.como-llegar__eyebrow',
     text: 'Cómo llegar',
     emoji: '📍',
   },
-  { section: 'trivia', selector: '.trivia__eyebrow', text: 'Juguemos', emoji: '🎮' },
+  { section: 'trivia', selector: '.trivia__eyebrow', text: 'Juguemos', emoji: '🌷' },
   { section: 'rsvp', selector: '.rsvp__eyebrow', text: 'Confirma tu lugar', emoji: '💌' },
 ];
 
