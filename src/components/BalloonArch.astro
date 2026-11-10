@@ -1,0 +1,68 @@
+---
+// Decorative balloon-and-flower arch that frames the cover: two independently generated layouts
+// (portrait vs landscape, see src/lib/cover-arch.ts) rendered as SVG, with only one shown at a
+// time via an aspect-ratio media query below. Every item is a <use> of a symbol defined once in
+// ArchSprite.astro. Purely decorative — aria-hidden and pointer-events: none — so it carries no
+// accessible content and never intercepts clicks on the title/button it sits above.
+import { ARCH_SPECS, buildArch, type ArchLayout } from '../lib/cover-arch';
+
+const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout }[] = [
+  { name: 'portrait', layout: buildArch(ARCH_SPECS.portrait) },
+  { name: 'landscape', layout: buildArch(ARCH_SPECS.landscape) },
+];
+---
+
+<div class="balloon-arch" data-testid="balloon-arch" aria-hidden="true">
+  {
+    layouts.map(({ name, layout }) => (
+      <svg
+        class="balloon-arch__layout"
+        data-arch-layout={name}
+        viewBox={`0 0 ${layout.width} ${layout.height}`}
+      >
+        {layout.items.map((item) => (
+          <use
+            href={`#${item.symbol}`}
+            data-arch-item={item.kind}
+            data-arch-symbol={item.symbol}
+            x={item.x - item.size / 2}
+            y={item.y - item.size / 2}
+            width={item.size}
+            height={item.size}
+            transform={`rotate(${item.rotate} ${item.x} ${item.y})`}
+          />
+        ))}
+      </svg>
+    ))
+  }
+</div>
+
+<style>
+  .balloon-arch {
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .balloon-arch__layout {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+  }
+
+  .balloon-arch__layout[data-arch-layout='landscape'] {
+    display: none;
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .balloon-arch__layout[data-arch-layout='portrait'] {
+      display: none;
+    }
+
+    .balloon-arch__layout[data-arch-layout='landscape'] {
+      display: block;
+    }
+  }
+</style>

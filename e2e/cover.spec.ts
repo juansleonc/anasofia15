@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// Cover-fidelity smoke test for the rose-garland cover (see Cover.astro for the scroll-lock
+// Cover-fidelity smoke test for the balloon-arch cover (see Cover.astro for the scroll-lock
 // script these tests exercise).
 
 test.describe('Cover section', () => {
@@ -25,21 +25,6 @@ test.describe('Cover section', () => {
       .evaluate((el) => getComputedStyle(el).fontFamily);
 
     expect(fontFamily).toContain('Great Vibes');
-  });
-
-  test('frames the cover with at least three rose shapes, all hidden from assistive tech', async ({
-    page,
-  }) => {
-    await page.goto('./');
-
-    const cover = page.getByTestId('cover');
-    const roses = cover.getByTestId('rose');
-    const count = await roses.count();
-    expect(count).toBeGreaterThanOrEqual(3);
-
-    for (const rose of await roses.all()) {
-      await expect(rose).toHaveAttribute('aria-hidden', 'true');
-    }
   });
 
   test('never renders duplicate element ids', async ({ page }) => {

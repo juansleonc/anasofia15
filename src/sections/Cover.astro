@@ -3,23 +3,24 @@
 // until it's clicked — see the script below). The click also dispatches `OPEN_INVITATION_EVENT`
 // on `window`, which `islands/MusicToggle.astro` listens for to start playback — a loose
 // window-event handshake so neither file needs to import or duplicate the other's audio element.
-import RoseGarland from '../components/RoseGarland.astro';
+import BalloonArch from '../components/BalloonArch.astro';
 import PetalFall from '../islands/PetalFall.astro';
 import { event } from '../data/event';
 ---
 
 <section class="cover" data-testid="cover" aria-label="Portada de la invitación">
-  <RoseGarland placement="top" />
-  <h1 class="cover__title">
-    <span class="cover__title-lead">Invitación para los quince años de</span>{' '}
-    <span class="cover__title-name font-cursive" data-testid="cover-celebrant-name">
-      {event.celebrantName}
-    </span>
-  </h1>
-  <button type="button" class="cover__open-button" data-testid="open-invitation-button">
-    Abrir invitación
-  </button>
-  <RoseGarland placement="bottom" />
+  <BalloonArch />
+  <div class="cover__content">
+    <h1 class="cover__title">
+      <span class="cover__title-lead">Invitación para los quince años de</span>{' '}
+      <span class="cover__title-name font-cursive" data-testid="cover-celebrant-name">
+        {event.celebrantName}
+      </span>
+    </h1>
+    <button type="button" class="cover__open-button" data-testid="open-invitation-button">
+      Abrir invitación
+    </button>
+  </div>
   <PetalFall />
 </section>
 
@@ -34,6 +35,15 @@ import { event } from '../data/event';
     min-height: 100dvh;
     padding: clamp(3.75rem, 14vh, 6rem) 1.25rem;
     text-align: center;
+  }
+
+  .cover__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(1.25rem, 4vh, 2.25rem);
   }
 
   .cover__title {
