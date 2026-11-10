@@ -476,6 +476,67 @@ describe('ArchSprite peony', () => {
   });
 });
 
+describe('ArchSprite blossom', () => {
+  it('has 5 petal paths sharing one radial petal gradient', () => {
+    const petalGradient = gradient('blossom-petal');
+    expect(petalGradient.tagName.toLowerCase()).toBe('radialgradient');
+    const petals = Array.from(symbol('blossom').querySelectorAll('path[fill="url(#blossom-petal)"]'));
+    expect(petals.length).toBe(5);
+  });
+
+  it('petals are smoothly rounded and fully opaque (no pointed corners, no wash)', () => {
+    const petals = Array.from(symbol('blossom').querySelectorAll('path[fill="url(#blossom-petal)"]'));
+    for (const petal of petals) {
+      expect(sharpestJoint(petal.getAttribute('d') ?? '')).toBeLessThanOrEqual(20);
+      expect(petal.getAttribute('fill-opacity')).toBeNull();
+      expect(petal.getAttribute('opacity')).toBeNull();
+    }
+  });
+
+  it('has one multi-subpath vein path, one crease per petal', () => {
+    const el = symbol('blossom');
+    const vein = Array.from(el.querySelectorAll('path')).find((path) => {
+      const stroke = path.getAttribute('stroke') ?? '';
+      return path.getAttribute('fill') === 'none' && stroke.startsWith('var(--c-') && !stroke.includes('white');
+    });
+    expect(vein).not.toBeUndefined();
+    const subpathCount = (vein!.getAttribute('d')?.match(/M/g) ?? []).length;
+    expect(subpathCount).toBeGreaterThanOrEqual(5);
+  });
+
+  it('has a centre disk with its own gradient, distinct from the petal gradient', () => {
+    const el = symbol('blossom');
+    const centre = Array.from(el.querySelectorAll('circle, ellipse')).find((shape) =>
+      (shape.getAttribute('fill') ?? '').startsWith('url(#'),
+    );
+    expect(centre).not.toBeUndefined();
+    const centreGradientId = (centre!.getAttribute('fill') ?? '').replace('url(#', '').replace(')', '');
+    expect(centreGradientId).not.toBe('blossom-petal');
+    expect(root.querySelector(`#${centreGradientId}`)).not.toBeNull();
+  });
+
+  it('has a filament path and an anther path, each with at least 8 stamen subpaths, token colours', () => {
+    const el = symbol('blossom');
+    const filament = Array.from(el.querySelectorAll('path')).find(
+      (path) => path.getAttribute('fill') === 'none' && (path.getAttribute('stroke') ?? '').includes('--c-champagne-500'),
+    );
+    const anther = Array.from(el.querySelectorAll('path')).find(
+      (path) => (path.getAttribute('fill') ?? '').includes('--c-champagne-700'),
+    );
+    expect(filament).not.toBeUndefined();
+    expect(anther).not.toBeUndefined();
+    expect((filament!.getAttribute('d')?.match(/M/g) ?? []).length).toBeGreaterThanOrEqual(8);
+    expect((anther!.getAttribute('d')?.match(/M/g) ?? []).length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('stays within its element budget (<= 12 elements)', () => {
+    // Counted by descendant shape, not direct children: blossom's shapes sit inside one
+    // positioning `<g>` (unlike the roses/peony, which paint their petals flat), so a direct
+    // `children.length` would only ever see that single wrapper.
+    expect(symbol('blossom').querySelectorAll('path, circle, ellipse').length).toBeLessThanOrEqual(12);
+  });
+});
+
 describe('arch-sprite.test.ts helpers', () => {
   it('countDeep follows <use href> into the symbol it references', () => {
     const own = symbol('balloon-pink').querySelectorAll('ellipse, path, circle').length;

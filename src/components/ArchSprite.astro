@@ -186,9 +186,17 @@
       <stop offset="45%" style="stop-color: var(--c-rose-300)" />
       <stop offset="100%" style="stop-color: var(--c-rose-600)" />
     </radialGradient>
-    <radialGradient id="blossom-gradient" cx="50%" cy="40%" r="70%">
-      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
-      <stop offset="100%" style="stop-color: var(--c-rose-300)" />
+    <!-- `blossom-petal`: radial from the petal's base (near the flower centre) outward to its
+         tip — darker rose-300 base, rose-100 mid, a white-alpha rim at the tip — shared by all 5
+         petals via `objectBoundingBox` units (each rotated copy has the same local bounding box). -->
+    <radialGradient id="blossom-petal" cx="50%" cy="92%" r="95%">
+      <stop offset="0%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="55%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0.9" />
+    </radialGradient>
+    <radialGradient id="blossom-center" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
     </radialGradient>
     <linearGradient id="leaf-eucalyptus-gradient" x1="20%" y1="0%" x2="80%" y2="100%">
       <stop offset="0%" style="stop-color: var(--c-leaf)" />
@@ -368,19 +376,46 @@
     <circle cx="36.2" cy="36" r="1.6" fill="var(--c-champagne-300)" />
   </symbol>
 
+  <!-- `blossom`: 5 petals from a single radial gradient (darker base, pale rose rim), one
+       multi-subpath vein path (a crease per petal) and one multi-subpath highlight (a glint per
+       petal, inside the petal only), a champagne centre disk with its own gradient and a stamen
+       cluster of 10 filaments + 10 anthers — both multi-subpath paths rather than 20 separate
+       elements, to stay inside the symbol's element budget. -->
   <symbol id="blossom" viewBox="0 0 48 48">
     <g transform="translate(24 24)">
-      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" />
-      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" transform="rotate(72)" />
-      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" transform="rotate(144)" />
-      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" transform="rotate(216)" />
-      <path d="M0 -20c6 0 9 6 9 11s-4 9-9 9-9-4-9-9 3-11 9-11Z" fill="url(#blossom-gradient)" transform="rotate(288)" />
-      <circle r="6" fill="var(--c-champagne-300)" />
-      <circle cx="-2.2" cy="-2.2" r="1.1" fill="var(--c-champagne-500)" />
-      <circle cx="2.2" cy="-2.2" r="1.1" fill="var(--c-champagne-500)" />
-      <circle cx="-2.2" cy="2.2" r="1.1" fill="var(--c-champagne-500)" />
-      <circle cx="2.2" cy="2.2" r="1.1" fill="var(--c-champagne-500)" />
-      <circle cx="0" cy="3" r="1.1" fill="var(--c-champagne-500)" />
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" />
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(72)" />
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(144)" />
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(216)" />
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(288)" />
+      <path
+        d="M0 -4C0 -9 0 -15 0 -20 M3.8 -1.2C8.6 -2.8 14.3 -4.6 19 -6.2 M2.4 3.2C5.3 7.3 8.8 12.1 11.8 16.2 M-2.4 3.2C-5.3 7.3 -8.8 12.1 -11.8 16.2 M-3.8 -1.2C-8.6 -2.8 -14.3 -4.6 -19 -6.2"
+        fill="none"
+        stroke="var(--c-rose-400)"
+        stroke-width="0.6"
+        stroke-opacity="0.4"
+        stroke-linecap="round"
+      />
+      <path
+        d="M3 -18C3.6 -14 2.6 -9 2 -6 M18 -2.7C14.4 -0.9 9.4 -0.3 6.3 0 M8.2 16.3C5.3 13.4 3.2 8.8 1.9 6 M-13 12.8C-11.1 9.2 -7.4 5.8 -5.1 3.7 M-16.2 -8.4C-12.2 -7.8 -7.8 -5.3 -5.1 -3.8"
+        fill="none"
+        stroke="var(--c-white)"
+        stroke-width="0.5"
+        stroke-opacity="0.35"
+        stroke-linecap="round"
+      />
+      <circle r="6" fill="url(#blossom-center)" />
+      <path
+        d="M0 -3C0 -4.3 0 -5.7 0 -7 M1.8 -2.4C2.5 -3.5 3.4 -4.6 4.1 -5.7 M2.9 -0.9C4.1 -1.3 5.4 -1.8 6.7 -2.2 M2.9 0.9C4.1 1.3 5.4 1.8 6.7 2.2 M1.8 2.4C2.5 3.5 3.4 4.6 4.1 5.7 M0 3C0 4.3 0 5.7 0 7 M-1.8 2.4C-2.5 3.5 -3.4 4.6 -4.1 5.7 M-2.9 0.9C-4.1 1.3 -5.4 1.8 -6.7 2.2 M-2.9 -0.9C-4.1 -1.3 -5.4 -1.8 -6.7 -2.2 M-1.8 -2.4C-2.5 -3.5 -3.4 -4.6 -4.1 -5.7"
+        fill="none"
+        stroke="var(--c-champagne-500)"
+        stroke-width="0.6"
+        stroke-linecap="round"
+      />
+      <path
+        d="M2.3 -7.8C2.8 -7.8 3.2 -7.4 3.2 -6.9C3.2 -6.4 2.8 -6 2.3 -6C1.8 -6 1.4 -6.4 1.4 -6.9C1.4 -7.4 1.8 -7.8 2.3 -7.8Z M5.9 -5.2C6.4 -5.2 6.8 -4.8 6.8 -4.3C6.8 -3.8 6.4 -3.4 5.9 -3.4C5.4 -3.4 5 -3.8 5 -4.3C5 -4.8 5.4 -5.2 5.9 -5.2Z M7.3 -0.9C7.8 -0.9 8.2 -0.5 8.2 0C8.2 0.5 7.8 0.9 7.3 0.9C6.8 0.9 6.4 0.5 6.4 0C6.4 -0.5 6.8 -0.9 7.3 -0.9Z M5.9 3.4C6.4 3.4 6.8 3.8 6.8 4.3C6.8 4.8 6.4 5.2 5.9 5.2C5.4 5.2 5 4.8 5 4.3C5 3.8 5.4 3.4 5.9 3.4Z M2.3 6C2.8 6 3.2 6.4 3.2 6.9C3.2 7.4 2.8 7.8 2.3 7.8C1.8 7.8 1.4 7.4 1.4 6.9C1.4 6.4 1.8 6 2.3 6Z M-2.3 6C-1.8 6 -1.4 6.4 -1.4 6.9C-1.4 7.4 -1.8 7.8 -2.3 7.8C-2.8 7.8 -3.2 7.4 -3.2 6.9C-3.2 6.4 -2.8 6 -2.3 6Z M-5.9 3.4C-5.4 3.4 -5 3.8 -5 4.3C-5 4.8 -5.4 5.2 -5.9 5.2C-6.4 5.2 -6.8 4.8 -6.8 4.3C-6.8 3.8 -6.4 3.4 -5.9 3.4Z M-7.3 -0.9C-6.8 -0.9 -6.4 -0.5 -6.4 0C-6.4 0.5 -6.8 0.9 -7.3 0.9C-7.8 0.9 -8.2 0.5 -8.2 0C-8.2 -0.5 -7.8 -0.9 -7.3 -0.9Z M-5.9 -5.2C-5.4 -5.2 -5 -4.8 -5 -4.3C-5 -3.8 -5.4 -3.4 -5.9 -3.4C-6.4 -3.4 -6.8 -3.8 -6.8 -4.3C-6.8 -4.8 -6.4 -5.2 -5.9 -5.2Z M-2.3 -7.8C-1.8 -7.8 -1.4 -7.4 -1.4 -6.9C-1.4 -6.4 -1.8 -6 -2.3 -6C-2.8 -6 -3.2 -6.4 -3.2 -6.9C-3.2 -7.4 -2.8 -7.8 -2.3 -7.8Z"
+        fill="var(--c-champagne-700)"
+      />
     </g>
   </symbol>
 
