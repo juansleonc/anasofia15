@@ -1,0 +1,309 @@
+---
+// Reusable animated dark background, modeled on the reference demo's three.js particle field but
+// rebuilt as a lightweight canvas-2D parallax field (no ~150KB three.js in a static invite):
+// a few hundred depth-varied points (depth drives size, brightness, twinkle, and drift speed)
+// that slowly drift AND shift with the pointer / device orientation, so the field reads as a 3D
+// volume the camera floats inside. Six CSS glow particles are layered on top as gold accents.
+// Mounted once by BaseLayout, fixed and behind every section (see BaseLayout.astro).
+// `prefers-reduced-motion` freezes everything: the canvas renders one static frame (no drift,
+// twinkle, or parallax) and the CSS particles stop animating, while the field stays visible.
+---
+
+<div class="starfield" data-testid="starfield" aria-hidden="true">
+  <canvas class="starfield__canvas" data-testid="starfield-canvas"></canvas>
+  <div class="starfield__particle" data-testid="starfield-particle"></div>
+  <div class="starfield__particle" data-testid="starfield-particle"></div>
+  <div class="starfield__particle" data-testid="starfield-particle"></div>
+  <div class="starfield__particle" data-testid="starfield-particle"></div>
+  <div class="starfield__particle" data-testid="starfield-particle"></div>
+  <div class="starfield__particle" data-testid="starfield-particle"></div>
+</div>
+
+<style>
+  .starfield {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    background-color: var(--c-black);
+  }
+
+  .starfield__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .starfield__particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 8px 1.5px rgba(238, 240, 243, 0.65);
+    opacity: 0.7;
+    animation: starfield-drift var(--motion-duration-slow) linear infinite;
+  }
+
+  .starfield__particle:nth-child(2) {
+    top: 18%;
+    left: 12%;
+    animation-duration: calc(var(--motion-duration-slow) * 6);
+  }
+
+  .starfield__particle:nth-child(3) {
+    top: 62%;
+    left: 70%;
+    background: var(--c-gold-bright);
+    box-shadow: 0 0 9px 2px rgba(212, 175, 55, 0.6);
+    animation-duration: calc(var(--motion-duration-slow) * 8);
+    animation-delay: calc(var(--motion-duration-slow) * -3);
+  }
+
+  .starfield__particle:nth-child(4) {
+    top: 35%;
+    left: 45%;
+    animation-duration: calc(var(--motion-duration-slow) * 7);
+    animation-delay: calc(var(--motion-duration-slow) * -5);
+  }
+
+  .starfield__particle:nth-child(5) {
+    top: 80%;
+    left: 20%;
+    background: var(--c-gold-bright);
+    box-shadow: 0 0 9px 2px rgba(212, 175, 55, 0.6);
+    animation-duration: calc(var(--motion-duration-slow) * 9);
+    animation-delay: calc(var(--motion-duration-slow) * -2);
+  }
+
+  .starfield__particle:nth-child(6) {
+    top: 10%;
+    left: 82%;
+    animation-duration: calc(var(--motion-duration-slow) * 7.5);
+    animation-delay: calc(var(--motion-duration-slow) * -4);
+  }
+
+  .starfield__particle:nth-child(7) {
+    top: 48%;
+    left: 8%;
+    background: var(--c-gold-bright);
+    box-shadow: 0 0 9px 2px rgba(212, 175, 55, 0.55);
+    animation-duration: calc(var(--motion-duration-slow) * 10);
+    animation-delay: calc(var(--motion-duration-slow) * -6);
+  }
+
+  @keyframes starfield-drift {
+    0% {
+      transform: translate(0, 0);
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(46px, 64px);
+      opacity: 0.25;
+    }
+  }
+
+  /* Explicit freeze (not just a zeroed duration): keeps the accent particles visible while fully
+     stopping their drift, per the theme's reduced-motion contract. The canvas field's freeze is
+     handled in the script below (single static frame, no listeners). */
+  @media (prefers-reduced-motion: reduce) {
+    .starfield__particle {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  // Canvas-2D port of the demo's three.js starfield: N depth-varied points, slow drift, and a
+  // "camera" that eases toward the pointer / device tilt each frame (same 0.04 lerp factor the
+  // demo used), shifting each star by its depth so near stars slide more than far ones.
+  interface Star {
+    x: number;
+    y: number;
+    /** 0 = far, 1 = near. Drives radius, brightness, drift speed, and parallax amount. */
+    z: number;
+    radius: number;
+    driftX: number;
+    driftY: number;
+    twinklePhase: number;
+    twinkleSpeed: number;
+    color: string;
+  }
+
+  const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+  /** How far (CSS px) a z=1 star shifts when the pointer reaches a viewport edge. */
+  const MAX_PARALLAX = 30;
+  const SILVER = '#cfd3da';
+  const WHITE = '#ffffff';
+  const GOLD = '#f0d987';
+
+  function initStarfield(): void {
+    const canvasEl = document.querySelector<HTMLCanvasElement>('[data-testid="starfield-canvas"]');
+    const context = canvasEl?.getContext('2d');
+    if (!canvasEl || !context) return;
+
+    // Rebind as locals with a definite (non-nullable) type: TS's control-flow narrowing above
+    // doesn't propagate into the nested function declarations below (they could, in principle,
+    // be invoked before the guard runs), so the nested functions close over these instead.
+    const canvas: HTMLCanvasElement = canvasEl;
+    const ctx: CanvasRenderingContext2D = context;
+
+    const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY);
+
+    let width = 0;
+    let height = 0;
+    let stars: Star[] = [];
+    let rafId = 0;
+    let lastTime = 0;
+
+    // Raw pointer target (-1..1 on both axes) and the eased "camera" that chases it.
+    const pointer = { x: 0, y: 0 };
+    const eased = { x: 0, y: 0 };
+
+    function seedStars(): void {
+      // Density-scaled with a hard cap so a phone never pushes more than ~150 points and a
+      // desktop never more than ~340 (the demo's 900 3D points project to roughly this).
+      const count = Math.min(340, Math.max(110, Math.round((width * height) / 3400)));
+      stars = Array.from({ length: count }, () => {
+        const z = Math.random();
+        const colorRoll = Math.random();
+        // Slow, slightly diagonal drift — near stars move faster, like the demo's rotating cloud.
+        const speed = 1.5 + z * 5;
+        const angle = Math.PI * 0.3 + (Math.random() - 0.5) * 0.9;
+        return {
+          x: Math.random() * (width + MAX_PARALLAX * 2) - MAX_PARALLAX,
+          y: Math.random() * (height + MAX_PARALLAX * 2) - MAX_PARALLAX,
+          z,
+          radius: 0.4 + z * 1.3,
+          driftX: Math.cos(angle) * speed,
+          driftY: Math.sin(angle) * speed,
+          twinklePhase: Math.random() * Math.PI * 2,
+          twinkleSpeed: 0.4 + Math.random() * 1.1,
+          color: colorRoll < 0.16 ? GOLD : colorRoll < 0.55 ? SILVER : WHITE,
+        };
+      });
+    }
+
+    function resize(): void {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      seedStars();
+    }
+
+    function drawFrame(timeSeconds: number, animate: boolean): void {
+      ctx.clearRect(0, 0, width, height);
+      for (const star of stars) {
+        // Depth-weighted parallax: the eased camera offset slides near stars further than far
+        // ones, which is what sells the 3D-volume feel without a real 3D projection.
+        const depthShift = MAX_PARALLAX * (0.25 + 0.75 * star.z);
+        const drawX = star.x - eased.x * depthShift;
+        const drawY = star.y - eased.y * depthShift;
+        const twinkle = animate
+          ? 0.62 + 0.38 * Math.sin(timeSeconds * star.twinkleSpeed + star.twinklePhase)
+          : 0.85;
+        ctx.globalAlpha = (0.3 + 0.6 * star.z) * twinkle;
+        ctx.fillStyle = star.color;
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function loop(now: number): void {
+      const dt = lastTime === 0 ? 0 : Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      eased.x += (pointer.x - eased.x) * 0.04;
+      eased.y += (pointer.y - eased.y) * 0.04;
+
+      for (const star of stars) {
+        star.x += star.driftX * dt;
+        star.y += star.driftY * dt;
+        // Wrap through the overscanned field so drift never empties an edge.
+        if (star.x > width + MAX_PARALLAX) star.x = -MAX_PARALLAX;
+        if (star.x < -MAX_PARALLAX) star.x = width + MAX_PARALLAX;
+        if (star.y > height + MAX_PARALLAX) star.y = -MAX_PARALLAX;
+        if (star.y < -MAX_PARALLAX) star.y = height + MAX_PARALLAX;
+      }
+
+      drawFrame(now / 1000, true);
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function start(): void {
+      if (rafId !== 0) return;
+      lastTime = 0;
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function stop(): void {
+      if (rafId === 0) return;
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+
+    function applyMotionPreference(): void {
+      if (reducedMotion.matches) {
+        stop();
+        eased.x = 0;
+        eased.y = 0;
+        drawFrame(0, false); // static field, no twinkle/parallax
+      } else {
+        start();
+      }
+    }
+
+    window.addEventListener(
+      'pointermove',
+      (event) => {
+        pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = (event.clientY / window.innerHeight) * 2 - 1;
+      },
+      { passive: true },
+    );
+
+    // Same tilt→pointer mapping the demo used: gamma (left/right) and beta (front/back, offset
+    // by the ~40° a phone is naturally held at) each normalized to -1..1.
+    window.addEventListener(
+      'deviceorientation',
+      (event) => {
+        if (event.gamma == null || event.beta == null) return;
+        pointer.x = Math.max(-1, Math.min(1, event.gamma / 40));
+        pointer.y = Math.max(-1, Math.min(1, (event.beta - 40) / 40));
+      },
+      { passive: true },
+    );
+
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        resize();
+        if (reducedMotion.matches) drawFrame(0, false);
+      }, 150);
+    });
+
+    // Don't burn battery drawing an invisible background.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+      else applyMotionPreference();
+    });
+
+    reducedMotion.addEventListener('change', applyMotionPreference);
+
+    resize();
+    applyMotionPreference();
+  }
+
+  initStarfield();
+</script>

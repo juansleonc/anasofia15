@@ -1,0 +1,143 @@
+---
+// Live-ticking countdown: renders the four day/hour/min/sec cards (SSR'd with zero-padded
+// placeholders) and an "arrived" state, then a client script recomputes both every second from
+// `computeTimeRemaining` (src/lib/countdown.ts) — reused, not reimplemented; this island only
+// owns display formatting (zero-padding) and the arrived/counting toggle.
+//
+// Testable seam: the target instant normally comes from `event.eventDateTimeIso`, but a
+// `?countdownTarget=<ISO>` query param overrides it when present, so e2e can drive the
+// "llegó el día" state without waiting for the real date or mocking the data module.
+import { event } from '../data/event';
+---
+
+<div
+  class="countdown-grid"
+  data-testid="countdown-grid"
+  data-target-iso={event.eventDateTimeIso}
+>
+  <div class="countdown-card" data-testid="countdown-card-days">
+    <span class="countdown-card__value" data-testid="countdown-value-days">00</span>
+    <span class="countdown-card__label">Días</span>
+  </div>
+  <div class="countdown-card" data-testid="countdown-card-hours">
+    <span class="countdown-card__value" data-testid="countdown-value-hours">00</span>
+    <span class="countdown-card__label">Horas</span>
+  </div>
+  <div class="countdown-card" data-testid="countdown-card-mins">
+    <span class="countdown-card__value" data-testid="countdown-value-mins">00</span>
+    <span class="countdown-card__label">Min</span>
+  </div>
+  <div class="countdown-card" data-testid="countdown-card-secs">
+    <span class="countdown-card__value" data-testid="countdown-value-secs">00</span>
+    <span class="countdown-card__label">Seg</span>
+  </div>
+</div>
+
+<p class="countdown-arrived" data-testid="countdown-arrived" hidden>¡Llegó el día! 🎉</p>
+
+<style>
+  .countdown-grid {
+    display: grid;
+    /* repeat(4, minmax(0,1fr)) + min-width:0 on each card is what keeps 4 columns from
+       overflowing at narrow (375px) widths — a naive 1fr grid lets long content push cards wider
+       than their track. */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.625rem;
+    width: 100%;
+  }
+
+  /* The `hidden` attribute's UA rule and this class's `display: grid` share specificity, so an
+     explicit override is needed or the grid would stay visible while "hidden". */
+  .countdown-grid[hidden] {
+    display: none;
+  }
+
+  .countdown-card {
+    min-width: 0;
+    background: var(--glass-bg);
+    border: var(--glass-border);
+    border-radius: 1rem;
+    padding: 1.375rem 0.25rem;
+    backdrop-filter: blur(6px);
+    box-shadow:
+      var(--glass-highlight),
+      0 18px 40px -24px rgba(0, 0, 0, 0.9);
+  }
+
+  .countdown-card__value {
+    display: block;
+    font-size: clamp(1.625rem, 8vw, 3.375rem);
+    font-weight: 700;
+    line-height: 1;
+    background: var(--gradient-silver);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    /* Cool halo that survives background-clip:text (text-shadow would not). */
+    filter: drop-shadow(0 0 12px rgba(238, 240, 243, 0.22));
+    transition: opacity var(--motion-duration-base) var(--motion-easing);
+  }
+
+  .countdown-card__label {
+    display: block;
+    margin-top: 0.625rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--c-gold-bright);
+  }
+
+  .countdown-arrived {
+    font-size: clamp(1.25rem, 6vw, 2rem);
+    color: var(--c-gold);
+    text-align: center;
+  }
+</style>
+
+<script>
+  import { computeTimeRemaining } from '../lib/countdown';
+
+  const grid = document.querySelector('[data-testid="countdown-grid"]') as HTMLElement | null;
+  const arrivedEl = document.querySelector(
+    '[data-testid="countdown-arrived"]',
+  ) as HTMLElement | null;
+
+  function pad(value: number): string {
+    return String(value).padStart(2, '0');
+  }
+
+  function setValue(testid: string, value: number): void {
+    const el = document.querySelector(`[data-testid="${testid}"]`);
+    if (el) el.textContent = pad(value);
+  }
+
+  function resolveTargetMs(): number {
+    const override = new URLSearchParams(window.location.search).get('countdownTarget');
+    if (override !== null) {
+      const overrideMs = Date.parse(override);
+      if (Number.isFinite(overrideMs)) return overrideMs;
+    }
+    return Date.parse(grid?.dataset.targetIso ?? '');
+  }
+
+  function tick(): void {
+    const targetMs = resolveTargetMs();
+    const remaining = computeTimeRemaining(Date.now(), targetMs);
+
+    if (remaining.arrived) {
+      grid?.setAttribute('hidden', '');
+      arrivedEl?.removeAttribute('hidden');
+      return;
+    }
+
+    grid?.removeAttribute('hidden');
+    arrivedEl?.setAttribute('hidden', '');
+    setValue('countdown-value-days', remaining.days);
+    setValue('countdown-value-hours', remaining.hours);
+    setValue('countdown-value-mins', remaining.mins);
+    setValue('countdown-value-secs', remaining.secs);
+  }
+
+  tick();
+  setInterval(tick, 1000);
+</script>

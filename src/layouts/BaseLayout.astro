@@ -1,0 +1,93 @@
+---
+// Shared <head>/<body> shell: design tokens, self-hosted fonts, Open Graph/meta tags, and the
+// animated <Starfield/> background mounted once behind every page.
+import '@fontsource/great-vibes/latin.css';
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-700.css';
+import '@fontsource/syne/latin-700.css';
+import '@fontsource/syne/latin-800.css';
+import '@fontsource/playfair-display/latin-800.css';
+import greatVibesWoff2 from '@fontsource/great-vibes/files/great-vibes-latin-400-normal.woff2';
+import '../styles/tokens.css';
+import { withBase } from '../lib/base';
+import { siteConfig } from '../data/site.config';
+import { publicAssetExists } from '../lib/assets';
+import Starfield from '../components/Starfield.astro';
+
+interface Props {
+  title?: string;
+}
+
+const { title = siteConfig.og.title } = Astro.props;
+
+// `import.meta.env.SITE`/`BASE_URL` are Astro's own read of `astro.config.mjs`'s `site`/`base` —
+// preferring them over `site.config.ts`'s duplicate `siteUrl`/`base` fields keeps the OG URLs
+// tied to the single value Astro actually builds with, so the two configs can't silently drift.
+const siteOrigin = import.meta.env.SITE ?? siteConfig.siteUrl;
+const canonicalUrl = new URL(withBase('/'), siteOrigin).toString();
+// Omitted entirely (not pointed at a 404) until the family drops the real file.
+const hasOgImage = publicAssetExists(siteConfig.og.imagePath);
+const ogImageUrl = new URL(withBase(siteConfig.og.imagePath), siteOrigin).toString();
+---
+
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+		<link rel="icon" href={withBase('/favicon.ico')} />
+		<link rel="preload" as="font" type="font/woff2" href={greatVibesWoff2} crossorigin />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+
+		<meta name="description" content={siteConfig.og.description} />
+		<link rel="canonical" href={canonicalUrl} />
+		<meta property="og:title" content={siteConfig.og.title} />
+		<meta property="og:description" content={siteConfig.og.description} />
+		<meta property="og:url" content={canonicalUrl} />
+		{hasOgImage && <meta property="og:image" content={ogImageUrl} />}
+	</head>
+	<body>
+		<Starfield />
+		<slot />
+		<script>
+			// Scroll-reveal (T21): progressive enhancement only — see tokens.css for why the
+			// `.reveal-pending`/`.is-revealed` classes are safe to add here without ever risking
+			// content that stays permanently hidden if this script fails partway through.
+			const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+
+			function initScrollReveal(): void {
+				if (window.matchMedia(REDUCED_MOTION_QUERY).matches) return;
+				if (!('IntersectionObserver' in window)) return;
+
+				const targets = document.querySelectorAll<HTMLElement>('[data-reveal]');
+				if (targets.length === 0) return;
+
+				const observer = new IntersectionObserver(
+					(entries) => {
+						for (const entry of entries) {
+							if (entry.isIntersecting) {
+								entry.target.classList.add('is-revealed');
+								observer.unobserve(entry.target);
+							}
+						}
+					},
+					{ threshold: 0.15, rootMargin: '0px 0px -10% 0px' },
+				);
+
+				for (const target of targets) {
+					target.classList.add('reveal-pending');
+					try {
+						observer.observe(target);
+					} catch {
+						// Observing failed for this element (should not happen for a valid Element) —
+						// undo the pending-hidden class rather than leave it invisible forever.
+						target.classList.remove('reveal-pending');
+					}
+				}
+			}
+
+			initScrollReveal();
+		</script>
+	</body>
+</html>

@@ -1,0 +1,109 @@
+/**
+ * Design tokens — "Disco Night" theme: black + silver + gold.
+ * CSS custom properties consumed by every section/component; do not hardcode raw hex values
+ * or font-family strings elsewhere — reference these tokens instead.
+ */
+
+:root {
+  /* Palette */
+  --c-black: #0a0a0f;
+  --c-silver: #c9ccd1;
+  --c-gold: #d4af37;
+  --c-bright: #eef0f3; /* near-white — headings/body copy that must pop over black */
+  --c-gold-bright: #f0d987; /* luminous gold — eyebrows/small accents that must stay legible */
+
+  /* Metallic gradients (text/surface accents over --c-black). Both stay bright end-to-end —
+     a gradient that fades into dark grey reads as washed-out over a black page. */
+  --gradient-silver: linear-gradient(180deg, #ffffff 0%, #b9bdc4 58%, #f4f5f7 100%);
+  --gradient-gold: linear-gradient(135deg, #fbf0c4 0%, #f0d987 30%, #d4af37 62%, #c39b2e 100%);
+
+  /* Glassy card surface (subtle luminous panel + hairline border over the starfield) */
+  --glass-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  --glass-border: 1px solid rgba(200, 204, 212, 0.24);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+
+  /* Typography */
+  --font-cursive: 'Great Vibes', cursive;
+  --font-display: 'Syne', 'Inter', system-ui, sans-serif;
+  --font-serif-display: 'Playfair Display', 'Georgia', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Motion */
+  --motion-duration-base: 600ms;
+  --motion-duration-slow: 1600ms;
+  --motion-easing: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Theme-fidelity: all drift/spin/reveal animation must be built on the motion vars above and
+   freeze when the visitor prefers reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-base: 0ms;
+    --motion-duration-slow: 0ms;
+  }
+}
+
+body {
+  background-color: var(--c-black);
+  color: var(--c-silver);
+  font-family: var(--font-body);
+}
+
+.font-cursive {
+  font-family: var(--font-cursive);
+}
+
+.text-gradient-gold {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-silver {
+  background: var(--gradient-silver);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Scroll-reveal (T21): the `.reveal-pending` class is added ONLY by JS, right before it starts
+   observing the element — so if JS fails to run at all, this rule never applies and content
+   stays at its default full opacity/position. `.is-revealed` (also JS-added, on intersection)
+   is what actually plays the fade/rise; `prefers-reduced-motion` shows content immediately with
+   no motion, both here and (belt-and-suspenders) in the JS that decides whether to reveal at all. */
+[data-reveal].reveal-pending {
+  opacity: 0;
+  transform: translateY(1.5rem);
+}
+
+[data-reveal].reveal-pending.is-revealed {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--motion-duration-base) var(--motion-easing),
+    transform var(--motion-duration-base) var(--motion-easing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal].reveal-pending {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Cover open-gate: `.scroll-locked` is added to <body> ONLY by JS, on load, before the guest can
+   interact — so if JS fails to run at all this rule never applies and the page stays reachable
+   by scroll (progressive enhancement, same principle as `.reveal-pending` above). Cover's own
+   script removes the class the instant "Abrir invitación" is clicked, before the programmatic
+   scroll-to-hero runs. `position: fixed` (not just `overflow: hidden`) is required here: WebKit
+   still honors a programmatic `window.scrollTo` against an `overflow: hidden` root/body that was
+   toggled on after the initial layout, so `overflow: hidden` alone does not reliably block it —
+   pinning the body's box to the viewport does. */
+body.scroll-locked {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  overflow: hidden;
+}

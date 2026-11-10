@@ -1,0 +1,99 @@
+---
+// "Cómo llegar": buttons-only deep-links to the venue — Google Maps + Waze, built at build time
+// from src/data/event.ts's venue via src/lib/maps.ts's builders. No embedded map/iframe by design
+// (keyless, no billed API surface).
+import { event } from '../data/event';
+import { buildGoogleMapsUrl, buildWazeUrl } from '../lib/maps';
+import EyebrowEmoji from '../components/EyebrowEmoji.astro';
+
+const googleMapsUrl = buildGoogleMapsUrl(event.venue);
+const wazeUrl = buildWazeUrl(event.venue);
+---
+
+<section class="como-llegar" data-testid="como-llegar" aria-label="Cómo llegar">
+  <div class="como-llegar__header">
+    <p class="como-llegar__eyebrow"><EyebrowEmoji emoji="📍" />Cómo llegar</p>
+    <h2 class="como-llegar__title text-gradient-silver">{event.venue.name}</h2>
+    <p class="como-llegar__locality">{event.venue.address}, {event.venue.locality} · {event.venue.country}</p>
+  </div>
+
+  <div class="como-llegar__actions">
+    <a
+      class="como-llegar__button como-llegar__button--maps"
+      href={googleMapsUrl}
+      target="_blank"
+      rel="noopener"
+    >
+      Google Maps
+    </a>
+    <a
+      class="como-llegar__button como-llegar__button--waze"
+      href={wazeUrl}
+      target="_blank"
+      rel="noopener"
+    >
+      Waze
+    </a>
+  </div>
+</section>
+
+<style>
+  .como-llegar {
+    padding: 2.5rem 1rem 4.375rem;
+  }
+
+  .como-llegar__header {
+    text-align: center;
+    margin-bottom: 1.75rem;
+  }
+
+  .como-llegar__eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--c-gold-bright);
+  }
+
+  .como-llegar__title {
+    font-weight: 700;
+    font-size: clamp(1.75rem, 7vw, 2.625rem);
+    margin-top: 0.75rem;
+  }
+
+  .como-llegar__locality {
+    font-weight: 300;
+    font-size: 0.9375rem;
+    color: var(--c-silver);
+    opacity: 0.9;
+    margin-top: 0.5rem;
+  }
+
+  .como-llegar__actions {
+    display: flex;
+    gap: 0.75rem;
+    max-width: 34rem;
+    margin: 0 auto;
+  }
+
+  .como-llegar__button {
+    flex: 1;
+    text-align: center;
+    padding: 1rem;
+    border-radius: 0.875rem;
+    font-weight: 700;
+    font-size: 0.875rem;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+  }
+
+  .como-llegar__button--maps {
+    background: var(--gradient-silver);
+    color: var(--c-black);
+  }
+
+  .como-llegar__button--waze {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(201, 204, 209, 0.24);
+    color: var(--c-silver);
+  }
+</style>

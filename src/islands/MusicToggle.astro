@@ -1,0 +1,155 @@
+---
+// Fixed bottom-right chrome music toggle (reuses the disco-night silver/black tokens): an
+// animated equalizer while the ambient track is playing, a musical note while paused. Owns the
+// single <audio> element for the site (nothing else may render another one) — it stays paused on
+// load and only starts via a real user gesture: either this button, or the Cover section's
+// "Abrir invitación" click, which unlocks playback through the open-invitation window event (see
+// src/lib/events.ts) rather than duplicating the audio element there. Renders nothing at all
+// until the real track is dropped at `public/music/song.mp3` (see src/lib/assets.ts) — a missing
+// file means no button and no <audio> element, not a broken one.
+import { withBase } from '../lib/base';
+import { siteConfig } from '../data/site.config';
+import { publicAssetExists } from '../lib/assets';
+
+const hasMusic = publicAssetExists(siteConfig.musicSrc);
+const musicSrc = withBase(siteConfig.musicSrc);
+---
+
+{
+  hasMusic && (
+    <>
+      <button
+        type="button"
+        class="music-toggle"
+        data-testid="music-toggle"
+        aria-label="Música de fondo"
+        aria-pressed="false"
+      >
+        <span class="music-toggle__eq" data-testid="music-toggle-eq" aria-hidden="true">
+          <span class="music-toggle__bar music-toggle__bar--1" />
+          <span class="music-toggle__bar music-toggle__bar--2" />
+          <span class="music-toggle__bar music-toggle__bar--3" />
+        </span>
+        <span class="music-toggle__note" data-testid="music-toggle-note" aria-hidden="true">
+          ♪
+        </span>
+      </button>
+
+      <audio data-testid="background-audio" loop preload="none" src={musicSrc} />
+    </>
+  )
+}
+
+<style>
+  .music-toggle {
+    position: fixed;
+    bottom: 1.375rem;
+    right: 1.375rem;
+    z-index: 60;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-silver);
+    box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.7);
+  }
+
+  .music-toggle__note {
+    font-size: 1rem;
+    color: var(--c-black);
+  }
+
+  .music-toggle__eq {
+    display: none;
+    align-items: flex-end;
+    gap: 2.5px;
+    height: 16px;
+  }
+
+  .music-toggle__bar {
+    width: 3px;
+    background: var(--c-black);
+    border-radius: 2px;
+  }
+
+  .music-toggle__bar--1 {
+    height: 60%;
+    animation: music-toggle-eq1 0.7s ease-in-out infinite alternate;
+  }
+  .music-toggle__bar--2 {
+    height: 100%;
+    animation: music-toggle-eq2 0.5s ease-in-out infinite alternate;
+  }
+  .music-toggle__bar--3 {
+    height: 75%;
+    animation: music-toggle-eq3 0.8s ease-in-out infinite alternate;
+  }
+
+  /* JS toggles `data-playing` only once the <audio> element itself actually starts/stops (via its
+     own play/pause events), so the icon always reflects real playback state, not intent. */
+  .music-toggle[data-playing='true'] .music-toggle__note {
+    display: none;
+  }
+  .music-toggle[data-playing='true'] .music-toggle__eq {
+    display: flex;
+  }
+
+  @keyframes music-toggle-eq1 {
+    from { height: 30%; }
+    to { height: 90%; }
+  }
+  @keyframes music-toggle-eq2 {
+    from { height: 60%; }
+    to { height: 100%; }
+  }
+  @keyframes music-toggle-eq3 {
+    from { height: 40%; }
+    to { height: 80%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .music-toggle__bar {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  import { OPEN_INVITATION_EVENT } from '../lib/events';
+
+  const audio = document.querySelector('[data-testid="background-audio"]') as HTMLAudioElement | null;
+  const button = document.querySelector('[data-testid="music-toggle"]') as HTMLButtonElement | null;
+
+  function setPlayingUi(playing: boolean): void {
+    if (!button) return;
+    button.setAttribute('data-playing', String(playing));
+    button.setAttribute('aria-pressed', String(playing));
+  }
+
+  function tryPlay(): void {
+    if (!audio) return;
+    audio.play().catch(() => {
+      // Autoplay blocked (no user gesture yet, or the browser's autoplay policy) — stay paused;
+      // the toggle button remains available for the guest to start it manually.
+    });
+  }
+
+  button?.addEventListener('click', () => {
+    if (!audio) return;
+    if (audio.paused) {
+      tryPlay();
+    } else {
+      audio.pause();
+    }
+  });
+
+  // Single source of truth for the icon: the audio element's own state, however playback started.
+  audio?.addEventListener('play', () => setPlayingUi(true));
+  audio?.addEventListener('pause', () => setPlayingUi(false));
+
+  window.addEventListener(OPEN_INVITATION_EVENT, tryPlay);
+</script>

@@ -1,0 +1,40 @@
+---
+// The countdown screen: eyebrow, the four live-ticking cards (delegated to CountdownIsland, which
+// owns the client-side ticker), and the human-readable display date from src/data/event.ts.
+import { event } from '../data/event';
+import CountdownIsland from '../islands/CountdownIsland.astro';
+import EyebrowEmoji from '../components/EyebrowEmoji.astro';
+---
+
+<section class="countdown" data-testid="countdown" aria-label="Cuenta regresiva">
+  <p class="countdown__eyebrow"><EyebrowEmoji emoji="⏳" />La cuenta regresiva</p>
+  <CountdownIsland />
+  <p class="countdown__date">{event.eventDateDisplay}</p>
+</section>
+
+<style>
+  .countdown {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.125rem;
+    min-height: 92dvh;
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+
+  .countdown__eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--c-gold-bright);
+  }
+
+  .countdown__date {
+    font-weight: 500;
+    font-size: 0.9375rem;
+    letter-spacing: 0.06em;
+    color: var(--c-bright);
+  }
+</style>

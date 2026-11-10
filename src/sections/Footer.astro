@@ -1,0 +1,38 @@
+---
+// Closing footer: the celebrant's full name in cursive over a subtle top border, plus the short
+// footer line from event.ts (`footerText`) — never hardcoded here so the family only ever edits
+// src/data/event.ts.
+import { event } from '../data/event';
+---
+
+<footer class="footer" data-testid="footer">
+  <p class="footer__monogram font-cursive text-gradient-silver" aria-hidden="true">{event.celebrantName}</p>
+  <p class="footer__line">{event.footerText}</p>
+</footer>
+
+<style>
+  .footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2.5rem 1rem 4.5rem;
+    text-align: center;
+    border-top: 1px solid rgba(201, 204, 209, 0.15);
+  }
+
+  .footer__monogram {
+    font-size: 1.75rem;
+    line-height: 1;
+    margin: 0;
+  }
+
+  .footer__line {
+    font-size: 0.7rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--c-silver);
+    opacity: 0.8;
+    margin: 0;
+  }
+</style>

@@ -1,0 +1,141 @@
+---
+// Two gala searchlight beams sweeping the cover's night sky, Hollywood-premiere style: anchored
+// off-screen at the bottom-left and bottom-right, angled up so they cross near the hanging mirror
+// ball. Pure CSS — each beam is a blurred, screen-blended cone (cool silver body over a narrow
+// warm gold core) that rocks a few degrees around its base; the two periods differ so the
+// crossing point wanders across the ball. A separate screen-blend radial wash sits OVER the ball
+// (z-index above the sibling ball mount) and pulses, reading as the beams raking light across the
+// mirrors — DiscoBall itself stays untouched. Everything is pointer-events: none and clipped
+// inside the cover, so the beams can overshoot the viewport without widening the page.
+// `prefers-reduced-motion` freezes the sweep at the default crossed pose (explicit
+// `animation: none`, per the Starfield/DiscoBall precedent) with the wash held at a steady glow.
+---
+
+<div class="spotlights" data-testid="spotlights" aria-hidden="true">
+  <div class="spotlights__beam spotlights__beam--left" data-testid="spotlight-beam"></div>
+  <div class="spotlights__beam spotlights__beam--right" data-testid="spotlight-beam"></div>
+</div>
+<div class="spotlights__wash" aria-hidden="true"></div>
+
+<style>
+  .spotlights {
+    position: absolute;
+    inset: 0;
+    /* The rotating beams intentionally overshoot the cover's box — clip HERE (not on body) so
+       they never produce a horizontal scrollbar on narrow phones. */
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  /* One klieg cone: narrow at its base, widening toward the sky, brightest near the source and
+     dissolving before its far end. Two stacked gradients — a slim warm gold core inside the cool
+     silver-white body — keep it on the disco palette; blur + screen blend make it add light over
+     the starfield and ball instead of painting a hard-edged shape. */
+  .spotlights__beam {
+    position: absolute;
+    bottom: -12%;
+    width: clamp(70px, 20vw, 150px);
+    /* Long enough that even at the widest sweep angle the far end reaches past the ball on a
+       wide desktop viewport (the crossing height varies with aspect ratio by design). */
+    height: 140%;
+    transform-origin: 50% 100%;
+    clip-path: polygon(36% 100%, 64% 100%, 100% 0%, 0% 0%);
+    background:
+      linear-gradient(
+          to top,
+          rgba(240, 217, 135, 0.5) 0%,
+          rgba(240, 217, 135, 0.14) 38%,
+          rgba(240, 217, 135, 0) 62%
+        )
+        center / 34% 100% no-repeat,
+      linear-gradient(
+        to top,
+        rgba(238, 240, 243, 0.62) 0%,
+        rgba(201, 204, 209, 0.32) 42%,
+        rgba(201, 204, 209, 0.1) 72%,
+        rgba(201, 204, 209, 0) 92%
+      );
+    filter: blur(14px);
+    mix-blend-mode: screen;
+    pointer-events: none;
+  }
+
+  /* Static transforms below are the crossed-beams pose reduced-motion falls back to; the sweep
+     keyframes override them while animating. The two periods are deliberately co-prime-ish so
+     the crossing point drifts instead of metronoming. */
+  .spotlights__beam--left {
+    left: -3%;
+    transform: rotate(27deg);
+    animation: spotlights-sweep-left 9.5s ease-in-out infinite;
+  }
+
+  .spotlights__beam--right {
+    right: -3%;
+    transform: rotate(-27deg);
+    animation: spotlights-sweep-right 11.5s ease-in-out -4s infinite;
+  }
+
+  @keyframes spotlights-sweep-left {
+    0%,
+    100% {
+      transform: rotate(14deg);
+    }
+    50% {
+      transform: rotate(40deg);
+    }
+  }
+
+  @keyframes spotlights-sweep-right {
+    0%,
+    100% {
+      transform: rotate(-40deg);
+    }
+    50% {
+      transform: rotate(-14deg);
+    }
+  }
+
+  /* The light wash the crossing beams throw across the mirror balls: a soft screen-blend glow
+     centered over Cover's ball cluster (which sits horizontally centered near the top),
+     z-lifted above it so the brightening reads ON the mirrors. Sized so its edges stay inside
+     the viewport (50% ± half of 46vw) — no clipping wrapper needed, no overflow. */
+  .spotlights__wash {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: min(46vw, 320px);
+    height: min(46vw, 320px);
+    transform: translateX(-50%);
+    z-index: 1;
+    background: radial-gradient(
+      circle at 50% 46%,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(238, 240, 243, 0.22) 38%,
+      rgba(238, 240, 243, 0) 68%
+    );
+    mix-blend-mode: screen;
+    opacity: 0.55;
+    animation: spotlights-wash 4.75s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes spotlights-wash {
+    0%,
+    100% {
+      opacity: 0.1;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+
+  /* Explicit freeze (not just a zeroed duration): the sweep parks at the crossed pose and the
+     wash holds its steady base glow, both still visible — per the theme's reduced-motion
+     contract (see Starfield/DiscoBall). */
+  @media (prefers-reduced-motion: reduce) {
+    .spotlights__beam,
+    .spotlights__wash {
+      animation: none;
+    }
+  }
+</style>
