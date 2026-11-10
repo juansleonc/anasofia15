@@ -190,6 +190,24 @@ describe('palette discipline', () => {
     expect(Math.min(...luminances)).toBeLessThanOrEqual(0.06);
   });
 
+  it("the open button's relief layers use wine tokens", () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const coverAstro = readFileSync(join(SRC_DIR, 'sections', 'Cover.astro'), 'utf8');
+
+    const wineShadow = tokensCss.match(/--shadow-button-wine:([^;]*);/);
+    expect(wineShadow).not.toBeNull();
+    expect(wineShadow![1]).toContain('var(--c-wine-700)');
+
+    // Both the resting relief and its pressed twin.
+    const reliefStacks = [...coverAstro.matchAll(/--cover-button-shadow:([^;]*);/g)].map((match) => match[1]);
+    expect(reliefStacks).toHaveLength(2);
+    for (const stack of reliefStacks) {
+      expect(stack).toContain('var(--shadow-button-wine)');
+      expect(stack).toContain('var(--c-wine-700)');
+      expect(stack).not.toContain('var(--c-rose-700)');
+    }
+  });
+
   it('the deep wine name reads strongly on the warm glow', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);

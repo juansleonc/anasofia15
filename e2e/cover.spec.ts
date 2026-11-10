@@ -202,6 +202,9 @@ test.describe('Cover section', () => {
   });
 
   test('the open button has relief', async ({ page }) => {
+    // Read the resting relief: while the pulse runs, the computed shadow is an interpolated
+    // animation value re-serialised in another colour space.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./');
 
     const button = page.getByRole('button', { name: 'Abrir invitación' });
@@ -242,52 +245,25 @@ test.describe('Cover section', () => {
     expect(insetLayers.length).toBeGreaterThanOrEqual(2);
     expect(outerLayers.length).toBeGreaterThanOrEqual(2);
 
-    expect(styles.borderTopWidth).toBeGreaterThanOrEqual(2);
-  });
-
-  // Round-3 feedback follow-up: the relief's inset/outer shadows and the label's text-shadow used
-  // to mix in `--c-wine-700`, leaving a dark wine undertone under the lighter rose fill even after
-  // the fill itself moved off wine. Every shadow layer must now resolve away from both retired
-  // wine rgb values.
-  test('no box-shadow or text-shadow layer on the open button resolves to the old wine tone', async ({
-    page,
-  }) => {
-    await page.goto('./');
-
-    const button = page.getByRole('button', { name: 'Abrir invitación' });
-    const styles = await button.evaluate((el) => {
-      const computed = getComputedStyle(el);
-      return { boxShadow: computed.boxShadow, textShadow: computed.textShadow };
-    });
-
-    const splitTopLevelLayers = (value: string): string[] => {
-      const layers: string[] = [];
-      let depth = 0;
-      let current = '';
-      for (const char of value) {
-        if (char === '(') depth += 1;
-        if (char === ')') depth -= 1;
-        if (char === ',' && depth === 0) {
-          layers.push(current.trim());
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      if (current.trim()) layers.push(current.trim());
-      return layers;
+    // The drop layers (those cast downward, as opposed to the flat gold ring) are deep wine.
+    // Engines serialise a `color-mix()` either as `rgba(r, g, b, a)` or as
+    // `color(srgb r g b / a)` with 0-1 channels, so both forms are read back to 0-255.
+    const layerRgb = (layer: string): number[] | null => {
+      const rgb = layer.match(/rgba?\((\d+), (\d+), (\d+)/);
+      if (rgb) return rgb.slice(1, 4).map(Number);
+      const srgb = layer.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)/);
+      return srgb ? srgb.slice(1, 4).map((channel) => Math.round(Number(channel) * 255)) : null;
     };
-
-    const retiredWineRgbs = ['rgb(110, 36, 64)', 'rgb(154, 68, 98)'];
-    const layers = [
-      ...splitTopLevelLayers(styles.boxShadow),
-      ...splitTopLevelLayers(styles.textShadow),
-    ];
-    for (const layer of layers) {
-      for (const wineRgb of retiredWineRgbs) {
-        expect(layer).not.toContain(wineRgb);
-      }
+    const dropLayers = outerLayers.filter((layer) => {
+      const offsets = layer.match(/(-?[\d.]+)px (-?[\d.]+)px/);
+      return !!offsets && Number(offsets[2]) > 0;
+    });
+    expect(dropLayers.length).toBeGreaterThanOrEqual(2);
+    for (const layer of dropLayers) {
+      expect(layerRgb(layer)).toEqual([110, 36, 64]);
     }
+
+    expect(styles.borderTopWidth).toBeGreaterThanOrEqual(2);
   });
 
   test('the open button is large enough to read easily on a short phone screen, without crowding it', async ({

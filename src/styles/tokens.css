@@ -42,7 +42,7 @@
     var(--c-wine-500) 45%,
     var(--c-wine-700) 100%
   );
-  --shadow-button-rose: 0 10px 24px -12px color-mix(in srgb, var(--c-rose-700) 45%, transparent);
+  --shadow-button-wine: 0 14px 30px -12px color-mix(in srgb, var(--c-wine-700) 55%, transparent);
   /* Foil sheen laid over the button fill; white label text still stays >= 4.5:1 on the top stop
      under it (proved in palette.test.ts). */
   --button-sheen-alpha: 10%;
