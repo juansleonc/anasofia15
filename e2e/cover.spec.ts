@@ -298,4 +298,44 @@ test.describe('Cover section', () => {
       }
     });
   }
+
+  test('the cover has depth and warm ambient light', async ({ page }) => {
+    await page.goto('./');
+
+    const coverBackground = await page
+      .getByTestId('cover')
+      .evaluate((el) => getComputedStyle(el).backgroundImage);
+    const coverGradientCount = (coverBackground.match(/[a-z-]+-gradient\(/gi) ?? []).length;
+    expect(coverGradientCount).toBeGreaterThanOrEqual(2);
+    expect(coverBackground).toContain('radial-gradient');
+    expect(coverBackground).toContain('linear-gradient');
+
+    const light = page.getByTestId('cover-light');
+    await expect(light).toHaveAttribute('aria-hidden', 'true');
+
+    const lightStyles = await light.evaluate((el) => {
+      const computed = getComputedStyle(el);
+      return {
+        pointerEvents: computed.pointerEvents,
+        backgroundImage: computed.backgroundImage,
+        clipPath: computed.clipPath,
+      };
+    });
+    expect(lightStyles.pointerEvents).toBe('none');
+    const lightGradientCount = (lightStyles.backgroundImage.match(/[a-z-]+-gradient\(/gi) ?? []).length;
+    expect(lightGradientCount).toBeGreaterThanOrEqual(2);
+    expect(lightStyles.clipPath).toContain('inset(');
+
+    // Sits behind the arch: earlier in document order than the balloon-arch container (both are
+    // absolutely positioned at the same stacking level, so paint order follows DOM order).
+    const lightPrecedesArch = await page.evaluate(() => {
+      const light = document.querySelector('[data-testid="cover-light"]');
+      const arch = document.querySelector('[data-testid="balloon-arch"]');
+      if (!light || !arch) return false;
+      return !!(
+        light.compareDocumentPosition(arch) & Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    });
+    expect(lightPrecedesArch).toBe(true);
+  });
 });
