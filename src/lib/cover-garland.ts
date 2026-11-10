@@ -17,7 +17,9 @@ export type ArchSymbol =
   | 'blossom'
   | 'leaf-eucalyptus'
   | 'leaf-olive'
-  | 'leaf-gold';
+  | 'leaf-gold'
+  | 'leaf-laurel-cluster'
+  | 'leaf-eucalyptus-cluster';
 
 export type GarlandKind = 'balloon' | 'flower' | 'leaf';
 
@@ -70,6 +72,15 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'leaf-eucalyptus', x: 160.7, y: 56.3, size: 70, rotate: -60, depth: 0 },
       { symbol: 'leaf-olive', x: 183.3, y: 64.3, size: 70, rotate: 60, depth: 0 },
       { symbol: 'leaf-olive', x: 239.8, y: 53.6, size: 70, rotate: -15, depth: 0 },
+      // laurel/eucalyptus clusters rooted inside the corner balloons (behind them, depth 0),
+      // fanning outward; eucalyptus doubled up at each corner because the laurel cluster art
+      // reads thin on its own
+      { symbol: 'leaf-eucalyptus-cluster', x: -1.71, y: 73.48, size: 90, rotate: -125, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: -36.83, y: 33.68, size: 130, rotate: -31, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: -37.43, y: 163.09, size: 130, rotate: -25, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 410.25, y: 92.51, size: 120, rotate: 125, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 387.72, y: 163.17, size: 90, rotate: 25, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 412.15, y: 289, size: 90, rotate: 91, depth: 0 },
       { symbol: 'balloon-pink', x: 70, y: 28, size: 120, rotate: 0, depth: 1 },
       { symbol: 'balloon-champagne', x: 178, y: 6, size: 112, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 292, y: 22, size: 126, rotate: 0, depth: 1 },
@@ -130,6 +141,12 @@ export const GARLAND: { portrait: GarlandLayout; landscape: GarlandLayout } = {
       { symbol: 'leaf-olive', x: 862.9, y: 35.2, size: 110, rotate: 60, depth: 0 },
       { symbol: 'leaf-olive', x: 907.1, y: 35.2, size: 110, rotate: -60, depth: 0 },
       { symbol: 'leaf-olive', x: 1110.7, y: 100.8, size: 130, rotate: 60, depth: 0 },
+      // laurel/eucalyptus clusters rooted inside the corner balloons (behind them, depth 0),
+      // fanning outward
+      { symbol: 'leaf-eucalyptus-cluster', x: -68.47, y: 171.27, size: 260, rotate: -125, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: -57.97, y: 174.16, size: 260, rotate: -27, depth: 0 },
+      { symbol: 'leaf-eucalyptus-cluster', x: 1410.67, y: 58.74, size: 180, rotate: 25, depth: 0 },
+      { symbol: 'leaf-laurel-cluster', x: 1378.5, y: 177.84, size: 180, rotate: 27, depth: 0 },
       { symbol: 'balloon-pink', x: 402.6, y: 12, size: 187, rotate: 0, depth: 1 },
       { symbol: 'balloon-champagne', x: 596.6, y: 0, size: 165, rotate: 0, depth: 1 },
       { symbol: 'balloon-pink', x: 1025.1, y: 48, size: 220, rotate: 0, depth: 1 },

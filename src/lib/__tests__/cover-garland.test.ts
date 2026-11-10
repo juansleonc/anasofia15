@@ -17,7 +17,13 @@ interface Box {
   b: number;
 }
 
-/** Conservative visible box: a disc for balloons and flowers, the rotated sprig rectangle's AABB for leaves. */
+const CLUSTER_IDS = ['leaf-laurel-cluster', 'leaf-eucalyptus-cluster'] as const;
+const isCluster = (item: GarlandItem) => (CLUSTER_IDS as readonly string[]).includes(item.symbol);
+
+/**
+ * Conservative visible box: a disc for balloons and flowers, the rotated sprig rectangle's AABB
+ * for single leaves, and a rotated size × size square's AABB for foliage clusters (aspect 1).
+ */
 function visBox(item: GarlandItem): Box {
   const kind = kindOf(item.symbol);
   if (kind !== 'leaf') {
@@ -25,7 +31,7 @@ function visBox(item: GarlandItem): Box {
     return { l: item.x - r, r: item.x + r, t: item.y - r, b: item.y + r };
   }
   const a = (item.rotate * Math.PI) / 180;
-  const w = 0.45 * item.size;
+  const w = isCluster(item) ? item.size : 0.45 * item.size;
   const h = item.size;
   const hw = (w * Math.abs(Math.cos(a)) + h * Math.abs(Math.sin(a))) / 2;
   const hh = (w * Math.abs(Math.sin(a)) + h * Math.abs(Math.cos(a))) / 2;
@@ -305,6 +311,49 @@ describe('north-star composition', () => {
     const gold = leaves.filter((leaf) => leaf.symbol === 'leaf-gold');
     expect(gold.map(label)).toEqual([]);
   });
+
+  it.each(LAYOUTS)(
+    '%s: each upper corner grows at least two clusters, laurel and eucalyptus, from behind a balloon, fanning outward',
+    (_name, layout) => {
+      const { balloons } = partsOf(layout);
+      const { x0, x1, top } = layout.clear;
+      const { width } = layout;
+      const clusters = layout.items.filter((item) => isCluster(item));
+      expect(clusters.length).toBeGreaterThan(0);
+
+      for (const cluster of clusters) {
+        expect(cluster.depth).toBe(0);
+        const base = stemBase(cluster);
+        const hostBalloon = balloons.find(
+          (b) => Math.hypot(b.x - base.x, b.y - base.y) <= 1.05 * bodyRadius(b),
+        );
+        expect(hostBalloon, `${label(cluster)} is not rooted in a balloon`).toBeDefined();
+        expect(base.y, `${label(cluster)} root is too low`).toBeLessThanOrEqual(top + 0.1 * width);
+      }
+
+      for (const side of ['left', 'right'] as const) {
+        const inStrip = (item: GarlandItem) => {
+          const base = stemBase(item);
+          return side === 'left' ? base.x < x0 : base.x > x1;
+        };
+        const cornerClusters = clusters.filter(inStrip);
+        expect(cornerClusters.length, `${side} corner has too few clusters`).toBeGreaterThanOrEqual(2);
+        expect(
+          cornerClusters.some((c) => c.symbol === 'leaf-laurel-cluster'),
+          `${side} corner has no laurel cluster`,
+        ).toBe(true);
+        expect(
+          cornerClusters.some((c) => c.symbol === 'leaf-eucalyptus-cluster'),
+          `${side} corner has no eucalyptus cluster`,
+        ).toBe(true);
+
+        const badFan = cornerClusters.filter((c) =>
+          side === 'left' ? c.rotate < -135 || c.rotate > -20 : c.rotate < 20 || c.rotate > 135,
+        );
+        expect(badFan.map(label), `${side} corner clusters fan the wrong way`).toEqual([]);
+      }
+    },
+  );
 
   it.each(LAYOUTS)('%s: at least six back sprigs peek up out of the crown', (_name, layout) => {
     const { leaves } = partsOf(layout);
