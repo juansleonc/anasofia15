@@ -264,4 +264,48 @@ describe('lowerGlitter', () => {
   it('varies the layout when the seed changes', () => {
     expect(glitter(12, 3, 7421)).not.toEqual(glitter(12, 3, 7));
   });
+
+  // The band used to start at 80% (only the strip under the button); it now starts around the
+  // cover's own midpoint so the whole lower half reads alive.
+  it('starts the band around the midpoint of the cover, well above the old under-button strip', () => {
+    expect(LOWER_REGION_START_PCT).toBeLessThanOrEqual(60);
+    expect(LOWER_REGION_START_PCT).toBeGreaterThanOrEqual(50);
+  });
+
+  // Mirrors the name/button rects CoverLowerGlitter.astro actually passes in.
+  const NAME_AND_BUTTON_KEEP_OUT = [
+    { xPct: 8, yPct: 34, widthPct: 84, heightPct: 34 }, // name
+    { xPct: 10, yPct: 67, widthPct: 80, heightPct: 21 }, // button, +12px pad baked in
+  ];
+
+  // Name/button now carve keep-out rects out of the widened band so particles never land on top
+  // of the title or the button.
+  it('keeps every particle outside the given keep-out rects', () => {
+    const keepOutRects = NAME_AND_BUTTON_KEEP_OUT;
+    const sparkles = lowerGlitter({ flakeCount: 12, bokehCount: 3, seed: 7421, keepOutRects });
+
+    expect(sparkles.length).toBeGreaterThan(0);
+    for (const sparkle of sparkles) {
+      for (const rect of keepOutRects) {
+        const insideX = sparkle.xPct >= rect.xPct && sparkle.xPct <= rect.xPct + rect.widthPct;
+        const insideY = sparkle.yPct >= rect.yPct && sparkle.yPct <= rect.yPct + rect.heightPct;
+        expect(insideX && insideY).toBe(false);
+      }
+    }
+  });
+
+  it('still keeps minimum spacing and particle counts when keep-out rects are supplied', () => {
+    const keepOutRects = NAME_AND_BUTTON_KEEP_OUT;
+    const sparkles = lowerGlitter({ flakeCount: 12, bokehCount: 3, seed: 7421, keepOutRects });
+    expect(sparkles).toHaveLength(15);
+    for (let i = 0; i < sparkles.length; i++) {
+      for (let j = i + 1; j < sparkles.length; j++) {
+        const distance = Math.hypot(
+          sparkles[i].xPct - sparkles[j].xPct,
+          sparkles[i].yPct - sparkles[j].yPct,
+        );
+        expect(distance).toBeGreaterThanOrEqual(LOWER_MIN_DISTANCE_PCT);
+      }
+    }
+  });
 });

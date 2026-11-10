@@ -9,10 +9,16 @@
 //   3. a soft glitter band: tiny twinkling light flecks (glow) growing denser toward the bottom
 //      edge, plus a few larger, static, blurred bokeh discs — see lowerGlitter() in
 //      lib/sparkles.ts for placement.
-// Kept entirely below the title/button block (LOWER_REGION_START_PCT) and SSR'd from the seeded
-// generator, same pattern as CoverSparkles — no client script, no layout/paint cost beyond the
-// first frame.
-import { lowerGlitter } from '../lib/sparkles';
+// SSR'd from the seeded generator, same pattern as CoverSparkles — no client script, no
+// layout/paint cost beyond the first frame.
+//
+// Follow-up pass: the band used to start at 88%, which only covered the strip already below the
+// button. It now starts around the cover's own midpoint (LOWER_REGION_START_PCT) so the whole
+// lower half reads alive — the name and button are kept clear with fixed keep-out rects instead,
+// since this component has no client script and can't measure their rendered boxes. The rects
+// below are tuned against the actual rendered layout at 375x667, 390x844 and 1440x800 (measured
+// name/button boxes, each padded a few percent beyond their largest measured box).
+import { lowerGlitter, type KeepOutRect } from '../lib/sparkles';
 
 // Twinkling flecks are capped well under the e2e render-budget's running-animation allowance (see
 // cover.spec.ts) — bokeh discs are static on purpose so they never count against it.
@@ -20,7 +26,19 @@ const FLAKE_COUNT = 12;
 const BOKEH_COUNT = 3;
 const SEED = 7421;
 
-const particles = lowerGlitter({ flakeCount: FLAKE_COUNT, bokehCount: BOKEH_COUNT, seed: SEED });
+const KEEP_OUT_RECTS: KeepOutRect[] = [
+  // The celebrant's name (and lead line above it).
+  { xPct: 8, yPct: 34, widthPct: 84, heightPct: 34 },
+  // The open-invitation button, padded beyond its measured box (contract: +12px).
+  { xPct: 10, yPct: 67, widthPct: 80, heightPct: 21 },
+];
+
+const particles = lowerGlitter({
+  flakeCount: FLAKE_COUNT,
+  bokehCount: BOKEH_COUNT,
+  seed: SEED,
+  keepOutRects: KEEP_OUT_RECTS,
+});
 
 const FLAKE_TONES = ['--c-white', '--c-champagne-100'];
 const BOKEH_TONES = ['--c-champagne-200', '--c-champagne-100'];

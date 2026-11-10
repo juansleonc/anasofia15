@@ -15,24 +15,32 @@ test.describe('Cover lower glitter', () => {
     expect(pointerEvents).toBe('none');
   });
 
-  test('renders at least 10 particles in the lower half of the cover', async ({ page }) => {
-    await page.goto('./');
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`renders at least 10 particles with centers in the lower half of the cover at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
 
-    const coverBox = await page.getByTestId('cover').boundingBox();
-    expect(coverBox).not.toBeNull();
-    const midY = coverBox!.y + coverBox!.height / 2;
+      const coverBox = await page.getByTestId('cover').boundingBox();
+      expect(coverBox).not.toBeNull();
+      const midY = coverBox!.y + coverBox!.height / 2;
 
-    const particles = page.locator('[data-lower-sparkle]');
-    const count = await particles.count();
-    expect(count).toBeGreaterThanOrEqual(10);
+      const particles = page.locator('[data-lower-sparkle]');
+      const count = await particles.count();
+      expect(count).toBeGreaterThanOrEqual(10);
 
-    let lowerHalfCount = 0;
-    for (let i = 0; i < count; i++) {
-      const box = await particles.nth(i).boundingBox();
-      if (box && box.y >= midY) lowerHalfCount++;
-    }
-    expect(lowerHalfCount).toBeGreaterThanOrEqual(10);
-  });
+      let lowerHalfCount = 0;
+      for (let i = 0; i < count; i++) {
+        const box = await particles.nth(i).boundingBox();
+        if (box && box.y + box.height / 2 >= midY) lowerHalfCount++;
+      }
+      expect(lowerHalfCount).toBeGreaterThanOrEqual(10);
+    });
+  }
 
   test('keeps the particle count at or under budget for the twinkling-element cap', async ({
     page,
@@ -44,27 +52,46 @@ test.describe('Cover lower glitter', () => {
     expect(flakeCount).toBeLessThanOrEqual(14);
   });
 
-  test('leaves the name and button boxes almost entirely clear of particles', async ({ page }) => {
-    await page.goto('./');
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 1440, height: 800 },
+  ]) {
+    test(`leaves the name and button boxes entirely clear of particles at ${viewport.width}x${viewport.height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
 
-    const nameBox = await page.getByTestId('cover-celebrant-name').boundingBox();
-    const buttonBox = await page.getByTestId('open-invitation-button').boundingBox();
-    expect(nameBox).not.toBeNull();
-    expect(buttonBox).not.toBeNull();
+      const nameBox = await page.getByTestId('cover-celebrant-name').boundingBox();
+      const buttonBox = await page.getByTestId('open-invitation-button').boundingBox();
+      expect(nameBox).not.toBeNull();
+      expect(buttonBox).not.toBeNull();
 
-    function intersects(a: { x: number; y: number; width: number; height: number }, b: typeof a) {
-      return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-    }
+      // Button is padded by 12px on every side, per the contract.
+      const buttonPad = 12;
+      const paddedButtonBox = {
+        x: buttonBox!.x - buttonPad,
+        y: buttonBox!.y - buttonPad,
+        width: buttonBox!.width + buttonPad * 2,
+        height: buttonBox!.height + buttonPad * 2,
+      };
 
-    const particles = page.locator('[data-lower-sparkle]');
-    const count = await particles.count();
-    let intersecting = 0;
-    for (let i = 0; i < count; i++) {
-      const box = await particles.nth(i).boundingBox();
-      if (box && (intersects(box, nameBox!) || intersects(box, buttonBox!))) intersecting++;
-    }
-    expect(intersecting).toBeLessThanOrEqual(2);
-  });
+      function intersects(a: { x: number; y: number; width: number; height: number }, b: typeof a) {
+        return (
+          a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+        );
+      }
+
+      const particles = page.locator('[data-lower-sparkle]');
+      const count = await particles.count();
+      let intersecting = 0;
+      for (let i = 0; i < count; i++) {
+        const box = await particles.nth(i).boundingBox();
+        if (box && (intersects(box, nameBox!) || intersects(box, paddedButtonBox))) intersecting++;
+      }
+      expect(intersecting).toBe(0);
+    });
+  }
 
   test('never renders a hard-edged square chip — every particle is a round radial-gradient glow', async ({
     page,

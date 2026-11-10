@@ -151,17 +151,29 @@ export function ringSparkles(options: RingSparklesOptions): Sparkle[] {
   return sparkles;
 }
 
+/** A rectangle, in cover-percentage units, that particles must never land inside — used to carve
+ *  the name/button out of the widened lower band. */
+export interface KeepOutRect {
+  xPct: number;
+  yPct: number;
+  widthPct: number;
+  heightPct: number;
+}
+
 export interface LowerGlitterOptions {
   flakeCount: number;
   bokehCount: number;
   seed: number;
+  /** Rects (name, button, …) particles must never land inside — see CoverLowerGlitter.astro for
+   *  the actual percentages, tuned against the rendered layout. Defaults to none. */
+  keepOutRects?: readonly KeepOutRect[];
 }
 
-/** Where the lower glitter band starts, as a percentage of the cover's own height — kept well
- *  below the title/button block (a generous safety margin, tuned against the shortest supported
- *  viewport) so the band never creeps into the name/button's own space; Cover.astro positions this
- *  layer with `inset: 0` over the whole cover, same as the whole-cover scatter. */
-export const LOWER_REGION_START_PCT = 80;
+/** Where the lower glitter band starts, as a percentage of the cover's own height. Widened
+ *  from 80 (which only covered the strip under the button) to around the cover's own midpoint,
+ *  so the whole lower half reads alive — the name/button are now kept clear by `keepOutRects`
+ *  instead of by starting the band below them. */
+export const LOWER_REGION_START_PCT = 58;
 
 /** Minimum spacing between any two lower-glitter particles, in cover-percentage units — tighter
  *  than MIN_DISTANCE_PCT since the band only has the bottom ~40% of the cover to work with. */
@@ -176,26 +188,54 @@ function biasedLowerYPct(random: () => number): number {
   return LOWER_REGION_START_PCT + span * Math.pow(random(), 0.5);
 }
 
-/** Same rejection-sampling as placePosition, but confined to the lower band and its own (tighter)
- *  minimum spacing. */
-function placeLowerPosition(random: () => number, placed: readonly Position[]): Position {
-  let best: Position = { xPct: random() * 100, yPct: biasedLowerYPct(random) };
-  let bestDistance = placed.length === 0 ? Infinity : minDistanceTo(best, placed);
+function isInsideKeepOut(point: Position, rects: readonly KeepOutRect[]): boolean {
+  return rects.some(
+    (rect) =>
+      point.xPct >= rect.xPct &&
+      point.xPct <= rect.xPct + rect.widthPct &&
+      point.yPct >= rect.yPct &&
+      point.yPct <= rect.yPct + rect.heightPct,
+  );
+}
 
-  for (
-    let attempt = 1;
-    attempt < LOWER_PLACEMENT_ATTEMPTS && bestDistance < LOWER_MIN_DISTANCE_PCT;
-    attempt++
-  ) {
+/** A handful of fixed, far-corner anchors that are never inside a realistic (partial-canvas)
+ *  keep-out rect — the last-resort fallback if every sampled candidate below happened to land
+ *  inside one. */
+function fallbackOutsideKeepOut(rects: readonly KeepOutRect[]): Position {
+  const anchors: Position[] = [
+    { xPct: 2, yPct: LOWER_REGION_START_PCT },
+    { xPct: 98, yPct: LOWER_REGION_START_PCT },
+    { xPct: 2, yPct: 100 },
+    { xPct: 98, yPct: 100 },
+    { xPct: 50, yPct: 100 },
+  ];
+  return anchors.find((anchor) => !isInsideKeepOut(anchor, rects)) ?? anchors[anchors.length - 1];
+}
+
+/** Same rejection-sampling as placePosition, but confined to the lower band, its own (tighter)
+ *  minimum spacing, and — unlike the whole-cover scatter — a hard constraint that a candidate
+ *  landing inside a keep-out rect is never an acceptable placement, best-effort or not. */
+function placeLowerPosition(
+  random: () => number,
+  placed: readonly Position[],
+  keepOutRects: readonly KeepOutRect[],
+): Position {
+  let best: Position | null = null;
+  let bestDistance = -Infinity;
+
+  for (let attempt = 0; attempt < LOWER_PLACEMENT_ATTEMPTS; attempt++) {
     const candidate: Position = { xPct: random() * 100, yPct: biasedLowerYPct(random) };
-    const candidateDistance = minDistanceTo(candidate, placed);
-    if (candidateDistance > bestDistance) {
+    if (isInsideKeepOut(candidate, keepOutRects)) continue;
+
+    const candidateDistance = placed.length === 0 ? Infinity : minDistanceTo(candidate, placed);
+    if (best === null || candidateDistance > bestDistance) {
       best = candidate;
       bestDistance = candidateDistance;
     }
+    if (bestDistance >= LOWER_MIN_DISTANCE_PCT) break;
   }
 
-  return best;
+  return best ?? fallbackOutsideKeepOut(keepOutRects);
 }
 
 /**
@@ -209,12 +249,13 @@ export function lowerGlitter(options: LowerGlitterOptions): Sparkle[] {
   const random = seededRandom(options.seed);
   const flakeCount = Math.max(0, Math.floor(options.flakeCount));
   const bokehCount = Math.max(0, Math.floor(options.bokehCount));
+  const keepOutRects = options.keepOutRects ?? [];
 
   const placed: Position[] = [];
   const sparkles: Sparkle[] = [];
 
   for (let i = 0; i < flakeCount; i++) {
-    const position = placeLowerPosition(random, placed);
+    const position = placeLowerPosition(random, placed, keepOutRects);
     placed.push(position);
 
     sparkles.push({
@@ -229,7 +270,7 @@ export function lowerGlitter(options: LowerGlitterOptions): Sparkle[] {
   }
 
   for (let i = 0; i < bokehCount; i++) {
-    const position = placeLowerPosition(random, placed);
+    const position = placeLowerPosition(random, placed, keepOutRects);
     placed.push(position);
     const [min, max] = SIZE_RANGES.bokeh;
 
