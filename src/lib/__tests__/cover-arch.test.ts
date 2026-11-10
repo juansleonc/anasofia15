@@ -91,23 +91,23 @@ describe('buildArch', () => {
     expect(tones.sort()).toEqual(['balloon-champagne', 'balloon-pink', 'balloon-rosegold']);
   });
 
-  it('places exactly the spec-requested number of flowers, using all three flower symbols', () => {
+  it('places exactly the spec-requested number of flowers, using all four flower symbols', () => {
     for (const spec of SPECS) {
       const { items } = buildArch(spec);
       const flowers = items.filter((item) => item.kind === 'flower');
       expect(flowers).toHaveLength(spec.counts.flowers);
       const symbols = new Set(flowers.map((item) => item.symbol));
-      expect(symbols).toEqual(new Set(['rose-bloom', 'rose-cream', 'blossom']));
+      expect(symbols).toEqual(new Set(['rose-pink', 'rose-cream', 'peony-blush', 'blossom']));
     }
   });
 
-  it('places exactly the spec-requested number of leaves, using both leaf symbols', () => {
+  it('places exactly the spec-requested number of leaves, using all three leaf symbols', () => {
     for (const spec of SPECS) {
       const { items } = buildArch(spec);
       const leaves = items.filter((item) => item.kind === 'leaf');
       expect(leaves).toHaveLength(spec.counts.leaves);
       const symbols = new Set(leaves.map((item) => item.symbol));
-      expect(symbols).toEqual(new Set(['leaf-eucalyptus', 'leaf-gold']));
+      expect(symbols).toEqual(new Set(['leaf-eucalyptus', 'leaf-olive', 'leaf-gold']));
     }
   });
 

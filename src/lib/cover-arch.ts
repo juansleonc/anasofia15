@@ -14,10 +14,12 @@ export type ArchSymbol =
   | 'balloon-rosegold-satin'
   | 'balloon-champagne'
   | 'balloon-champagne-satin'
-  | 'rose-bloom'
+  | 'rose-pink'
   | 'rose-cream'
+  | 'peony-blush'
   | 'blossom'
   | 'leaf-eucalyptus'
+  | 'leaf-olive'
   | 'leaf-gold';
 
 /** A balloon's metallic/pearl tone, independent of which chrome-vs-satin finish it renders as. */
@@ -90,8 +92,8 @@ export const ARCH_SPECS: { portrait: ArchSpec; landscape: ArchSpec } = {
 };
 
 const BALLOON_TONES: readonly ArchTone[] = ['pink', 'rosegold', 'champagne'];
-const FLOWER_SYMBOLS: readonly ArchSymbol[] = ['rose-bloom', 'rose-cream', 'blossom'];
-const LEAF_SYMBOLS: readonly ArchSymbol[] = ['leaf-eucalyptus', 'leaf-gold'];
+const FLOWER_SYMBOLS: readonly ArchSymbol[] = ['rose-pink', 'rose-cream', 'peony-blush', 'blossom'];
+const LEAF_SYMBOLS: readonly ArchSymbol[] = ['leaf-eucalyptus', 'leaf-olive', 'leaf-gold'];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));

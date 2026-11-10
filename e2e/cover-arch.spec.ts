@@ -79,20 +79,29 @@ test.describe('Balloon arch', () => {
     await expect(page.locator('[data-arch-layout="portrait"]')).toBeHidden();
   });
 
-  test('the visible layout includes all three balloon tones plus at least one flower and one leaf', async ({
-    page,
-  }) => {
-    await page.setViewportSize(PHONE);
-    await page.goto('./');
+  test('the visible layout includes every balloon, flower and leaf symbol', async ({ page }) => {
+    for (const viewport of [PHONE, DESKTOP]) {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
 
-    const symbols = await visibleLayoutAttrs(page, 'data-arch-symbol');
-    expect(symbols).toEqual(
-      expect.arrayContaining(['balloon-pink', 'balloon-rosegold', 'balloon-champagne']),
-    );
-
-    const kinds = await visibleLayoutAttrs(page, 'data-arch-item');
-    expect(kinds).toContain('flower');
-    expect(kinds).toContain('leaf');
+      const symbols = await visibleLayoutAttrs(page, 'data-arch-symbol');
+      expect(symbols).toEqual(
+        expect.arrayContaining([
+          'balloon-pink',
+          'balloon-rosegold',
+          'balloon-rosegold-satin',
+          'balloon-champagne',
+          'balloon-champagne-satin',
+          'rose-pink',
+          'rose-cream',
+          'peony-blush',
+          'blossom',
+          'leaf-eucalyptus',
+          'leaf-olive',
+          'leaf-gold',
+        ]),
+      );
+    }
   });
 
   test('visible items touch the top strip and both outer side strips of the viewport', async ({
