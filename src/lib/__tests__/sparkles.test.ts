@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scatterSparkles, MAX_SPARKLES, MIN_DISTANCE_PCT, type Sparkle } from '../sparkles';
+import { scatterSparkles, ringSparkles, MAX_SPARKLES, MIN_DISTANCE_PCT, type Sparkle } from '../sparkles';
 
 const SIZE_RANGES: Record<Sparkle['kind'], [number, number]> = {
   glow: [3, 7],
@@ -115,5 +115,61 @@ describe('scatterSparkles', () => {
 
   it('varies the layout when the seed changes', () => {
     expect(scatter(28, 2026)).not.toEqual(scatter(28, 7));
+  });
+});
+
+// Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is being made
+// airier in a parallel task, so a small, tightly clustered ring of extra sparkles concentrates
+// around the title block to re-balance it, distinct from the whole-cover `scatterSparkles` layer.
+describe('ringSparkles', () => {
+  function ring(count: number, seed = 4015): Sparkle[] {
+    return ringSparkles({ count, seed });
+  }
+
+  it('returns exactly the requested number of sparkles', () => {
+    expect(ring(5)).toHaveLength(5);
+    expect(ring(0)).toHaveLength(0);
+  });
+
+  it('only ever produces glow or star kinds — never bokeh (too large/faint for a tight ring)', () => {
+    const sparkles = ring(12);
+    for (const sparkle of sparkles) {
+      expect(['glow', 'star']).toContain(sparkle.kind);
+    }
+  });
+
+  it('sizes each kind within its own range', () => {
+    const sparkles = ring(12);
+    for (const sparkle of sparkles) {
+      const [min, max] = SIZE_RANGES[sparkle.kind];
+      expect(sparkle.sizePx).toBeGreaterThanOrEqual(min);
+      expect(sparkle.sizePx).toBeLessThanOrEqual(max);
+    }
+  });
+
+  it('keeps every sparkle within the 0..100 percentage box', () => {
+    const sparkles = ring(12);
+    for (const sparkle of sparkles) {
+      expect(sparkle.xPct).toBeGreaterThanOrEqual(0);
+      expect(sparkle.xPct).toBeLessThanOrEqual(100);
+      expect(sparkle.yPct).toBeGreaterThanOrEqual(0);
+      expect(sparkle.yPct).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it('clusters tightly around the centre, unlike the edge-to-edge whole-cover scatter', () => {
+    const sparkles = ring(12);
+    for (const sparkle of sparkles) {
+      const distanceFromCentre = Math.hypot(sparkle.xPct - 50, sparkle.yPct - 50);
+      expect(distanceFromCentre).toBeLessThanOrEqual(55);
+    }
+  });
+
+  it('is deterministic for a given seed', () => {
+    expect(ring(12, 4015)).toEqual(ring(12, 4015));
+  });
+
+  it('varies the layout when the seed changes', () => {
+    expect(ring(12, 4015)).not.toEqual(ring(12, 7));
   });
 });

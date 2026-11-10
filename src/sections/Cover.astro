@@ -8,13 +8,43 @@ import CoverSparkles from '../components/CoverSparkles.astro';
 import PetalFall from '../islands/PetalFall.astro';
 import { event } from '../data/event';
 import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
+import { ringSparkles } from '../lib/sparkles';
+
+// Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is getting airier in
+// a parallel task, so the cover's own centre needed more presence (bigger type, a flourish and a
+// tight ring of sparkles around the title), not more clutter. This small ring is deliberately
+// separate from CoverSparkles's whole-cover `scatterSparkles` layer (see src/lib/sparkles.ts) —
+// it's positioned relative to the title block itself (see `.cover__title { position: relative }`
+// below), not scattered across the whole cover, so it reads as a halo around the name specifically.
+const TITLE_RING_COUNT = 5;
+const TITLE_RING_SEED = 4015;
+const titleRingSparkles = ringSparkles({ count: TITLE_RING_COUNT, seed: TITLE_RING_SEED });
+
+// The title's own max-width must never let it grow wider than the arch's text clear zone (the
+// full-width strip between the two side gutter columns — see clampOutOfClearZone in cover-arch.ts)
+// or a single-line lead/name can grow into the side balloons at some in-between viewport width.
+// Derived straight from the same ARCH_SPECS the arch itself is built from (read-only — this never
+// touches cover-arch.ts), as a fraction of the viewport width, the same way archClearanceVars
+// derives the vertical clearance.
+
+// A rotated/elongated balloon's rendered bounding box can bleed a few px past the strict circular
+// clear-zone math clampOutOfClearZone uses, so this leaves a safety margin rather than sizing the
+// title to exactly touch the theoretical boundary.
+const TEXT_CLEAR_SAFETY_FACTOR = 0.9;
+
+function clearWidthRatio(spec: (typeof ARCH_SPECS)['portrait']): number {
+  return (1 - (2 * spec.gutter) / spec.width) * TEXT_CLEAR_SAFETY_FACTOR;
+}
+const archClearWidthVars =
+  `--arch-clear-portrait:${clearWidthRatio(ARCH_SPECS.portrait)};` +
+  `--arch-clear-landscape:${clearWidthRatio(ARCH_SPECS.landscape)};`;
 ---
 
 <section
   class="cover"
   data-testid="cover"
   aria-label="Portada de la invitación"
-  style={archClearanceVars(ARCH_SPECS)}
+  style={`${archClearanceVars(ARCH_SPECS)};${archClearWidthVars}`}
 >
   <div class="cover__light" data-testid="cover-light" aria-hidden="true"></div>
   <BalloonArch />
@@ -26,7 +56,50 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
       <span class="cover__title-name font-cursive" data-testid="cover-celebrant-name">
         {event.celebrantName}
       </span>
+      <div class="cover__title-sparkles" data-testid="cover-title-sparkles" aria-hidden="true">
+        {
+          titleRingSparkles.map((sparkle) => {
+            const vars =
+              `--sparkle-x:${sparkle.xPct}%;` +
+              `--sparkle-y:${sparkle.yPct}%;` +
+              `--sparkle-size:${sparkle.sizePx}px;` +
+              `--sparkle-rotate:${sparkle.rotateDeg}deg;` +
+              `--sparkle-delay:${sparkle.delayMs}ms;` +
+              `--sparkle-duration:${sparkle.durationMs}ms;`;
+
+            if (sparkle.kind === 'star') {
+              return (
+                <span
+                  class="cover-title-sparkle__item cover-title-sparkle__star"
+                  data-title-sparkle="star"
+                  style={`${vars}--sparkle-tone:var(--c-champagne-200);`}
+                >
+                  <span class="cover-title-sparkle__halo" />
+                  <svg viewBox="0 0 24 24" width="100%" height="100%">
+                    <use href="#sparkle-star" />
+                  </svg>
+                </span>
+              );
+            }
+
+            return (
+              <span
+                class="cover-title-sparkle__item cover-title-sparkle__glow"
+                data-title-sparkle="glow"
+                style={`${vars}--sparkle-tone:var(--c-white);`}
+              />
+            );
+          })
+        }
+      </div>
     </h1>
+    <div class="cover__flourish" data-testid="cover-flourish" aria-hidden="true">
+      <span class="cover__flourish-line"></span>
+      <svg class="cover__flourish-icon" viewBox="0 0 24 24">
+        <use href="#sparkle-star" />
+      </svg>
+      <span class="cover__flourish-line"></span>
+    </div>
     <button type="button" tabindex="0" class="cover__open-button" data-testid="open-invitation-button">
       Abrir invitación
     </button>
@@ -129,7 +202,10 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(1.25rem, 4vh, 2.25rem);
+    /* Nov 2026 user-feedback pass: tightened from the previous clamp(1.25rem, 4vh, 2.25rem) so the
+       (now larger) lead/name/flourish/button read as one dense, centred block instead of a loose
+       stack with gaps sized for the old, smaller type. */
+    gap: clamp(0.85rem, 2.5vh, 1.5rem);
   }
 
   /* Warm light cast directly behind the lead line, the name and the button — raises (never
@@ -149,17 +225,32 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
   }
 
   .cover__title {
+    /* Positions `.cover__title-sparkles` below relative to the title's own rendered box, so the
+       ring of extra sparkles always sits "around the name" regardless of viewport/text length. */
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
     margin: 0;
-    max-width: 26rem;
+    /* Never wider than the arch's own text clear zone (see archClearWidthVars above) — otherwise a
+       single-line lead/name can grow past the gutter and into the side balloons at some in-between
+       viewport width. `vw`-based, not a container percentage, so it resolves against the real
+       viewport regardless of this flex column's own shrink-to-fit width. */
+    max-width: min(26rem, calc(var(--arch-clear-portrait) * 100vw));
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover__title {
+      max-width: min(26rem, calc(var(--arch-clear-landscape) * 100vw));
+    }
   }
 
   .cover__title-lead {
     font-family: var(--font-display);
-    font-size: clamp(1.05rem, 4vw, 1.4rem);
+    /* Nov 2026 user-feedback pass: floor raised from 1.05rem (the old 4vw formula clamped to a
+       16.8px floor at 375px) to a 1.3rem (20.8px) floor, growing further on wide viewports. */
+    font-size: clamp(1.3rem, 0.95rem + 1.1vw, 1.8rem);
     font-weight: 600;
     font-style: italic;
     color: var(--c-ink);
@@ -168,10 +259,108 @@ import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
 
   .cover__title-name {
     display: inline-block;
-    font-size: clamp(3.2rem, 15vw, 5.25rem);
+    /* Nov 2026 user-feedback pass: raised from clamp(3.2rem, 15vw, 5.25rem) — "mucho espacio vacío
+       en el centro" — so the name reads as a bold centrepiece: >= 60px at 375, >= 96px at 1440. */
+    font-size: clamp(3.75rem, 2.3rem + 9vw, 6.5rem);
     line-height: 1.3;
     padding: 0.1em 0.2em;
     color: var(--c-rose-700);
+  }
+
+  /* A small, tightly clustered ring of extra glow/star sparkles layered directly around the title
+     block (see ringSparkles() in lib/sparkles.ts) — absolutely positioned so it never affects the
+     title's own flex layout/height, just floats over/around it. */
+  .cover__title-sparkles {
+    position: absolute;
+    /* Kept well inside the cover's own left/right padding (never past it, regardless of viewport —
+       see cover.spec.ts's overflow tests) while still reaching generously above/below the text. */
+    inset: -18% -5%;
+    pointer-events: none;
+  }
+
+  .cover-title-sparkle__item {
+    position: absolute;
+    left: var(--sparkle-x);
+    top: var(--sparkle-y);
+    width: var(--sparkle-size);
+    height: var(--sparkle-size);
+    animation-name: cover-title-sparkle-twinkle;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-delay: var(--sparkle-delay);
+    animation-duration: var(--sparkle-duration);
+  }
+
+  .cover-title-sparkle__glow {
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--sparkle-tone) 0%, transparent 72%);
+  }
+
+  .cover-title-sparkle__star {
+    transform: rotate(var(--sparkle-rotate));
+  }
+
+  .cover-title-sparkle__star svg {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .cover-title-sparkle__halo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(var(--sparkle-size) * 2.8);
+    height: calc(var(--sparkle-size) * 2.8);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--sparkle-tone) 70%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  /* Fainter peak than the whole-cover sparkle layer's 0.8 — "subtle", concentrated accents around
+     the name, not a second layer of attention-grabbing twinkle. */
+  @keyframes cover-title-sparkle-twinkle {
+    0%,
+    100% {
+      opacity: 0.15;
+    }
+    50% {
+      opacity: 0.65;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover-title-sparkle__item {
+      animation: none;
+    }
+  }
+
+  /* Thin champagne divider between the name and the button: a small flourish icon (reusing the
+     sparkle-star symbol) between two hairlines, fading out at both ends. */
+  .cover__flourish {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    max-width: 11rem;
+  }
+
+  .cover__flourish-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--c-champagne-500), transparent);
+  }
+
+  .cover__flourish-icon {
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
   }
 
   .cover__open-button {

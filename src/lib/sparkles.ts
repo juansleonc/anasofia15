@@ -103,6 +103,54 @@ function placePosition(random: () => number, placed: readonly Position[]): Posit
   return best;
 }
 
+export interface RingSparklesOptions {
+  count: number;
+  seed: number;
+}
+
+/** Only glow and star — bokeh's large, very-faint disc would just read as a blur smeared over the
+ *  letters at this tight a radius, so it's left out of the ring on purpose. */
+const RING_KIND_PATTERN: readonly SparkleKind[] = ['glow', 'star', 'glow'];
+
+function clampPct(value: number): number {
+  return Math.min(100, Math.max(0, value));
+}
+
+/**
+ * A small, tightly clustered ring of extra glow/star sparkles meant to sit layered directly
+ * around the title block (see Cover.astro, which positions this absolutely over the celebrant's
+ * name/lead) — distinct from `scatterSparkles`'s calm whole-cover dusting. Nov 2026 user-feedback
+ * pass: "mucho espacio vacío en el centro" — the arch is getting airier in a parallel task, so the
+ * centre needed its own subtle concentration of light to stay balanced, not just a bigger scatter.
+ */
+export function ringSparkles(options: RingSparklesOptions): Sparkle[] {
+  const random = seededRandom(options.seed);
+  const count = Math.max(0, Math.floor(options.count));
+  const sparkles: Sparkle[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const kind = RING_KIND_PATTERN[i % RING_KIND_PATTERN.length];
+    const [min, max] = SIZE_RANGES[kind];
+    // Evenly spaced around the ring with a seeded wobble (angle) and a varying radius so it reads
+    // as organic sparkle rather than a mechanical, perfectly circular necklace.
+    const angle = (i / count) * Math.PI * 2 + random() * 0.8;
+    const radius = 36 + random() * 14;
+
+    sparkles.push({
+      kind,
+      xPct: clampPct(50 + Math.cos(angle) * radius),
+      // Flattened vertically — the title block reads wider than it is tall.
+      yPct: clampPct(50 + Math.sin(angle) * radius * 0.55),
+      sizePx: min + random() * (max - min) * 0.6,
+      rotateDeg: random() * 360,
+      delayMs: random() * 4000,
+      durationMs: 3600 + random() * 2800,
+    });
+  }
+
+  return sparkles;
+}
+
 export function scatterSparkles(options: ScatterSparklesOptions): Sparkle[] {
   const random = seededRandom(options.seed);
   const count = Math.min(MAX_SPARKLES, Math.max(0, Math.floor(options.count)));

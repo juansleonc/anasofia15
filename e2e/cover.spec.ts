@@ -468,6 +468,127 @@ test.describe('Cover section', () => {
     });
   }
 
+  // Nov 2026 user-feedback pass: "mucho espacio vacío en el centro" — the arch is getting airier
+  // in a parallel task, so the cover's own centre needed more presence: bigger type, a flourish,
+  // and a tight ring of extra sparkles (below), rather than more clutter.
+  test('the celebrant name is large enough to fill the centre at 375 and grows further at 1440', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('./');
+
+    const nameFontSize375 = await page
+      .getByTestId('cover-celebrant-name')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(nameFontSize375).toBeGreaterThanOrEqual(60);
+
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await page.reload();
+
+    const nameFontSize1440 = await page
+      .getByTestId('cover-celebrant-name')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(nameFontSize1440).toBeGreaterThanOrEqual(96);
+  });
+
+  test('the lead line is large enough to read at 375 and scales up further on desktop', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('./');
+
+    const leadFontSize375 = await page
+      .getByTestId('cover-title-lead')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(leadFontSize375).toBeGreaterThanOrEqual(20);
+
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await page.reload();
+
+    const leadFontSize1440 = await page
+      .getByTestId('cover-title-lead')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(leadFontSize1440).toBeGreaterThan(leadFontSize375);
+  });
+
+  test('a champagne flourish divider sits between the name and the button', async ({ page }) => {
+    await page.goto('./');
+
+    const flourish = page.getByTestId('cover-flourish');
+    await expect(flourish).toHaveAttribute('aria-hidden', 'true');
+
+    const domOrder = await page.evaluate(() => {
+      const name = document.querySelector('[data-testid="cover-celebrant-name"]');
+      const flourishEl = document.querySelector('[data-testid="cover-flourish"]');
+      const button = document.querySelector('[data-testid="open-invitation-button"]');
+      if (!name || !flourishEl || !button) return null;
+      return {
+        nameBeforeFlourish: !!(
+          name.compareDocumentPosition(flourishEl) & Node.DOCUMENT_POSITION_FOLLOWING
+        ),
+        flourishBeforeButton: !!(
+          flourishEl.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING
+        ),
+      };
+    });
+    expect(domOrder).toEqual({ nameBeforeFlourish: true, flourishBeforeButton: true });
+
+    const nameBox = await page.getByTestId('cover-celebrant-name').boundingBox();
+    const flourishBox = await flourish.boundingBox();
+    const buttonBox = await page.getByRole('button', { name: 'Abrir invitación' }).boundingBox();
+    expect(nameBox).not.toBeNull();
+    expect(flourishBox).not.toBeNull();
+    expect(buttonBox).not.toBeNull();
+
+    // Vertically between the two — the divider's own box starts at/after the name's bottom edge
+    // and ends at/before the button's top edge.
+    expect(flourishBox!.y).toBeGreaterThanOrEqual(nameBox!.y + nameBox!.height - 1);
+    expect(flourishBox!.y + flourishBox!.height).toBeLessThanOrEqual(buttonBox!.y + 1);
+  });
+
+  test('a few extra soft sparkles concentrate in a ring around the title block', async ({ page }) => {
+    await page.goto('./');
+
+    const ring = page.getByTestId('cover-title-sparkles');
+    await expect(ring).toHaveAttribute('aria-hidden', 'true');
+
+    const items = page.locator('[data-title-sparkle]');
+    const itemCount = await items.count();
+    expect(itemCount).toBeGreaterThanOrEqual(3);
+
+    const kinds = await items.evaluateAll((elements) =>
+      elements.map((el) => el.getAttribute('data-title-sparkle')),
+    );
+    for (const kind of kinds) {
+      // Reuses the existing soft kinds only — no square chip, and bokeh would just blur over the
+      // letters at this tight a radius.
+      expect(['glow', 'star']).toContain(kind);
+    }
+
+    const h1Box = await page.locator('h1.cover__title').boundingBox();
+    const ringBox = await ring.boundingBox();
+    expect(h1Box).not.toBeNull();
+    expect(ringBox).not.toBeNull();
+
+    // Loosely centred on the title block, not drifted off into a corner of the page.
+    const TOLERANCE_PX = 80;
+    expect(ringBox!.x).toBeGreaterThanOrEqual(h1Box!.x - TOLERANCE_PX);
+    expect(ringBox!.x + ringBox!.width).toBeLessThanOrEqual(h1Box!.x + h1Box!.width + TOLERANCE_PX);
+    expect(ringBox!.y).toBeGreaterThanOrEqual(h1Box!.y - TOLERANCE_PX);
+    expect(ringBox!.y + ringBox!.height).toBeLessThanOrEqual(h1Box!.y + h1Box!.height + TOLERANCE_PX);
+  });
+
+  test('the title sparkle ring freezes under prefers-reduced-motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('./');
+
+    const stillAnimated = await page.evaluate(() => {
+      const items = document.querySelectorAll('[data-title-sparkle]');
+      return [...items].filter((el) => getComputedStyle(el).animationName !== 'none').length;
+    });
+    expect(stillAnimated).toBe(0);
+  });
+
   test('the cover stays within its render budget', async ({ page }) => {
     await page.goto('./');
 
