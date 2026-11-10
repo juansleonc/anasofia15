@@ -43,9 +43,20 @@ const layouts: { name: 'portrait' | 'landscape'; layout: ArchLayout; mask: strin
 <style>
   .balloon-arch {
     position: absolute;
-    inset: 0 0 auto 0;
+    /* Bounded to the cover's own box on every edge (not just top/left/right) and clipped: with no
+       frame to clip to, a layout taller than the cover (e.g. a deep portrait arch on a short,
+       wide viewport) would otherwise spill past the cover's bottom edge into the section below
+       it. The soft-end mask keeps that clip from reading as a hard cut. */
+    inset: 0;
+    overflow: hidden;
     z-index: 0;
     pointer-events: none;
+    mask-image: linear-gradient(to bottom, var(--c-white) calc(100% - 10vh), transparent 100%);
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      var(--c-white) calc(100% - 10vh),
+      transparent 100%
+    );
   }
 
   /* The one arch-wide drop-shadow (depth for the arch as a whole, no per-item filters). Lives on
