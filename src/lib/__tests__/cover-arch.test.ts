@@ -518,6 +518,52 @@ describe('mirror balance', () => {
   });
 });
 
+describe('balloon size variety', () => {
+  // The reference mixes big, medium and small balloons in roughly equal parts, the biggest about
+  // four times the smallest, with the big ones gathered on the shoulders.
+  it('mixes large, medium and small balloons, the biggest at least three times the smallest', () => {
+    for (const spec of SEEDED_SPECS) {
+      const sizes = buildArch(spec)
+        .items.filter((item) => item.kind === 'balloon')
+        .map((item) => item.size / spec.sizeRange[1]);
+      const share = (keep: (size: number) => boolean): number => sizes.filter(keep).length / sizes.length;
+      const where = `seed ${spec.seed} ${spec.width}x${spec.height}`;
+      expect(sizes.length, where).toBeGreaterThan(0);
+      expect(Math.max(...sizes) / Math.min(...sizes), where).toBeGreaterThanOrEqual(3);
+      expect(share((size) => size >= 0.75), where).toBeGreaterThanOrEqual(0.2);
+      expect(share((size) => size >= 0.45 && size < 0.75), where).toBeGreaterThanOrEqual(0.3);
+      expect(share((size) => size < 0.45), where).toBeGreaterThanOrEqual(0.2);
+    }
+  });
+
+  it('gathers the bigger balloons on the shoulders rather than the crown center', () => {
+    for (const spec of SEEDED_SPECS) {
+      const crown = buildArch(spec).items.filter((item) => item.kind === 'balloon' && item.y < spec.band);
+      const onShoulder = (item: ArchItem): boolean => item.x < 0.3 * spec.width || item.x > 0.7 * spec.width;
+      const shoulders = crown.filter(onShoulder).map((item) => item.size);
+      const center = crown.filter((item) => !onShoulder(item)).map((item) => item.size);
+      const where = `seed ${spec.seed} ${spec.width}x${spec.height}`;
+      expect(shoulders.length, where).toBeGreaterThan(0);
+      expect(center.length, where).toBeGreaterThan(0);
+      expect(median(shoulders), where).toBeGreaterThanOrEqual(1.2 * median(center));
+    }
+  });
+
+  // Portrait side columns are only a gutter wide, so only landscape is held to keeping them big.
+  it('keeps landscape side balloons at least half the size of the shoulder ones', () => {
+    for (const spec of SEEDED_SPECS.filter((s) => s.width === ARCH_SPECS.landscape.width)) {
+      const balloons = buildArch(spec).items.filter((item) => item.kind === 'balloon');
+      const shoulders = balloons
+        .filter((item) => item.y < spec.band && (item.x < 0.3 * spec.width || item.x > 0.7 * spec.width))
+        .map((item) => item.size);
+      const sides = balloons.filter((item) => item.y >= spec.band).map((item) => item.size);
+      expect(shoulders.length).toBeGreaterThan(0);
+      expect(sides.length).toBeGreaterThan(0);
+      expect(median(sides)).toBeGreaterThanOrEqual(0.5 * median(shoulders));
+    }
+  });
+});
+
 // Specs asking for more than the canvas holds: placement must skip what doesn't fit rather than
 // stack it on top of what is already there.
 describe('crowded specs', () => {

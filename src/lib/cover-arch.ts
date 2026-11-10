@@ -239,11 +239,23 @@ function cornerBump(t: number, corners: [number, number], width = CORNER_BUMP_WI
 }
 
 /** Spine fraction over which balloons swell to full size around each corner's shoulder. */
-const SIZE_BUMP_WIDTH = 0.08;
+const SIZE_BUMP_WIDTH = 0.085;
+/** Balloon size level (0 = sizeRange[0], 1 = sizeRange[1]) down the side columns, away from the corners. */
+const SIDE_SIZE_LEVEL = 0.65;
+/** Balloon size level across the crown center, between the two shoulders. */
+const CROWN_SIZE_LEVEL = 0.25;
+/** Front balloons' size relative to the back ones, away from the shoulders; at a shoulder they match. */
+const FRONT_SCALE = 0.7;
 
-/** Balloon size profile: biggest at the corners, still generous mid-crown, smallest down the sides. */
+/** Balloon size profile: biggest at the shoulders, still big down the sides, smallest mid-crown. */
 function balloonTaper(t: number, corners: [number, number]): number {
-  return 0.45 + 0.55 * Math.max(0.35 * Math.sin(Math.PI * clamp(t, 0, 1)), cornerBump(t, corners, SIZE_BUMP_WIDTH));
+  const onSide = t < corners[0] || t > corners[1];
+  return Math.max(onSide ? SIDE_SIZE_LEVEL : CROWN_SIZE_LEVEL, cornerBump(t, corners, SIZE_BUMP_WIDTH));
+}
+
+/** Back balloons keep their full size; front ones are smaller accents except on the shoulders. */
+function layerScale(t: number, corners: [number, number], isBack: boolean): number {
+  return isBack ? 1 : FRONT_SCALE + (1 - FRONT_SCALE) * cornerBump(t, corners, SIZE_BUMP_WIDTH);
 }
 
 /**
@@ -485,7 +497,7 @@ function placeBalloons(spec: ArchSpec, spine: Spine, flowers: ArchItem[], rng: (
     scale: number,
   ): ArchItem => {
     const sample = sampleSpine(spine, t);
-    const size = (spec.sizeRange[0] + sizeSpan * balloonTaper(t, corners)) * (isBack ? 1 : 0.75) * scale;
+    const size = (spec.sizeRange[0] + sizeSpan * balloonTaper(t, corners)) * layerScale(t, corners, isBack) * scale;
     const offset = offsetFrac * size;
     return fitInside(
       {
@@ -550,7 +562,7 @@ function placeBalloons(spec: ArchSpec, spine: Spine, flowers: ArchItem[], rng: (
 
 const FILLER_SPINE_STEPS = 120;
 /** How many of the biggest holes a filler may try before giving up on fitting cleanly. */
-const FILLER_CANDIDATES = 24;
+const FILLER_CANDIDATES = 36;
 
 /** How far `point` sits from the edge of the nearest solid: negative inside one, positive in a gap. */
 function clearance(point: Point, solids: ArchItem[]): number {
