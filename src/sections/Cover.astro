@@ -6,13 +6,19 @@
 import BalloonArch from '../components/BalloonArch.astro';
 import PetalFall from '../islands/PetalFall.astro';
 import { event } from '../data/event';
+import { archClearanceVars, ARCH_SPECS } from '../lib/cover-arch';
 ---
 
-<section class="cover" data-testid="cover" aria-label="Portada de la invitación">
+<section
+  class="cover"
+  data-testid="cover"
+  aria-label="Portada de la invitación"
+  style={archClearanceVars(ARCH_SPECS)}
+>
   <BalloonArch />
   <div class="cover__content">
     <h1 class="cover__title">
-      <span class="cover__title-lead">Invitación para los quince años de</span>{' '}
+      <span class="cover__title-lead" data-testid="cover-title-lead">Invitación para los quince años de</span>{' '}
       <span class="cover__title-name font-cursive" data-testid="cover-celebrant-name">
         {event.celebrantName}
       </span>
@@ -34,7 +40,17 @@ import { event } from '../data/event';
     gap: clamp(1.25rem, 4vh, 2.25rem);
     min-height: 100dvh;
     padding: clamp(3.75rem, 14vh, 6rem) 1.25rem;
+    /* Never let the title sit under the arch: clear at least as far down as the arch's crown
+       band reaches (see archClearanceVars in cover-arch.ts), whichever is taller than the
+       cosmetic clamp above. */
+    padding-top: max(clamp(3.75rem, 14vh, 6rem), calc(var(--arch-band-portrait) * 100%));
     text-align: center;
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover {
+      padding-top: max(clamp(3.75rem, 14vh, 6rem), calc(var(--arch-band-landscape) * 100%));
+    }
   }
 
   .cover__content {

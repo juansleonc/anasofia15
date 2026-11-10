@@ -36,6 +36,10 @@ async function visibleItemRects(page: Page): Promise<Rect[]> {
   });
 }
 
+function rectsIntersect(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
+
 test.describe('Balloon arch', () => {
   test('is hidden from assistive tech and never blocks pointer input', async ({ page }) => {
     await page.goto('./');
@@ -94,6 +98,30 @@ test.describe('Balloon arch', () => {
       expect(rects.some((rect) => rect.y <= topBand)).toBe(true);
       expect(rects.some((rect) => rect.x <= leftStrip)).toBe(true);
       expect(rects.some((rect) => rect.x + rect.width >= rightStrip)).toBe(true);
+    }
+  });
+
+  test('no arch item overlaps the title or the button', async ({ page }) => {
+    for (const viewport of [PHONE, { width: 390, height: 844 }, DESKTOP]) {
+      await page.setViewportSize(viewport);
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+      const leadRect = await page.getByTestId('cover-title-lead').boundingBox();
+      const nameRect = await page.getByTestId('cover-celebrant-name').boundingBox();
+      const buttonRect = await page.getByRole('button', { name: 'Abrir invitación' }).boundingBox();
+      expect(leadRect).not.toBeNull();
+      expect(nameRect).not.toBeNull();
+      expect(buttonRect).not.toBeNull();
+
+      const targets = [leadRect, nameRect, buttonRect].filter((rect): rect is Rect => rect !== null);
+      const archRects = await visibleItemRects(page);
+
+      for (const archRect of archRects) {
+        for (const target of targets) {
+          expect(rectsIntersect(archRect, target)).toBe(false);
+        }
+      }
     }
   });
 
