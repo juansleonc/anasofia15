@@ -38,13 +38,27 @@ function clearWidthRatio(spec: (typeof ARCH_SPECS)['portrait']): number {
 const archClearWidthVars =
   `--arch-clear-portrait:${clearWidthRatio(ARCH_SPECS.portrait)};` +
   `--arch-clear-landscape:${clearWidthRatio(ARCH_SPECS.landscape)};`;
+
+// Nov 2026 user-feedback pass: the name must render on a single line at every viewport (see
+// `white-space: nowrap` on .cover__title-name below), never wrapping onto two lines the way a
+// plain vw clamp could. So its font-size can't be tuned independently of the space it has to
+// fit in — it has to be derived straight from the same clear-zone width as `.cover__title`'s own
+// max-width above. `NAME_WIDTH_PER_EM` is how wide one rendered px of `event.celebrantName`'s own
+// box (text plus its 0.2em-per-side horizontal padding, see .cover__title-name) is per 1px of
+// font-size — measured directly off the live Great Vibes render, so it's tied to this specific
+// string; re-measure it if the celebrant name ever changes. `NAME_FIT_SAFETY` keeps the computed
+// size a little under the exact fit so antialiasing/sub-pixel rounding never tips it into
+// overflowing the clear zone.
+const NAME_WIDTH_PER_EM = 4.224;
+const NAME_FIT_SAFETY = 0.93;
+const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toFixed(4)};`;
 ---
 
 <section
   class="cover"
   data-testid="cover"
   aria-label="Portada de la invitación"
-  style={`${archClearanceVars(ARCH_SPECS)};${archClearWidthVars}`}
+  style={`${archClearanceVars(ARCH_SPECS)};${archClearWidthVars}${nameFitVar}`}
 >
   <div class="cover__light" data-testid="cover-light" aria-hidden="true"></div>
   <BalloonArch />
@@ -231,18 +245,23 @@ const archClearWidthVars =
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    /* Nov 2026 user-feedback pass: tightened from 0.5rem so the lead and name read as one
+       cohesive block instead of two loosely related lines (see the lead/name gap e2e test). */
+    gap: 0.3rem;
     margin: 0;
     /* Never wider than the arch's own text clear zone (see archClearWidthVars above) — otherwise a
        single-line lead/name can grow past the gutter and into the side balloons at some in-between
        viewport width. `vw`-based, not a container percentage, so it resolves against the real
-       viewport regardless of this flex column's own shrink-to-fit width. */
-    max-width: min(26rem, calc(var(--arch-clear-portrait) * 100vw));
+       viewport regardless of this flex column's own shrink-to-fit width. No longer capped at a
+       flat 26rem (that cap used to force the lead to wrap earlier than it needed to on wide
+       viewports, orphaning its last word) — the clear zone itself is the only limit now, and the
+       name keeps clear of it on its own via its own fitted font-size below. */
+    max-width: calc(var(--arch-clear-portrait) * 100vw);
   }
 
   @media (min-aspect-ratio: 1/1) {
     .cover__title {
-      max-width: min(26rem, calc(var(--arch-clear-landscape) * 100vw));
+      max-width: calc(var(--arch-clear-landscape) * 100vw);
     }
   }
 
@@ -255,16 +274,30 @@ const archClearWidthVars =
     font-style: italic;
     color: var(--c-ink);
     letter-spacing: 0.01em;
+    /* Nov 2026 user-feedback pass: lets the browser pick a more even line split (never a lone
+       trailing word) instead of the greedy default — see the "no orphan last line" e2e test. */
+    text-wrap: balance;
   }
 
   .cover__title-name {
     display: inline-block;
-    /* Nov 2026 user-feedback pass: raised from clamp(3.2rem, 15vw, 5.25rem) — "mucho espacio vacío
-       en el centro" — so the name reads as a bold centrepiece: >= 60px at 375, >= 96px at 1440. */
-    font-size: clamp(3.75rem, 2.3rem + 9vw, 6.5rem);
-    line-height: 1.3;
-    padding: 0.1em 0.2em;
+    /* Nov 2026 user-feedback pass: the name must always render on one line (never wrap, never
+       overlap the arch) — `nowrap` plus a font-size derived from the clear-zone width itself (see
+       `nameFitVar` above) instead of an independent vw clamp, which could (and did) size the name
+       wider than the room it had to fit in. */
+    white-space: nowrap;
+    font-size: clamp(3.25rem, calc(var(--name-fit-ratio) * var(--arch-clear-portrait) * 100vw), 6.5rem);
+    /* Tightened from 1.3 (and padding from 0.1em) together with .cover__title's smaller gap above,
+       so the name sits close under the lead instead of leaving a large empty band between them. */
+    line-height: 1.18;
+    padding: 0.04em 0.2em;
     color: var(--c-rose-700);
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover__title-name {
+      font-size: clamp(3.25rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 6.5rem);
+    }
   }
 
   /* A small, tightly clustered ring of extra glow/star sparkles layered directly around the title
