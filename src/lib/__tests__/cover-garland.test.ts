@@ -270,6 +270,22 @@ describe('north-star composition', () => {
     expect(cut.map(label)).toEqual([]);
   });
 
+  it.each(LAYOUTS)('%s: the main roses and peonies are big, and veiled by a front balloon', (_name, layout) => {
+    const { balloons, flowers } = partsOf(layout);
+    const roseAndPeony = flowers.filter((f) => ROSE_AND_PEONY.includes(f.symbol));
+    const M = Math.max(...balloons.map((b) => b.size));
+
+    const undersized = roseAndPeony.filter((f) => f.size < 0.53 * M);
+    expect(undersized.map(label)).toEqual([]);
+
+    const mean = roseAndPeony.reduce((sum, f) => sum + f.size, 0) / roseAndPeony.length;
+    expect(mean).toBeGreaterThanOrEqual(0.6 * M);
+
+    const frontAccents = balloons.filter((b) => b.depth === 4);
+    const veiled = roseAndPeony.filter((f) => frontAccents.some((b) => pressedTogether(f, b)));
+    expect(veiled.length / roseAndPeony.length).toBeGreaterThanOrEqual(0.5);
+  });
+
   it.each(LAYOUTS)('%s: every sprig grows out of the mass, with no floating leaf', (_name, layout) => {
     const { leaves, solids } = partsOf(layout);
 
