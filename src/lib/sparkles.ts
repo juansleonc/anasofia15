@@ -372,3 +372,100 @@ export function fallingConfetti(options: FallingConfettiOptions): ConfettiPiece[
 
   return pieces;
 }
+
+export type DriftKind = 'glitter' | 'star' | 'bokeh';
+
+export interface DriftSparkle {
+  kind: DriftKind;
+  /** 0..100 — spawn position on the garland arc, as a percentage of the cover width. */
+  xPct: number;
+  /** 0..100 — spawn position on the garland arc, as a percentage of the cover height. */
+  yPct: number;
+  /** The horizontal share of the drift toward the text block's centre, in cover-percent units. */
+  dxPct: number;
+  /** The vertical share of the drift toward the text block's centre, in cover-percent units. */
+  dyPct: number;
+  sizePx: number;
+  /** 0..1 — the opacity reached partway through the drift, before fading back out. */
+  peakOpacity: number;
+  /** 8000..13000ms — one slow drift from the garland toward the centre. */
+  durationMs: number;
+  /** -durationMs..0 — negative, so the drift is already mid-flight when the page loads. */
+  delayMs: number;
+}
+
+export interface DriftingSparklesOptions {
+  glitter: number;
+  stars: number;
+  bokeh: number;
+  seed: number;
+}
+
+const DRIFT_SIZE_RANGES: Record<DriftKind, [number, number]> = {
+  glitter: [4, 7],
+  star: [10, 16],
+  bokeh: [24, 44],
+};
+
+/** A fixed peak opacity per kind (not a range) — glitter reads brightest, bokeh stays faint. */
+const DRIFT_PEAK_OPACITY: Record<DriftKind, number> = {
+  glitter: 0.85,
+  star: 0.75,
+  bokeh: 0.3,
+};
+
+/** The point the drift travels toward, in cover percent — the centre of the text block, not the
+ *  geometric centre of the cover (see design: R5-5). */
+const DRIFT_TARGET = { xPct: 50, yPct: 55 };
+
+/** Tracks the R5-2 arch pocket's crown curve: high (29%) at the centre, rising toward the walls
+ *  (up to 38%) — a constant in cover-percent space, not an import from the garland data, so the
+ *  two lanes stay decoupled. */
+function driftSpawnYPct(xPct: number): number {
+  return 29 + 9 * Math.pow((xPct - 50) / 30, 2);
+}
+
+/**
+ * A seeded set of particles that spawn along the garland's arc and drift toward the centre of the
+ * text block, fading out as they go (see components/CoverConfettiFall.astro, which renders them
+ * with the shared `cover-sparkle-drift` keyframe). Distinct from `fallingConfetti` (straight down)
+ * and the twinkle-in-place layers (`scatterSparkles`, `lowerGlitter`).
+ */
+export function driftingSparkles(options: DriftingSparklesOptions): DriftSparkle[] {
+  const random = seededRandom(options.seed);
+  const counts: [DriftKind, number][] = [
+    ['glitter', Math.max(0, Math.floor(options.glitter))],
+    ['star', Math.max(0, Math.floor(options.stars))],
+    ['bokeh', Math.max(0, Math.floor(options.bokeh))],
+  ];
+
+  const sparkles: DriftSparkle[] = [];
+
+  for (const [kind, count] of counts) {
+    for (let i = 0; i < count; i++) {
+      const xPct = 20 + random() * 60;
+      const yPct = driftSpawnYPct(xPct) + (random() - 0.5) * 3;
+
+      const travel = 0.5 + random() * 0.3;
+      const dxPct = (DRIFT_TARGET.xPct - xPct) * travel;
+      const dyPct = (DRIFT_TARGET.yPct - yPct) * travel;
+
+      const [min, max] = DRIFT_SIZE_RANGES[kind];
+      const durationMs = 8000 + random() * 5000;
+
+      sparkles.push({
+        kind,
+        xPct,
+        yPct,
+        dxPct,
+        dyPct,
+        sizePx: min + random() * (max - min),
+        peakOpacity: DRIFT_PEAK_OPACITY[kind],
+        durationMs,
+        delayMs: -random() * durationMs,
+      });
+    }
+  }
+
+  return sparkles;
+}
