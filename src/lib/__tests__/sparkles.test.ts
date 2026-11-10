@@ -3,23 +3,19 @@ import {
   scatterSparkles,
   ringSparkles,
   lowerGlitter,
-  confettiSlivers,
+  fallingConfetti,
+  RIBBON_WIDTH_PX,
   MAX_SPARKLES,
   MIN_DISTANCE_PCT,
   LOWER_REGION_START_PCT,
   LOWER_MIN_DISTANCE_PCT,
-  MAX_SLIVERS,
-  SLIVER_WIDTH_PX,
-  SLIVER_UPPER_BAND,
   type Sparkle,
-  type KeepOutRect,
 } from '../sparkles';
 
 const SIZE_RANGES: Record<Sparkle['kind'], [number, number]> = {
   glow: [3, 7],
   star: [8, 14],
   bokeh: [26, 58],
-  sliver: [7, 12],
 };
 
 function scatter(count: number, seed = 2026): Sparkle[] {
@@ -68,7 +64,7 @@ describe('scatterSparkles', () => {
 
   it('round-robins the three kinds in an exact 4:2:1 glow:star:bokeh ratio', () => {
     const sparkles = scatter(28);
-    const counts = { glow: 0, star: 0, bokeh: 0, sliver: 0 };
+    const counts = { glow: 0, star: 0, bokeh: 0 };
     for (const sparkle of sparkles) {
       counts[sparkle.kind]++;
     }
@@ -204,7 +200,7 @@ describe('lowerGlitter', () => {
 
   it('produces only glow (flecks) and bokeh (discs) kinds, in the requested amounts', () => {
     const sparkles = glitter(12, 3);
-    const counts = { glow: 0, star: 0, bokeh: 0, sliver: 0 };
+    const counts = { glow: 0, star: 0, bokeh: 0 };
     for (const sparkle of sparkles) counts[sparkle.kind]++;
     expect(counts.glow).toBe(12);
     expect(counts.bokeh).toBe(3);
@@ -316,77 +312,58 @@ describe('lowerGlitter', () => {
   });
 });
 
-// Nov 2026 north-star pass: a handful of STATIC thin gold foil slivers — the
-// north-star reference's scattered confetti ribbons — distinct from the soft-light glints above.
-// No round/square chips, no animation (0 cost against the running-animation budget), and never
-// over the lead/name/button text.
-describe('confettiSlivers', () => {
-  const TEXT_KEEP_OUT: KeepOutRect[] = [
-    { xPct: 8, yPct: 34, widthPct: 84, heightPct: 34 }, // lead + name
-    { xPct: 10, yPct: 67, widthPct: 80, heightPct: 21 }, // button, padded
-  ];
-
-  function slivers(count: number, seed = 90210, keepOutRects?: readonly KeepOutRect[]): Sparkle[] {
-    return confettiSlivers({ count, seed, keepOutRects });
+describe('fallingConfetti', () => {
+  function pieces(seed = 1515) {
+    return fallingConfetti({ ribbons: 12, glitter: 6, seed });
   }
 
-  it('returns at most MAX_SLIVERS (8) slivers even when more are requested', () => {
-    expect(MAX_SLIVERS).toBeLessThanOrEqual(8);
-    expect(slivers(50)).toHaveLength(MAX_SLIVERS);
+  it('returns the requested ribbons first, then the glitter specks', () => {
+    const confetti = pieces();
+    expect(confetti).toHaveLength(18);
+    expect(confetti.filter((piece) => piece.kind === 'ribbon')).toHaveLength(12);
+    expect(confetti.filter((piece) => piece.kind === 'glitter')).toHaveLength(6);
   });
 
-  it('returns no slivers for a non-positive count', () => {
-    expect(slivers(0)).toHaveLength(0);
-    expect(slivers(-3)).toHaveLength(0);
+  it('returns nothing for non-positive counts', () => {
+    expect(fallingConfetti({ ribbons: 0, glitter: -2, seed: 1 })).toHaveLength(0);
   });
 
-  it('produces only the sliver kind', () => {
-    for (const sparkle of slivers(8)) {
-      expect(sparkle.kind).toBe('sliver');
+  it('falls gently: 9-15s per fall, already mid-fall at load', () => {
+    for (const piece of pieces()) {
+      expect(piece.durationMs).toBeGreaterThanOrEqual(9000);
+      expect(piece.durationMs).toBeLessThanOrEqual(15000);
+      expect(piece.delayMs).toBeLessThanOrEqual(0);
+      expect(piece.delayMs).toBeGreaterThanOrEqual(-piece.durationMs);
     }
   });
 
-  it('gives every sliver an aspect ratio of at least 3:1 against the fixed sliver width', () => {
-    for (const sparkle of slivers(8)) {
-      expect(sparkle.sizePx / SLIVER_WIDTH_PX).toBeGreaterThanOrEqual(3);
+  it('spawns across the cover with a small drift and a half-to-one-and-a-half turn spin', () => {
+    for (const piece of pieces()) {
+      expect(piece.xPct).toBeGreaterThanOrEqual(6);
+      expect(piece.xPct).toBeLessThanOrEqual(94);
+      expect(Math.abs(piece.driftPx)).toBeLessThanOrEqual(30);
+      expect(piece.spinDeg).toBeGreaterThanOrEqual(180);
+      expect(piece.spinDeg).toBeLessThanOrEqual(540);
     }
   });
 
-  it('places every sliver only in the arch interior margin or the lower band, never the clear middle', () => {
-    for (const sparkle of slivers(8)) {
-      const [upperStart, upperEnd] = SLIVER_UPPER_BAND;
-      const inUpperBand = sparkle.yPct >= upperStart && sparkle.yPct <= upperEnd;
-      const inLowerBand = sparkle.yPct >= LOWER_REGION_START_PCT && sparkle.yPct <= 100;
-      expect(inUpperBand || inLowerBand).toBe(true);
-      expect(sparkle.xPct).toBeGreaterThanOrEqual(0);
-      expect(sparkle.xPct).toBeLessThanOrEqual(100);
+  it('rests each piece between 30% and 90% of the cover for reduced motion', () => {
+    for (const piece of pieces()) {
+      expect(piece.restYPct).toBeGreaterThanOrEqual(30);
+      expect(piece.restYPct).toBeLessThanOrEqual(90);
     }
   });
 
-  it('keeps every sliver outside the given text keep-out rects', () => {
-    const sparkles = slivers(8, 90210, TEXT_KEEP_OUT);
-    expect(sparkles.length).toBeGreaterThan(0);
-    for (const sparkle of sparkles) {
-      for (const rect of TEXT_KEEP_OUT) {
-        const insideX = sparkle.xPct >= rect.xPct && sparkle.xPct <= rect.xPct + rect.widthPct;
-        const insideY = sparkle.yPct >= rect.yPct && sparkle.yPct <= rect.yPct + rect.heightPct;
-        expect(insideX && insideY).toBe(false);
-      }
+  it('keeps every ribbon at least three times as long as it is wide', () => {
+    const ribbons = pieces().filter((piece) => piece.kind === 'ribbon');
+    expect(ribbons).toHaveLength(12);
+    for (const ribbon of ribbons) {
+      expect(ribbon.lengthPx / RIBBON_WIDTH_PX).toBeGreaterThanOrEqual(3);
     }
   });
 
-  it('is static — every sliver carries zero delay and zero duration', () => {
-    for (const sparkle of slivers(8)) {
-      expect(sparkle.delayMs).toBe(0);
-      expect(sparkle.durationMs).toBe(0);
-    }
-  });
-
-  it('is deterministic for a given seed', () => {
-    expect(slivers(8, 90210)).toEqual(slivers(8, 90210));
-  });
-
-  it('varies the layout when the seed changes', () => {
-    expect(slivers(8, 90210)).not.toEqual(slivers(8, 7));
+  it('is deterministic for a seed and varies with it', () => {
+    expect(pieces(1515)).toEqual(pieces(1515));
+    expect(pieces(1515)).not.toEqual(pieces(42));
   });
 });

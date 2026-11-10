@@ -1,0 +1,189 @@
+---
+// Gold foil ribbons and glitter specks falling gently from the garland's lower edge toward the
+// bottom of the cover. SSR'd from the seeded `fallingConfetti` layout, so there is no client
+// script. The layer is a size container, so the one shared keyframe can move every piece in `cqh`
+// (a share of the cover's height) using transform and opacity only. Under reduced motion each
+// piece stops at its own seeded resting height instead, so the cover still reads as festive.
+import { fallingConfetti, RIBBON_WIDTH_PX } from '../lib/sparkles';
+
+const RIBBON_COUNT = 12;
+const GLITTER_COUNT = 6;
+const SEED = 1515;
+
+const pieces = fallingConfetti({ ribbons: RIBBON_COUNT, glitter: GLITTER_COUNT, seed: SEED });
+
+// Soft static bokeh along the garland's lower edge and in the side gutters beside the text block,
+// clear of the lead, name and button at portrait and landscape: [x %, y %, diameter px, opacity].
+const BOKEH: readonly (readonly [number, number, number, number])[] = [
+  [8, 30, 46, 0.5],
+  [92, 33, 40, 0.45],
+  [64, 26, 30, 0.45],
+  [5, 60, 34, 0.4],
+  [95, 64, 38, 0.4],
+  [7, 90, 44, 0.35],
+];
+
+// Golden light flares glinting on the garland, like the reference's sparkle points:
+// [x %, y %, size px].
+const FLARES: readonly (readonly [number, number, number])[] = [
+  [31, 14, 70],
+  [72, 22, 56],
+  [58, 9, 44],
+];
+
+function round(value: number): string {
+  return value.toFixed(2);
+}
+---
+
+<div class="cover-confetti" data-testid="cover-confetti" aria-hidden="true">
+  {
+    pieces.map((piece) => {
+      const vars =
+        `--confetti-x:${round(piece.xPct)}%;` +
+        `--confetti-length:${round(piece.lengthPx)}px;` +
+        `--confetti-duration:${Math.round(piece.durationMs)}ms;` +
+        `--confetti-delay:${Math.round(piece.delayMs)}ms;` +
+        `--confetti-drift:${round(piece.driftPx)}px;` +
+        `--confetti-spin:${round(piece.spinDeg)}deg;` +
+        `--confetti-rest:${round(piece.restYPct)}cqh;`;
+      return (
+        <span
+          class={`cover-confetti__piece cover-confetti__${piece.kind}`}
+          data-confetti={piece.kind}
+          style={vars}
+        />
+      );
+    })
+  }
+  {
+    BOKEH.map(([xPct, yPct, sizePx, opacity]) => (
+      <span
+        class="cover-confetti__bokeh"
+        data-bokeh
+        style={`left:${xPct}%;top:${yPct}%;--bokeh-size:${sizePx}px;opacity:${opacity};`}
+      />
+    ))
+  }
+  {
+    FLARES.map(([xPct, yPct, sizePx]) => (
+      <span
+        class="cover-confetti__flare"
+        data-flare
+        style={`left:${xPct}%;top:${yPct}%;--flare-size:${sizePx}px;`}
+      />
+    ))
+  }
+</div>
+
+<style define:vars={{ ribbonWidth: `${RIBBON_WIDTH_PX}px` }}>
+  .cover-confetti {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    container-type: size;
+  }
+
+  .cover-confetti__piece {
+    position: absolute;
+    top: 0;
+    left: var(--confetti-x);
+    opacity: 0;
+    animation: cover-confetti-fall var(--confetti-duration) linear var(--confetti-delay) infinite;
+  }
+
+  .cover-confetti__ribbon {
+    width: var(--ribbonWidth);
+    height: var(--confetti-length);
+    border-radius: 1px;
+    background-image: linear-gradient(
+      180deg,
+      var(--c-champagne-300),
+      var(--c-champagne-500) 55%,
+      var(--c-champagne-700)
+    );
+  }
+
+  /* A soft speck of light, never a hard chip. */
+  .cover-confetti__glitter {
+    width: var(--confetti-length);
+    height: var(--confetti-length);
+    border-radius: 50%;
+    background-image: radial-gradient(
+      circle,
+      var(--c-white) 0%,
+      var(--c-champagne-300) 45%,
+      transparent 72%
+    );
+  }
+
+  .cover-confetti__bokeh {
+    position: absolute;
+    width: var(--bokeh-size);
+    height: var(--bokeh-size);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background-image: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--c-champagne-100) 70%, transparent) 0%,
+      color-mix(in srgb, var(--c-champagne-200) 35%, transparent) 55%,
+      transparent 72%
+    );
+  }
+
+  /* A 4-point star of light: a white core plus two thin crossing bars. */
+  .cover-confetti__flare {
+    position: absolute;
+    width: var(--flare-size);
+    height: var(--flare-size);
+    transform: translate(-50%, -50%);
+    background:
+      radial-gradient(
+          circle,
+          var(--c-white) 0%,
+          color-mix(in srgb, var(--c-champagne-200) 70%, transparent) 12%,
+          transparent 40%
+        ),
+      linear-gradient(
+          90deg,
+          transparent 0%,
+          color-mix(in srgb, var(--c-white) 85%, transparent) 50%,
+          transparent 100%
+        )
+        center / 100% 2px no-repeat,
+      linear-gradient(
+          0deg,
+          transparent 0%,
+          color-mix(in srgb, var(--c-white) 85%, transparent) 50%,
+          transparent 100%
+        )
+        center / 2px 70% no-repeat;
+  }
+
+  @keyframes cover-confetti-fall {
+    0% {
+      transform: translate(0, 22cqh) rotate(0deg);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.9;
+    }
+    85% {
+      opacity: 0.75;
+    }
+    100% {
+      transform: translate(var(--confetti-drift), 95cqh) rotate(var(--confetti-spin));
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover-confetti__piece {
+      animation: none;
+      opacity: 0.7;
+      transform: translateY(var(--confetti-rest)) rotate(var(--confetti-spin));
+    }
+  }
+</style>

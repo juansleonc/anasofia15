@@ -394,10 +394,10 @@ test.describe('Cover section', () => {
     const coverBackground = await page
       .getByTestId('cover')
       .evaluate((el) => getComputedStyle(el).backgroundImage);
-    const coverGradientCount = (coverBackground.match(/[a-z-]+-gradient\(/gi) ?? []).length;
-    expect(coverGradientCount).toBeGreaterThanOrEqual(2);
-    expect(coverBackground).toContain('radial-gradient');
-    expect(coverBackground).toContain('linear-gradient');
+    const coverGradients = coverBackground.match(/[a-z-]+-gradient\(/gi) ?? [];
+    expect(coverGradients.length).toBeGreaterThanOrEqual(4);
+    expect(coverGradients.filter((g) => g === 'radial-gradient(').length).toBeGreaterThanOrEqual(3);
+    expect(coverGradients.filter((g) => g === 'linear-gradient(')).toHaveLength(1);
 
     const light = page.getByTestId('cover-light');
     await expect(light).toHaveAttribute('aria-hidden', 'true');
@@ -812,6 +812,6 @@ test.describe('Cover section', () => {
     expect(budget).not.toBeNull();
     expect(budget!.archItemCount).toBeLessThanOrEqual(200);
     expect(budget!.coverElementCount).toBeLessThanOrEqual(320);
-    expect(budget!.runningAnimationCount).toBeLessThanOrEqual(50);
+    expect(budget!.runningAnimationCount).toBeLessThanOrEqual(46);
   });
 });
