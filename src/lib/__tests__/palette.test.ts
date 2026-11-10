@@ -142,7 +142,18 @@ describe('palette discipline', () => {
       '--c-rosegold-400': '#dba592',
       '--c-wine-500': '#9a4462',
       '--c-wine-700': '#6e2440',
+      '--c-wine-900': '#4a1525',
     });
+  });
+
+  it("the lead's deep wine reads at least 7:1 on champagne-100, rose-100 and rose-200", () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    expect(tokens['--c-wine-900']).toBe('#4a1525');
+    for (const background of ['--c-champagne-100', '--c-rose-100', '--c-rose-200']) {
+      expect(contrastRatio(tokens['--c-wine-900'], tokens[background])).toBeGreaterThanOrEqual(7);
+    }
   });
 
   // Resolves the open button's fill gradient into its ordered stop tokens, so the contrast checks

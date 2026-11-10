@@ -541,6 +541,15 @@ test.describe('Cover section', () => {
     expect(color).toBe('rgb(110, 36, 64)');
   });
 
+  test('the lead is deep wine', async ({ page }) => {
+    await page.goto('./');
+
+    const color = await page
+      .getByTestId('cover-title-lead')
+      .evaluate((el) => getComputedStyle(el).color);
+    expect(color).toBe('rgb(74, 21, 37)');
+  });
+
   for (const { viewport, minLeadPx } of [
     { viewport: { width: 375, height: 667 }, minLeadPx: 23 },
     { viewport: { width: 1440, height: 800 }, minLeadPx: 34 },
