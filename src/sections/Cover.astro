@@ -3,29 +3,116 @@
 // until it's clicked — see the script below). The click also dispatches `OPEN_INVITATION_EVENT`
 // on `window`, which `islands/MusicToggle.astro` listens for to start playback — a loose
 // window-event handshake so neither file needs to import or duplicate the other's audio element.
-import RoseGarland from '../components/RoseGarland.astro';
+import BalloonArch from '../components/BalloonArch.astro';
+import CoverConfettiFall from '../components/CoverConfettiFall.astro';
+import CoverLowerGlitter from '../components/CoverLowerGlitter.astro';
+import CoverSparkles from '../components/CoverSparkles.astro';
 import PetalFall from '../islands/PetalFall.astro';
 import { event } from '../data/event';
+import { garlandCoverVars } from '../lib/cover-garland';
+import { ringSparkles } from '../lib/sparkles';
+
+// Gives the cover's own centre more presence (bigger type, a flourish and a tight ring of
+// sparkles around the title), not more clutter. This small ring is deliberately separate from
+// CoverSparkles's whole-cover `scatterSparkles` layer (see src/lib/sparkles.ts) — it's positioned
+// relative to the title block itself (see `.cover__title { position: relative }` below), not
+// scattered across the whole cover, so it reads as a halo around the name specifically.
+const TITLE_RING_COUNT = 5;
+const TITLE_RING_SEED = 4015;
+const titleRingSparkles = ringSparkles({ count: TITLE_RING_COUNT, seed: TITLE_RING_SEED });
+
+// The name must render on a single line at every viewport (see `white-space: nowrap` on
+// .cover__title-name below), never wrapping onto two lines the way a plain vw clamp could. So
+// its font-size can't be tuned independently of the space it has to fit in — it has to be
+// derived straight from the same clear-zone width as `.cover__title`'s own max-width above.
+// `NAME_WIDTH_PER_EM` is how wide one rendered px of `event.celebrantName`'s own box (text plus
+// its 0.2em-per-side horizontal padding, see .cover__title-name) is per 1px of font-size —
+// measured directly off the live Great Vibes render at two very different sizes (265.0px /
+// 62.76px at 375 and 540.5px / 128px at 1440 — both ≈ 4.223), so it's tied to this specific
+// string; re-measure it if the celebrant name ever changes. `NAME_FIT_SAFETY` keeps the computed
+// size a little under the exact fit so antialiasing/sub-pixel rounding never tips it into
+// overflowing the clear zone.
+const NAME_WIDTH_PER_EM = 4.224;
+const NAME_FIT_SAFETY = 0.95;
+const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toFixed(4)};`;
 ---
 
-<section class="cover" data-testid="cover" aria-label="Portada de la invitación">
-  <RoseGarland placement="top" />
-  <h1 class="cover__title">
-    <span class="cover__title-lead">Invitación para los quince años de</span>{' '}
-    <span class="cover__title-name font-cursive" data-testid="cover-celebrant-name">
-      {event.celebrantName}
-    </span>
-  </h1>
-  <button type="button" class="cover__open-button" data-testid="open-invitation-button">
-    Abrir invitación
-  </button>
-  <RoseGarland placement="bottom" />
+<section
+  class="cover"
+  data-testid="cover"
+  aria-label="Portada de la invitación"
+  style={`${garlandCoverVars()}${nameFitVar}`}
+>
+  <div class="cover__light" data-testid="cover-light" aria-hidden="true"></div>
+  <BalloonArch />
+  <CoverSparkles />
+  <CoverLowerGlitter />
+  <CoverConfettiFall />
+  <div class="cover__content">
+    <div class="cover__glow" data-testid="cover-glow" aria-hidden="true"></div>
+    <h1 class="cover__title">
+      <span class="cover__title-lead" data-testid="cover-title-lead">Invitación para los quince años de</span>{' '}
+      <span class="cover__title-name font-cursive" data-testid="cover-celebrant-name">
+        {event.celebrantName}
+      </span>
+      <div class="cover__title-sparkles" data-testid="cover-title-sparkles" aria-hidden="true">
+        {
+          titleRingSparkles.map((sparkle) => {
+            const vars =
+              `--sparkle-x:${sparkle.xPct}%;` +
+              `--sparkle-y:${sparkle.yPct}%;` +
+              `--sparkle-size:${sparkle.sizePx}px;` +
+              `--sparkle-rotate:${sparkle.rotateDeg}deg;` +
+              `--sparkle-delay:${sparkle.delayMs}ms;` +
+              `--sparkle-duration:${sparkle.durationMs}ms;`;
+
+            if (sparkle.kind === 'star') {
+              return (
+                <span
+                  class="cover-title-sparkle__item cover-title-sparkle__star"
+                  data-title-sparkle="star"
+                  style={`${vars}--sparkle-tone:var(--c-champagne-200);`}
+                >
+                  <span class="cover-title-sparkle__halo" />
+                  <svg viewBox="0 0 24 24" width="100%" height="100%">
+                    <use href="#sparkle-star" />
+                  </svg>
+                </span>
+              );
+            }
+
+            return (
+              <span
+                class="cover-title-sparkle__item cover-title-sparkle__glow"
+                data-title-sparkle="glow"
+                style={`${vars}--sparkle-tone:var(--c-white);`}
+              />
+            );
+          })
+        }
+      </div>
+    </h1>
+    <div class="cover__flourish" data-testid="cover-flourish" aria-hidden="true">
+      <span class="cover__flourish-line"></span>
+      <svg class="cover__flourish-icon" viewBox="0 0 24 24">
+        <use href="#sparkle-star" />
+      </svg>
+      <span class="cover__flourish-line"></span>
+    </div>
+    <button type="button" tabindex="0" class="cover__open-button" data-testid="open-invitation-button">
+      Abrir invitación
+    </button>
+  </div>
   <PetalFall />
 </section>
 
 <style>
   .cover {
     position: relative;
+    /* border-box so `min-height: 100dvh` caps the TOTAL box at one viewport; with the default
+       content-box it only bounded the area inside the padding, leaving the guest's scroll-locked
+       first screen taller than the viewport. */
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -33,68 +120,414 @@ import { event } from '../data/event';
     gap: clamp(1.25rem, 4vh, 2.25rem);
     min-height: 100dvh;
     padding: clamp(3.75rem, 14vh, 6rem) 1.25rem;
+    /* Never let the title sit under the garland: clear at least as far down as the garland's
+       clear top (see garlandCoverVars in cover-garland.ts), or the 36vh tall-phone floor the
+       portrait garland keeps (see BalloonArch.astro), and never less than the cosmetic clamp
+       above. The cover is a single scroll-locked screen, so that clear top is also capped by
+       `--cover-arch-band-cap` (below) to leave room for the text block and the open button
+       underneath it. */
+    padding-top: max(
+      clamp(3.75rem, 14vh, 6rem),
+      min(max(calc(var(--arch-band-portrait) * 100%), 36vh), var(--cover-arch-band-cap))
+    );
     text-align: center;
+    isolation: isolate;
+    /* A warm, luminous, festive base: a champagne glow under the garland, rose blooms in both
+       bottom corners, over a champagne-to-rose wash. Static. */
+    background-image:
+      radial-gradient(
+        ellipse 70% 50% at 50% 30%,
+        color-mix(in srgb, var(--c-champagne-100) 85%, transparent) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 60% 45% at 8% 92%,
+        color-mix(in srgb, var(--c-rose-200) 55%, transparent) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 60% 45% at 92% 92%,
+        color-mix(in srgb, var(--c-rose-200) 55%, transparent) 0%,
+        transparent 70%
+      ),
+      linear-gradient(
+        180deg,
+        var(--c-champagne-100) 0%,
+        var(--c-rose-100) 48%,
+        color-mix(in srgb, var(--c-rose-200) 75%, var(--c-champagne-100)) 100%
+      );
   }
 
-  .cover__title {
+  /* Warm ambient light behind the arch: a golden haze plus very subtle rays. No frame to clip to
+     anymore — `inset: 0` already bounds it to the cover's own box, same as before. Static — no
+     animation, so it needs no reduced-motion handling. */
+  .cover__light {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(
+        ellipse 70% 45% at 50% 30%,
+        color-mix(in srgb, var(--c-champagne-200) 45%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 30% 20% at 12% 85%,
+        color-mix(in srgb, var(--c-champagne-100) 50%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 30% 20% at 88% 85%,
+        color-mix(in srgb, var(--c-champagne-100) 50%, transparent),
+        transparent 70%
+      ),
+      conic-gradient(
+        from 160deg at 50% -8%,
+        transparent,
+        color-mix(in srgb, var(--c-champagne-100) 20%, transparent) 4deg,
+        transparent 9deg,
+        transparent 50deg,
+        color-mix(in srgb, var(--c-champagne-100) 16%, transparent) 54deg,
+        transparent 59deg,
+        transparent 100deg,
+        color-mix(in srgb, var(--c-champagne-100) 18%, transparent) 104deg,
+        transparent 109deg,
+        transparent 151deg,
+        color-mix(in srgb, var(--c-champagne-100) 16%, transparent) 155deg,
+        transparent 160deg,
+        transparent 200deg,
+        color-mix(in srgb, var(--c-champagne-100) 18%, transparent) 204deg,
+        transparent 209deg
+      );
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, var(--c-white), transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, var(--c-white), transparent 75%);
+  }
+
+  /* One viewport-height unit for the height caps below: the dynamic viewport where supported (so
+     mobile browser chrome is accounted for), plain `vh` elsewhere. */
+  .cover {
+    --cover-vh: 1vh;
+  }
+
+  @supports (height: 1dvh) {
+    .cover {
+      --cover-vh: 1dvh;
+    }
+  }
+
+  /* How far down the portrait garland's clear top may sit: the viewport height less a reserve for
+     the text block and the open button, which grows with width the way that block does (two lead
+     lines and the smallest name on phones, one lead line and the largest name from about 840px
+     wide). Tall screens never reach the cap, so their layout is untouched; near-square portrait
+     windows pick it up and BalloonArch lifts the portrait garland by the same amount, so the text
+     and the garland stay aligned. */
+  .cover {
+    --cover-arch-band-cap: max(
+      clamp(3.75rem, 14vh, 6rem),
+      calc(100 * var(--cover-vh) - clamp(19.25rem, 10rem + 31vw, 25.3rem))
+    );
+  }
+
+  /* Landscape sizes are driven by width (the garland and the clear zone scale with it), but the
+     cover is a single scroll-locked screen, so every vertical dimension of the landscape layout
+     is also capped by a share of the viewport height: whichever is smaller wins, which keeps the
+     open button on screen for any window shape (wide-but-short included) with no breakpoint to
+     jump at. Each cap is tuned to sit at or just above that dimension's width-driven size at
+     1366x768 and 1440x800, so those screens, and any no wider relative to their height, keep
+     their width-driven layout; only wider or shorter windows pick up a cap.
+     `--cover-arch-band-cap` limits how far down the garland's clear top may sit (on the very
+     shortest windows, also to the viewport height less a fixed reserve for the text block);
+     BalloonArch shifts the landscape garland up by the same amount, so the text and the garland
+     stay aligned. */
+  @media (min-aspect-ratio: 1/1) {
+    .cover {
+      --cover-arch-band-cap: min(
+        calc(41 * var(--cover-vh)),
+        max(clamp(3.75rem, 14vh, 6rem), calc(100 * var(--cover-vh) - 12rem))
+      );
+      padding-top: max(
+        clamp(3.75rem, 14vh, 6rem),
+        min(calc(var(--arch-band-landscape) * 100%), var(--cover-arch-band-cap))
+      );
+    }
+  }
+
+  .cover__content {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    /* A tight gap so the lead/name/flourish/button read as one dense, centred block instead of a
+       loose stack. */
+    gap: clamp(0.85rem, 2.5vh, 1.5rem);
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover__content {
+      gap: clamp(0.3rem, calc(2.5 * var(--cover-vh)), 1.5rem);
+    }
+  }
+
+  /* Warm light cast directly behind the lead line, the name and the button — raises (never
+     lowers) text contrast rather than competing with it. Sits in the content's own stacking
+     context so it never leaks in front of or behind the arch/frame. */
+  .cover__glow {
+    position: absolute;
+    inset: -8% -5%;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(
+      ellipse at 50% 48%,
+      color-mix(in srgb, var(--c-champagne-100) 92%, transparent) 0%,
+      color-mix(in srgb, var(--c-champagne-200) 40%, transparent) 45%,
+      transparent 72%
+    );
+  }
+
+  .cover__title {
+    /* Positions `.cover__title-sparkles` below relative to the title's own rendered box, so the
+       ring of extra sparkles always sits "around the name" regardless of viewport/text length. */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Gives the lead and the name a little room to breathe apart, while still reading as one
+       cohesive block — the larger name carries its own ascender room on top of this. */
+    gap: clamp(0.9rem, 0.75rem + 0.5vw, 1.15rem);
     margin: 0;
-    max-width: 26rem;
+    /* Never wider than the garland's text clear zone (`--arch-clear-portrait` /
+       `--arch-clear-landscape`, set from `garlandCoverVars()` above) — otherwise a single-line
+       lead/name can grow past the gutter and into the corner cascades at some in-between
+       viewport width. `vw`-based, not a container percentage, so it resolves against the real
+       viewport regardless of this flex column's own shrink-to-fit width. No longer capped at a
+       flat 26rem (that cap used to force the lead to wrap earlier than it needed to on wide
+       viewports, orphaning its last word) — the clear zone itself is the only limit now, and the
+       name keeps clear of it on its own via its own fitted font-size below. */
+    max-width: calc(var(--arch-clear-portrait) * 100vw);
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover__title {
+      max-width: calc(var(--arch-clear-landscape) * 100vw);
+      gap: min(clamp(0.9rem, 0.75rem + 0.5vw, 1.15rem), calc(2.5 * var(--cover-vh)));
+    }
   }
 
   .cover__title-lead {
     font-family: var(--font-display);
-    font-size: clamp(1.05rem, 4vw, 1.4rem);
+    /* About 23px on phones, growing to about 35px on wide desktops. */
+    font-size: clamp(1.45rem, 1.05rem + 1.3vw, 2.25rem);
     font-weight: 600;
     font-style: italic;
-    color: var(--c-ink);
+    color: var(--c-wine-900);
     letter-spacing: 0.01em;
+    /* Lets the browser pick a more even line split (never a lone trailing word) instead of the
+       greedy default — see the "no orphan last line" e2e test. */
+    text-wrap: balance;
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover__title-lead {
+      font-size: min(clamp(1.45rem, 1.05rem + 1.3vw, 2.25rem), max(0.95rem, calc(4.6 * var(--cover-vh))));
+    }
   }
 
   .cover__title-name {
     display: inline-block;
-    font-size: clamp(3.2rem, 15vw, 5.25rem);
-    line-height: 1.3;
-    padding: 0.1em 0.2em;
-    color: var(--c-rose-700);
+    /* The name must always render on one line (never wrap, never overlap the arch) — `nowrap`
+       plus a font-size derived from the clear-zone width itself (see `nameFitVar` above) instead
+       of an independent vw clamp, which could size the name wider than the room it had to fit
+       in. */
+    white-space: nowrap;
+    font-size: clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-portrait) * 100vw), 9.2rem);
+    /* Tightened from 1.3 (and padding from 0.1em) together with .cover__title's smaller gap above,
+       so the name sits close under the lead instead of leaving a large empty band between them. */
+    line-height: 1.18;
+    padding: 0.04em 0.2em;
+    color: var(--c-wine-700);
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover__title-name {
+      font-size: min(
+        clamp(3.75rem, calc(var(--name-fit-ratio) * var(--arch-clear-landscape) * 100vw), 9.2rem),
+        calc(21.8 * var(--cover-vh) - 1.2rem)
+      );
+    }
+  }
+
+  /* A small, tightly clustered ring of extra glow/star sparkles layered directly around the title
+     block (see ringSparkles() in lib/sparkles.ts) — absolutely positioned so it never affects the
+     title's own flex layout/height, just floats over/around it. */
+  .cover__title-sparkles {
+    position: absolute;
+    /* Kept well inside the cover's own left/right padding (never past it, regardless of viewport —
+       see cover.spec.ts's overflow tests) while still reaching generously above/below the text. */
+    inset: -18% -5%;
+    pointer-events: none;
+  }
+
+  .cover-title-sparkle__item {
+    position: absolute;
+    left: var(--sparkle-x);
+    top: var(--sparkle-y);
+    width: var(--sparkle-size);
+    height: var(--sparkle-size);
+    animation-name: cover-title-sparkle-twinkle;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-delay: var(--sparkle-delay);
+    animation-duration: var(--sparkle-duration);
+  }
+
+  .cover-title-sparkle__glow {
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--sparkle-tone) 0%, transparent 72%);
+  }
+
+  .cover-title-sparkle__star {
+    transform: rotate(var(--sparkle-rotate));
+  }
+
+  .cover-title-sparkle__star svg {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .cover-title-sparkle__halo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(var(--sparkle-size) * 2.8);
+    height: calc(var(--sparkle-size) * 2.8);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--sparkle-tone) 70%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  /* Fainter peak than the whole-cover sparkle layer's 0.8 — "subtle", concentrated accents around
+     the name, not a second layer of attention-grabbing twinkle. */
+  @keyframes cover-title-sparkle-twinkle {
+    0%,
+    100% {
+      opacity: 0.15;
+    }
+    50% {
+      opacity: 0.65;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover-title-sparkle__item {
+      animation: none;
+    }
+  }
+
+  /* Thin champagne divider between the name and the button: a small flourish icon (reusing the
+     sparkle-star symbol) between two hairlines, fading out at both ends. */
+  .cover__flourish {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    max-width: 11rem;
+  }
+
+  .cover__flourish-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--c-champagne-500), transparent);
+  }
+
+  .cover__flourish-icon {
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
   }
 
   .cover__open-button {
     margin-top: 0.25rem;
-    padding: 1rem 2.625rem;
-    border: 1px solid var(--c-rose-300);
+    /* A slightly wide pill so it reads clearly as the one call to action; the clamps grow it past
+       the floor on wider viewports. */
+    min-width: 264px;
+    min-height: 56px;
+    padding: clamp(1.1rem, 1vw + 0.85rem, 1.5rem) clamp(3rem, 7vw, 4.5rem);
+    border: 2px solid var(--c-champagne-500);
     border-radius: 999px;
-    background: var(--gradient-button);
+    /* Sheen first so it paints over the wine/rose gradient underneath (every fill stop stays in
+       the computed `background-image`, just with a translucent highlight laid on top). */
+    background: var(--gradient-button-sheen), var(--gradient-button-wine-rose);
+    /* Relief stack, named so the pulse keyframes below can reuse it instead of repeating it:
+       a gold bevel highlight (top inset), a deep wine inner shadow (bottom inset, gives the pill
+       its "pressed-in" depth), a gold outer ring (double rim with the solid border), a tight wine
+       contact shadow and the soft wine lift shadow. Gold lives only on the rim and bevel. */
+    --cover-button-shadow: inset 0 1px 0 color-mix(in srgb, var(--c-champagne-300) 80%, transparent),
+      inset 0 -3px 6px color-mix(in srgb, var(--c-wine-700) 70%, var(--c-ink)),
+      0 0 0 1px color-mix(in srgb, var(--c-champagne-300) 70%, transparent),
+      0 3px 6px color-mix(in srgb, var(--c-wine-700) 25%, transparent), var(--shadow-button-wine);
+    box-shadow: var(--cover-button-shadow);
     color: var(--c-white);
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    font-family: var(--font-body);
+    /* 1.25rem (20px) floor at a 375px viewport, growing toward 1.5rem on wider screens. */
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+    font-weight: 600;
+    /* 0.05em keeps the label legible without reading as smaller — much wider tracking does. */
+    letter-spacing: 0.05em;
+    font-family: var(--font-display);
+    /* Engraved look: only darkens around the glyphs, never lightens them. */
+    text-shadow: 0 1px 1px color-mix(in srgb, var(--c-wine-700) 60%, transparent);
     cursor: pointer;
-    box-shadow: var(--card-shadow);
     transition: transform var(--motion-duration-base) var(--motion-easing);
     animation: cover-pulse 2.6s ease-out infinite;
+  }
+
+  @media (min-aspect-ratio: 1/1) {
+    .cover__open-button {
+      min-height: min(56px, max(44px, calc(7.4 * var(--cover-vh))));
+      padding-block: min(clamp(1.1rem, 1vw + 0.85rem, 1.5rem), max(0.5rem, calc(3.2 * var(--cover-vh))));
+      font-size: min(clamp(1.25rem, 4vw, 1.5rem), max(0.9rem, calc(3.2 * var(--cover-vh))));
+    }
   }
 
   .cover__open-button:hover {
     transform: translateY(-2px);
   }
 
-  /* Soft expanding rose ring, layered on top of the resting shadow so the shadow never blinks off. */
+  .cover__open-button:focus-visible {
+    outline: 2px solid var(--c-champagne-500);
+    outline-offset: 3px;
+  }
+
+  /* The relief responds to touch: the pill presses in and its inner shadow deepens. */
+  .cover__open-button:active {
+    transform: translateY(1px);
+    --cover-button-shadow: inset 0 1px 0 color-mix(in srgb, var(--c-champagne-300) 80%, transparent),
+      inset 0 -5px 9px color-mix(in srgb, var(--c-wine-700) 80%, var(--c-ink)),
+      0 0 0 1px color-mix(in srgb, var(--c-champagne-300) 70%, transparent),
+      0 1px 2px color-mix(in srgb, var(--c-wine-700) 35%, transparent), var(--shadow-button-wine);
+  }
+
+  /* Soft expanding champagne-gold ring, layered on top of the resting shadow so the shadow never
+     blinks off. */
   @keyframes cover-pulse {
     0%,
     100% {
       box-shadow:
-        var(--card-shadow),
-        0 0 0 0 color-mix(in srgb, var(--c-rose-400) 45%, transparent);
+        var(--cover-button-shadow),
+        0 0 0 0 color-mix(in srgb, var(--c-champagne-500) 45%, transparent);
     }
     70% {
       box-shadow:
-        var(--card-shadow),
-        0 0 0 16px color-mix(in srgb, var(--c-rose-400) 0%, transparent);
+        var(--cover-button-shadow),
+        0 0 0 16px color-mix(in srgb, var(--c-champagne-500) 0%, transparent);
     }
   }
 

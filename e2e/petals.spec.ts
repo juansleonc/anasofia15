@@ -51,6 +51,60 @@ test.describe('Petal fall on open', () => {
     const petalFall = page.getByTestId('petal-fall');
     await expect(petalFall).toHaveAttribute('data-petals', 'skipped');
     await expect(petalFall.locator('> *')).toHaveCount(0);
+    await expect(petalFall.locator('.petal-fall__petal')).toHaveCount(0);
+    await expect(petalFall.locator('.petal-fall__fleck')).toHaveCount(0);
+  });
+
+  test('the shower mixes rose petals with gold flecks colored from the champagne palette', async ({
+    page,
+  }) => {
+    await page.goto('./');
+
+    await page.getByRole('button', { name: 'Abrir invitación' }).click();
+
+    const petalFall = page.getByTestId('petal-fall');
+    const petals = petalFall.locator('.petal-fall__petal');
+    const flecks = petalFall.locator('.petal-fall__fleck');
+    expect(await petals.count()).toBeGreaterThanOrEqual(1);
+    expect(await flecks.count()).toBeGreaterThanOrEqual(1);
+
+    const champagneTokens = await page.evaluate(() => {
+      const styles = getComputedStyle(document.documentElement);
+      return ['--c-champagne-300', '--c-champagne-500', '--c-champagne-700'].map((name) =>
+        styles.getPropertyValue(name).trim(),
+      );
+    });
+
+    const fleckColors = await flecks.evaluateAll((elements) =>
+      elements.map((el) => getComputedStyle(el).getPropertyValue('--petal-color').trim()),
+    );
+    expect(fleckColors.length).toBeGreaterThanOrEqual(1);
+    for (const color of fleckColors) {
+      expect(champagneTokens).toContain(color);
+    }
+  });
+
+  test('the shower\'s gold flecks are soft round glints, never hard-edged square chips', async ({
+    page,
+  }) => {
+    await page.goto('./');
+
+    await page.getByRole('button', { name: 'Abrir invitación' }).click();
+
+    const flecks = page.getByTestId('petal-fall').locator('.petal-fall__fleck');
+    const fleckCount = await flecks.count();
+    expect(fleckCount).toBeGreaterThanOrEqual(1);
+
+    const styles = await flecks.evaluateAll((elements) =>
+      elements.map((el) => {
+        const computed = getComputedStyle(el);
+        return { borderRadius: computed.borderRadius, backgroundImage: computed.backgroundImage };
+      }),
+    );
+    for (const style of styles) {
+      expect(style.borderRadius).not.toBe('0px');
+      expect(style.backgroundImage).toContain('radial-gradient');
+    }
   });
 
   test('petals are cleared from the DOM once the shower settles', async ({ page }) => {

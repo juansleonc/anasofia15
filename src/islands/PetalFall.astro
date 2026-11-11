@@ -1,12 +1,14 @@
 ---
-// One-shot rose-petal shower fired by the "Abrir invitación" open gesture. Listens for
-// `OPEN_INVITATION_EVENT` (Cover dispatches it; this island never touches the button or the
-// scroll gate) and spawns a capped batch of DOM/CSS petal spans that drift down and sway, then
-// clears them once the shower settles. Particle init is the pure, unit-tested
-// `createPetals`/`showerDurationMs` (src/lib/petals.ts); only the DOM/CSS rendering lives here.
-// State surfaces on `data-petals` (fired/skipped) and `data-petal-showers` so tests can observe
-// the shower without pixel sampling. `prefers-reduced-motion` skips the shower; petal colors
-// come from the rose tokens at runtime (no literal colors), so the shower matches the live theme.
+// One-shot rose-petal-and-gold-fleck shower fired by the "Abrir invitación" open gesture.
+// Listens for `OPEN_INVITATION_EVENT` (Cover dispatches it; this island never touches the
+// button or the scroll gate) and spawns a capped batch of DOM/CSS petal and fleck spans that
+// drift down and sway, then clears both batches once the shower settles. Particle init is the
+// pure, unit-tested `createPetals`/`createFlecks`/`showerDurationMs` (src/lib/petals.ts); only
+// the DOM/CSS rendering lives here. State surfaces on `data-petals` (fired/skipped) and
+// `data-petal-showers` so tests can observe the shower without pixel sampling.
+// `prefers-reduced-motion` skips the whole shower; petal colors come from the rose tokens and
+// fleck colors from the champagne tokens, both read at runtime (no literal colors), so the
+// shower matches the live theme.
 ---
 
 <div class="petal-fall" data-testid="petal-fall" aria-hidden="true"></div>
@@ -48,15 +50,49 @@
       transform: translate3d(0, 115vh, 0) rotate(calc(var(--petal-rotate) + 360deg));
     }
   }
+
+  /* Soft round glint rather than a hard-edged chip: a radial-gradient glow fading from the
+     champagne color to transparent, no flat fill/edge — matches the cover's idle sparkle
+     "flecks", the same kind of soft light. */
+  .petal-fall :global(.petal-fall__fleck) {
+    position: absolute;
+    top: -10%;
+    left: var(--petal-x);
+    width: var(--petal-size);
+    height: var(--petal-size);
+    background: radial-gradient(circle, var(--petal-color) 0%, transparent 72%);
+    border-radius: 50%;
+    opacity: 0.9;
+    animation-name: fleck-fall;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    animation-delay: var(--petal-delay);
+    animation-duration: var(--petal-duration);
+  }
+
+  @keyframes fleck-fall {
+    0% {
+      transform: translate3d(0, 0, 0) rotate(var(--petal-rotate)) rotateX(0deg);
+    }
+    50% {
+      transform: translate3d(var(--petal-sway), 55vh, 0) rotate(calc(var(--petal-rotate) + 180deg))
+        rotateX(180deg);
+    }
+    100% {
+      transform: translate3d(0, 115vh, 0) rotate(calc(var(--petal-rotate) + 360deg)) rotateX(360deg);
+    }
+  }
 </style>
 
 <script>
-  import { createPetals, showerDurationMs, type Petal } from '../lib/petals';
+  import { createPetals, createFlecks, showerDurationMs, type Particle } from '../lib/petals';
   import { OPEN_INVITATION_EVENT } from '../lib/events';
 
   const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
   const PETAL_COUNT = 28;
+  const FLECK_COUNT = 22;
   const ROSE_TOKEN_NAMES = ['--c-rose-100', '--c-rose-200', '--c-rose-300', '--c-rose-400'];
+  const CHAMPAGNE_TOKEN_NAMES = ['--c-champagne-300', '--c-champagne-500', '--c-champagne-700'];
 
   function initPetalFall(): void {
     const containerEl = document.querySelector<HTMLDivElement>('[data-testid="petal-fall"]');
@@ -66,21 +102,21 @@
     // narrowing doesn't flow into nested function bodies.
     const container: HTMLDivElement = containerEl;
 
-    function paletteFromTokens(): string[] {
+    function paletteFromTokenNames(tokenNames: string[]): string[] {
       const styles = getComputedStyle(document.documentElement);
-      return ROSE_TOKEN_NAMES.map((name) => styles.getPropertyValue(name).trim()).filter(Boolean);
+      return tokenNames.map((name) => styles.getPropertyValue(name).trim()).filter(Boolean);
     }
 
-    function createPetalElement(petal: Petal): HTMLSpanElement {
+    function createParticleElement(particle: Particle, className: string): HTMLSpanElement {
       const span = document.createElement('span');
-      span.className = 'petal-fall__petal';
-      span.style.setProperty('--petal-x', `${petal.xPct}%`);
-      span.style.setProperty('--petal-size', `${petal.sizePx}px`);
-      span.style.setProperty('--petal-color', petal.color);
-      span.style.setProperty('--petal-delay', `${petal.delayMs}ms`);
-      span.style.setProperty('--petal-duration', `${petal.durationMs}ms`);
-      span.style.setProperty('--petal-sway', `${petal.swayPx}px`);
-      span.style.setProperty('--petal-rotate', `${petal.rotateDeg}deg`);
+      span.className = className;
+      span.style.setProperty('--petal-x', `${particle.xPct}%`);
+      span.style.setProperty('--petal-size', `${particle.sizePx}px`);
+      span.style.setProperty('--petal-color', particle.color);
+      span.style.setProperty('--petal-delay', `${particle.delayMs}ms`);
+      span.style.setProperty('--petal-duration', `${particle.durationMs}ms`);
+      span.style.setProperty('--petal-sway', `${particle.swayPx}px`);
+      span.style.setProperty('--petal-rotate', `${particle.rotateDeg}deg`);
       return span;
     }
 
@@ -91,9 +127,16 @@
       }
       if (container.dataset.petals === 'fired') return;
 
-      const petals = createPetals({ count: PETAL_COUNT, palette: paletteFromTokens() });
+      const petals = createPetals({ count: PETAL_COUNT, palette: paletteFromTokenNames(ROSE_TOKEN_NAMES) });
+      const flecks = createFlecks({
+        count: FLECK_COUNT,
+        palette: paletteFromTokenNames(CHAMPAGNE_TOKEN_NAMES),
+      });
       for (const petal of petals) {
-        container.appendChild(createPetalElement(petal));
+        container.appendChild(createParticleElement(petal, 'petal-fall__petal'));
+      }
+      for (const fleck of flecks) {
+        container.appendChild(createParticleElement(fleck, 'petal-fall__fleck'));
       }
 
       container.dataset.petals = 'fired';
@@ -101,7 +144,7 @@
 
       window.setTimeout(() => {
         container.replaceChildren();
-      }, showerDurationMs(petals));
+      }, showerDurationMs([...petals, ...flecks]));
     }
 
     // `once` is the primary one-shot guard; `fire` itself re-checks so a manually re-dispatched

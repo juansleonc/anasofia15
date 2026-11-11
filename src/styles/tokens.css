@@ -21,10 +21,38 @@
   --c-white: #ffffff;
   --c-error: #a3324a;
   --c-success: #3f6b47;
+  --c-champagne-100: #fbf3e4;
+  --c-champagne-200: #f2e0c2;
+  --c-champagne-300: #e6c99a;
+  --c-champagne-500: #cda869;
+  --c-champagne-700: #a07e46;
+  --c-rosegold-200: #f3d3c8;
+  --c-rosegold-400: #dba592;
+  --c-wine-500: #9a4462;
+  --c-wine-700: #6e2440;
+  --c-wine-900: #4a1525;
+  --c-champagne-800: #7a5c2e;
 
   /* Composite surfaces */
   --gradient-rose: linear-gradient(135deg, #f3c6d0 0%, #e8a3b4 45%, #b5617a 100%);
   --gradient-button: linear-gradient(135deg, #b5617a 0%, #9e4a63 100%);
+  /* Open-invitation button fill: rose at the top deepening to wine. Gold stays on the rim and
+     bevel only, so white label text clears 4.5:1 on every stop (proved in palette.test.ts). */
+  --gradient-button-wine-rose: linear-gradient(
+    180deg,
+    var(--c-rose-700) 0%,
+    var(--c-wine-500) 45%,
+    var(--c-wine-700) 100%
+  );
+  --shadow-button-wine: 0 14px 30px -12px color-mix(in srgb, var(--c-wine-700) 55%, transparent);
+  /* Foil sheen laid over the button fill; white label text still stays >= 5.0:1 on every stop
+     under it (proved in palette.test.ts). */
+  --button-sheen-alpha: 6%;
+  --gradient-button-sheen: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--c-white) var(--button-sheen-alpha), transparent) 0%,
+    transparent 52%
+  );
   --card-bg: rgba(255, 255, 255, 0.78);
   --card-border: 1px solid rgba(158, 74, 99, 0.18);
   --card-shadow: 0 18px 40px -24px rgba(158, 74, 99, 0.35);
@@ -51,6 +79,7 @@
 
 body {
   position: relative;
+  margin: 0;
   background-color: var(--c-bg);
   color: var(--c-ink);
   font-family: var(--font-body);

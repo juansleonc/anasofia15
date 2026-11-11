@@ -32,6 +32,15 @@ test.describe('design tokens + fonts', () => {
         white: read('--c-white'),
         error: read('--c-error'),
         success: read('--c-success'),
+        champagne100: read('--c-champagne-100'),
+        champagne200: read('--c-champagne-200'),
+        champagne300: read('--c-champagne-300'),
+        champagne500: read('--c-champagne-500'),
+        champagne700: read('--c-champagne-700'),
+        rosegold200: read('--c-rosegold-200'),
+        rosegold400: read('--c-rosegold-400'),
+        wine500: read('--c-wine-500'),
+        wine700: read('--c-wine-700'),
       };
     });
 
@@ -51,6 +60,15 @@ test.describe('design tokens + fonts', () => {
     expect(tokens.white).toBe('#fff');
     expect(tokens.error).toBe('#a3324a');
     expect(tokens.success).toBe('#3f6b47');
+    expect(tokens.champagne100).toBe('#fbf3e4');
+    expect(tokens.champagne200).toBe('#f2e0c2');
+    expect(tokens.champagne300).toBe('#e6c99a');
+    expect(tokens.champagne500).toBe('#cda869');
+    expect(tokens.champagne700).toBe('#a07e46');
+    expect(tokens.rosegold200).toBe('#f3d3c8');
+    expect(tokens.rosegold400).toBe('#dba592');
+    expect(tokens.wine500).toBe('#9a4462');
+    expect(tokens.wine700).toBe('#6e2440');
   });
 
   test('the page body background is the rose paper token', async ({ page }) => {

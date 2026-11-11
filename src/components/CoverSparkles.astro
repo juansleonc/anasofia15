@@ -1,0 +1,179 @@
+---
+// Idle decorative sparkle/bokeh layer scattered across the whole cover (behind the text, including
+// the band behind the title/button — see src/lib/sparkles.ts for why); `inset: 0` bounds it to
+// the cover's own box (no frame to clip to anymore). SSR'd once from the seeded
+// `scatterSparkles` layout so there is no client script: every sparkle is a plain `<span>` with its
+// position/size/timing baked in as `%`/px/ms custom properties, and a CSS keyframe reads them to
+// twinkle `opacity` only (compositor-only, no layout/paint cost beyond the first frame).
+// `animation: none` under reduced motion freezes every sparkle in place.
+//
+// Every kind here is soft and round, never a hard-edged chip — `glow` is a small radial-gradient
+// light dot, `star` is the 4-point sparkle with a blurred radial-gradient halo behind it (no SVG
+// filters), and `bokeh` is a large, very faint out-of-focus disc. See src/lib/sparkles.ts for the
+// Poisson-like placement (denser near the arch/name, sparse at the bottom).
+import { scatterSparkles } from '../lib/sparkles';
+
+const SPARKLE_COUNT = 14;
+const SPARKLE_SEED = 2026;
+
+const sparkles = scatterSparkles({ count: SPARKLE_COUNT, seed: SPARKLE_SEED });
+
+// Cycles each kind across a couple of warm-light tones so the scatter reads as varied glow rather
+// than one flat color repeated. Glow's core alternates bright white and champagne-100 — "a premium
+// magic" needs a hint of white heat, not just gold.
+const GLOW_TONES = ['--c-white', '--c-champagne-100'];
+const STAR_HALO_TONES = ['--c-champagne-200', '--c-champagne-100'];
+const BOKEH_TONES = ['--c-champagne-100', '--c-champagne-200'];
+
+// Half of the glow dots free up a running-animation slot for the drift layer (see
+// lib/sparkles.ts `driftingSparkles`) without losing any particle — they just stop twinkling and
+// sit as a calm, static point of light instead. Counted per-glow (not per overall index) so
+// exactly half of the glow kind turns static regardless of its position among the stars/bokeh.
+let glowIndex = 0;
+---
+
+<div class="cover-sparkles" data-testid="cover-sparkles" aria-hidden="true">
+  {
+    sparkles.map((sparkle, index) => {
+      const vars =
+        `--sparkle-x:${sparkle.xPct}%;` +
+        `--sparkle-y:${sparkle.yPct}%;` +
+        `--sparkle-size:${sparkle.sizePx}px;` +
+        `--sparkle-rotate:${sparkle.rotateDeg}deg;` +
+        `--sparkle-delay:${sparkle.delayMs}ms;` +
+        `--sparkle-duration:${sparkle.durationMs}ms;`;
+
+      if (sparkle.kind === 'star') {
+        const tone = STAR_HALO_TONES[index % STAR_HALO_TONES.length];
+        return (
+          <span
+            class="cover-sparkles__item cover-sparkles__star"
+            data-sparkle="star"
+            style={`${vars}--sparkle-tone:var(${tone});`}
+          >
+            <span class="cover-sparkles__halo" />
+            <svg viewBox="0 0 24 24" width="100%" height="100%">
+              <use href="#sparkle-star" />
+            </svg>
+          </span>
+        );
+      }
+
+      if (sparkle.kind === 'bokeh') {
+        const tone = BOKEH_TONES[index % BOKEH_TONES.length];
+        return (
+          <span
+            class="cover-sparkles__item cover-sparkles__bokeh"
+            data-sparkle="bokeh"
+            style={`${vars}--sparkle-tone:var(${tone});`}
+          />
+        );
+      }
+
+      const tone = GLOW_TONES[index % GLOW_TONES.length];
+      const isStatic = glowIndex % 2 === 1;
+      glowIndex++;
+      return (
+        <span
+          class="cover-sparkles__item cover-sparkles__glow"
+          data-sparkle="glow"
+          data-sparkle-static={isStatic ? '' : undefined}
+          style={`${vars}--sparkle-tone:var(${tone});`}
+        />
+      );
+    })
+  }
+</div>
+
+<style>
+  .cover-sparkles {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .cover-sparkles__item {
+    position: absolute;
+    left: var(--sparkle-x);
+    top: var(--sparkle-y);
+    width: var(--sparkle-size);
+    height: var(--sparkle-size);
+    animation-name: cover-sparkle-twinkle;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-delay: var(--sparkle-delay);
+    animation-duration: var(--sparkle-duration);
+  }
+
+  /* Soft round light particle: a bright core (white or champagne-100) fading straight to
+     transparent — no flat fill, no edge, so it reads as a mote of light rather than a chip. */
+  .cover-sparkles__glow {
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--sparkle-tone) 0%, transparent 72%);
+  }
+
+  .cover-sparkles__star {
+    transform: rotate(var(--sparkle-rotate));
+  }
+
+  .cover-sparkles__star svg {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Blurred halo behind the star — a soft radial glow, not a CSS/SVG filter blur, so it stays
+     compositor-cheap. Sized well past the star itself so it reads as diffuse light around a
+     point, not a ring. */
+  .cover-sparkles__halo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(var(--sparkle-size) * 2.8);
+    height: calc(var(--sparkle-size) * 2.8);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--sparkle-tone) 70%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  /* Half the glow dots stay static (a calm point of light, not a blinking one) to free a
+     running-animation slot for the garland-to-centre drift layer. */
+  .cover-sparkles__glow[data-sparkle-static] {
+    animation: none;
+  }
+
+  /* Out-of-focus light rather than a hard shape: a soft radial disc, no stroke/edge. Static, so
+     it reads as ambient light and stays out of the running-animation budget. */
+  .cover-sparkles__bokeh {
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--sparkle-tone) 45%, transparent) 0%,
+      transparent 72%
+    );
+    animation: none;
+  }
+
+  /* Gentle twinkle: opacity only (no scale/transform) — calmer than a blinking shape. */
+  @keyframes cover-sparkle-twinkle {
+    0%,
+    100% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cover-sparkles__item {
+      animation: none;
+    }
+  }
+</style>

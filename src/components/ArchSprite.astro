@@ -1,0 +1,628 @@
+---
+// Single hidden sprite sheet for every balloon/flower/leaf/sparkle shape the cover's arch draws:
+// one <svg> holding the shared gradient <defs> plus the reusable <symbol> shapes that
+// `BalloonArch.astro` references by id via <use>. Defining each shape exactly once here — the
+// same pattern as `RoseSprite.astro` — is what keeps "no duplicate element ids" true no matter
+// how many balloons/flowers/leaves a layout places.
+//
+// Gradient stop-colors read from theme tokens (`style="stop-color: var(--c-…)"`) rather than raw
+// hex, so the whole sprite re-themes from the palette alone. No SVG filters
+// (feGaussianBlur/feTurbulence): those rasterize per visible instance on iPhone WebKit during
+// scroll/animation — the glossy-balloon read comes entirely from layered radial gradients plus a
+// shared highlight shape instead.
+---
+
+<svg
+  class="arch-sprite"
+  data-testid="arch-sprite"
+  aria-hidden="true"
+  focusable="false"
+  style="position:absolute;width:0;height:0;overflow:hidden"
+>
+  <defs>
+    {/* Balloon body gradients: every tone is >= 6 stops — hot core, light, mid body, body,
+         terminator (darkest, ~85-90%) then a lighter rim stop at 100% — the terminator/rim pair
+         is what reads as a lit sphere instead of a flat shaded disc. Chrome tones (rose-gold,
+         champagne) keep a sharp, late terminator; their satin siblings widen the stop spacing and
+         soften the terminator (no hard rose-600/champagne-700 edge) for a duller, non-mirror finish. */}
+    <radialGradient id="balloon-pink-gradient" cx="30%" cy="26%" r="80%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="18%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="40%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="62%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="86%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-300)" />
+    </radialGradient>
+    <radialGradient id="balloon-rosegold-gradient" cx="30%" cy="26%" r="80%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="22%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="40%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="58%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="85%" style="stop-color: var(--c-rose-600)" />
+      <stop offset="100%" style="stop-color: var(--c-rosegold-400)" />
+    </radialGradient>
+    <radialGradient id="balloon-rosegold-satin-gradient" cx="30%" cy="26%" r="80%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="28%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="50%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="72%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="90%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rosegold-400)" />
+    </radialGradient>
+    {/* Metallic gold: a hot champagne-100 core, a fast fall through the champagne scale and a
+         deep champagne-800 terminator just inside the edge, then a lighter rim. The steep, late
+         dark band is what reads as polished foil rather than matte beige. */}
+    <radialGradient id="balloon-champagne-gradient" cx="32%" cy="26%" r="78%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="12%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="26%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="42%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="58%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="75%" style="stop-color: var(--c-champagne-700)" />
+      <stop offset="89%" style="stop-color: var(--c-champagne-800)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
+    </radialGradient>
+    {/* Gold only: a wide, soft "horizon" band of reflected light across the lower body,
+         feathered to nothing on every side. */}
+    <radialGradient id="balloon-champagne-horizon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.45" />
+      <stop offset="50%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.22" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-200)" stop-opacity="0" />
+    </radialGradient>
+    {/* Pearl blush: a low-contrast champagne-to-rose-gold ramp (no gold terminator), so it
+         sits with the rose-gold pearls rather than reading as a second gold. */}
+    <radialGradient id="balloon-champagne-satin-gradient" cx="30%" cy="26%" r="80%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="25%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="50%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="72%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="90%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rosegold-200)" />
+    </radialGradient>
+
+    {/* Shared across every tone: a soft contact shadow dropped below-right of the body (depth
+         where balloons overlap each other) and a warm bottom-up environment tint (floor light
+         bouncing into the lower half). One def each keeps the gradient budget low; neither reads
+         as tone-specific. */}
+    <radialGradient id="balloon-contact-shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color: var(--c-rose-700)" stop-opacity="0.28" />
+      <stop offset="100%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="balloon-env-tint" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-200)" stop-opacity="0.35" />
+      <stop offset="45%" style="stop-color: var(--c-champagne-200)" stop-opacity="0" />
+    </linearGradient>
+
+    {/* Knots are tone-matched (a darker shade of the balloon's own body colour) instead of every
+         tone sharing one wine-coloured triangle; chrome and satin siblings of a tone share a def. */}
+    <linearGradient id="balloon-pink-knot" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-rose-600)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-700)" />
+    </linearGradient>
+    <linearGradient id="balloon-rosegold-knot" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-600)" />
+    </linearGradient>
+    <linearGradient id="balloon-champagne-knot" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-700)" />
+    </linearGradient>
+
+    {/* Pearl finish (rose-gold and pearl-blush balloons): a nacre sheen laid over the body,
+         champagne at the upper left melting into rose and then into nothing. */}
+    <linearGradient id="balloon-nacre" x1="10%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.45" />
+      <stop offset="45%" style="stop-color: var(--c-rose-200)" stop-opacity="0.25" />
+      <stop offset="100%" style="stop-color: var(--c-rose-200)" stop-opacity="0" />
+    </linearGradient>
+
+    {/* Shared lighting for every balloon (the `balloon-gloss` symbol below): a softbox
+         "window" reflection fading from 70% white, a tight specular hot spot, a champagne
+         rim-light crescent (light bounced in from the neighbouring balloons) and an
+         ambient-occlusion crescent along the bottom that gives the body weight. */}
+    <linearGradient id="balloon-gloss-window" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="0.7" />
+      <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0" />
+    </linearGradient>
+    <radialGradient id="balloon-gloss-spec" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color: var(--c-white)" stop-opacity="1" />
+      <stop offset="45%" style="stop-color: var(--c-white)" stop-opacity="0.5" />
+      <stop offset="100%" style="stop-color: var(--c-white)" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="balloon-gloss-rim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
+      <stop offset="45%" style="stop-color: var(--c-champagne-100)" stop-opacity="0.45" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-100)" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="balloon-gloss-ao" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color: var(--c-ink)" stop-opacity="0" />
+      <stop offset="70%" style="stop-color: var(--c-ink)" stop-opacity="0" />
+      <stop offset="100%" style="stop-color: var(--c-ink)" stop-opacity="0.3" />
+    </linearGradient>
+    {/* Shared by every flower: a soft rose shadow offset down-right under the bloom, so it sits
+         pressed into the balloons around it instead of floating on top. It fades to nothing well
+         before the bloom's own edge, so there is no ring to see — depth comes from this plus real
+         balloon overlap, never from paint beyond the petals. */}
+    <radialGradient id="flower-seat-shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color: var(--c-rose-700)" stop-opacity="0.26" />
+      <stop offset="55%" style="stop-color: var(--c-rose-700)" stop-opacity="0.12" />
+      <stop offset="88%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
+      <stop offset="100%" style="stop-color: var(--c-rose-700)" stop-opacity="0" />
+    </radialGradient>
+    {/* Flower rings: one gradient per ring, `objectBoundingBox` units (the default — no
+         `gradientUnits` attr) so each petal is shaded within its own bounding box, computed before
+         its `transform="rotate(… c c)"`. Outer/mid petals point tip-up, so a high `cy` puts the
+         lightest stop on the rolled lip and the darkest at the base. The rose `-inner` gradients
+         paint the cup crescents instead: centered in the crescent's box, dark at the middle and
+         light at the rim, so every nested petal shows a lit lip falling into shadow toward the
+         next one — the depth between layers that makes the cup read. */}
+    <radialGradient id="rose-pink-outer" cx="34%" cy="8%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="30%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="65%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+    </radialGradient>
+    <radialGradient id="rose-pink-mid" cx="34%" cy="8%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="35%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="70%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-600)" />
+    </radialGradient>
+    <radialGradient id="rose-pink-inner" cx="34%" cy="8%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="45%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="80%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-700)" />
+    </radialGradient>
+    <radialGradient id="rose-pink-heart" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" style="stop-color: var(--c-rose-700)" />
+      <stop offset="55%" style="stop-color: var(--c-rose-600)" />
+      <stop offset="85%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-200)" />
+    </radialGradient>
+    <radialGradient id="rose-cream-outer" cx="34%" cy="8%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="25%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="55%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-300)" />
+    </radialGradient>
+    <radialGradient id="rose-cream-mid" cx="34%" cy="8%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="40%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="75%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="100%" style="stop-color: var(--c-rosegold-400)" />
+    </radialGradient>
+    <radialGradient id="rose-cream-inner" cx="34%" cy="8%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="45%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="80%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
+    </radialGradient>
+    <radialGradient id="rose-cream-heart" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="55%" style="stop-color: var(--c-rosegold-400)" />
+      <stop offset="85%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-200)" />
+    </radialGradient>
+    <radialGradient id="peony-blush-outer" cx="38%" cy="6%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="40%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="78%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+    </radialGradient>
+    <radialGradient id="peony-blush-mid" cx="38%" cy="6%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="45%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-400)" />
+    </radialGradient>
+    <radialGradient id="peony-blush-inner" cx="38%" cy="6%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-rose-100)" />
+      <stop offset="50%" style="stop-color: var(--c-rose-300)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-600)" />
+    </radialGradient>
+    <radialGradient id="peony-ivory-outer" cx="38%" cy="6%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="40%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="78%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-300)" />
+    </radialGradient>
+    <radialGradient id="peony-ivory-mid" cx="38%" cy="6%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="45%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="100%" style="stop-color: var(--c-rosegold-400)" />
+    </radialGradient>
+    <radialGradient id="peony-ivory-inner" cx="38%" cy="6%" r="105%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="55%" style="stop-color: var(--c-rosegold-200)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-300)" />
+    </radialGradient>
+    {/* `blossom-petal`: radial from the petal's base (near the flower centre) outward to its
+         tip — darker rose-300 base, rose-100 mid, a white-alpha rim at the tip — shared by all 5
+         petals via `objectBoundingBox` units (each rotated copy has the same local bounding box). */}
+    <radialGradient id="blossom-petal" cx="50%" cy="92%" r="95%">
+      <stop offset="0%" style="stop-color: var(--c-rose-400)" />
+      <stop offset="55%" style="stop-color: var(--c-rose-200)" />
+      <stop offset="100%" style="stop-color: var(--c-rose-100)" />
+    </radialGradient>
+    <radialGradient id="blossom-center" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-200)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-500)" />
+    </radialGradient>
+    {/* Natural foliage: eucalyptus and olive leaves read as lit round/lanceolate foliage (a radial
+         or linear tint from a lightened champagne core out to the deep leaf tone) rather than one
+         flat silhouette colour. Gold leaves get their own diagonal foil-sheen gradient. */}
+    <radialGradient id="leaf-eucalyptus-gradient" cx="35%" cy="28%" r="78%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="45%" style="stop-color: var(--c-leaf)" />
+      <stop offset="100%" style="stop-color: var(--c-leaf-deep)" />
+    </radialGradient>
+    <linearGradient id="leaf-olive-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color: var(--c-leaf-deep)" />
+      <stop offset="65%" style="stop-color: var(--c-leaf)" />
+      <stop offset="100%" style="stop-color: var(--c-leaf)" />
+    </linearGradient>
+    <linearGradient id="leaf-gold-metal" x1="0%" y1="10%" x2="100%" y2="90%">
+      <stop offset="0%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="30%" style="stop-color: var(--c-champagne-100)" />
+      <stop offset="52%" style="stop-color: var(--c-champagne-300)" />
+      <stop offset="78%" style="stop-color: var(--c-champagne-500)" />
+      <stop offset="100%" style="stop-color: var(--c-champagne-800)" />
+    </linearGradient>
+  </defs>
+
+  <symbol id="balloon-gloss" viewBox="0 0 100 110">
+    <path d="M18 36C17 30 17 26 20 22C26 12 37 7 49 7C45 11 41 17 39 25C32 26 25 30 18 36Z" fill="url(#balloon-gloss-window)" />
+    <ellipse cx="29" cy="19" rx="5" ry="3.6" fill="url(#balloon-gloss-spec)" transform="rotate(-30 29 19)" style="opacity: var(--balloon-spec, 1)" />
+    <path d="M91 40C92 60 83 78 64 89C77 77 85 60 86 42C87.5 41 89.5 40.5 91 40Z" fill="url(#balloon-gloss-rim)" />
+    <path d="M14 62C22 80 36 90 50 91.5C64 90 78 80 86 62C78 78 64 87 50 87.5C36 87 22 78 14 62Z" fill="url(#balloon-gloss-ao)" />
+  </symbol>
+
+  <symbol id="balloon-pink" viewBox="0 0 100 110">
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-pink-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
+    <path
+      d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
+      fill="url(#balloon-pink-knot)"
+    />
+    <ellipse cx="48.4" cy="93.8" rx="0.9" ry="0.5" fill="var(--c-white)" fill-opacity="0.5" transform="rotate(-20 48.4 93.8)" />
+    <use href="#balloon-gloss" style="--balloon-spec: 0.8" />
+  </symbol>
+
+  <symbol id="balloon-rosegold" viewBox="0 0 100 110">
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-rosegold-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-nacre)" />
+    <path
+      d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
+      fill="url(#balloon-rosegold-knot)"
+    />
+    <ellipse cx="48.4" cy="93.8" rx="0.9" ry="0.5" fill="var(--c-white)" fill-opacity="0.5" transform="rotate(-20 48.4 93.8)" />
+    <use href="#balloon-gloss" style="--balloon-spec: 0.5" />
+  </symbol>
+
+  <symbol id="balloon-rosegold-satin" viewBox="0 0 100 110">
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-rosegold-satin-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-nacre)" />
+    <path
+      d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
+      fill="url(#balloon-rosegold-knot)"
+    />
+    <ellipse cx="48.4" cy="93.8" rx="0.9" ry="0.5" fill="var(--c-white)" fill-opacity="0.5" transform="rotate(-20 48.4 93.8)" />
+    <use href="#balloon-gloss" style="--balloon-spec: 0.5" />
+  </symbol>
+
+  <symbol id="balloon-champagne" viewBox="0 0 100 110">
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-champagne-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
+    <path d="M8 56C30 48 70 48 92 56C90 68 84 78 78 84C64 76 36 76 22 84C16 78 10 68 8 56Z" fill="url(#balloon-champagne-horizon)" />
+    <path
+      d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
+      fill="url(#balloon-champagne-knot)"
+    />
+    <ellipse cx="48.4" cy="93.8" rx="0.9" ry="0.5" fill="var(--c-white)" fill-opacity="0.5" transform="rotate(-20 48.4 93.8)" />
+    <use href="#balloon-gloss" />
+  </symbol>
+
+  <symbol id="balloon-champagne-satin" viewBox="0 0 100 110">
+    <ellipse cx="58" cy="92" rx="20" ry="7" fill="url(#balloon-contact-shadow)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-champagne-satin-gradient)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-env-tint)" />
+    <path d="M50 2C74.3 2 94 20.6 94 44C94 64.5 79.5 83.5 56.5 92.4C53 93.6 47 93.6 43.5 92.4C20.5 83.5 6 64.5 6 44C6 20.6 25.7 2 50 2Z" fill="url(#balloon-nacre)" />
+    <path
+      d="M50 92.8C52.6 93 53.75 95.2 52.6 97.3C51.7 99 48.3 99 47.4 97.3C46.25 95.2 47.4 93 50 92.8Z"
+      fill="url(#balloon-champagne-knot)"
+    />
+    <ellipse cx="48.4" cy="93.8" rx="0.9" ry="0.5" fill="var(--c-white)" fill-opacity="0.5" transform="rotate(-20 48.4 93.8)" />
+    <use href="#balloon-gloss" style="--balloon-spec: 0.5" />
+  </symbol>
+
+  {/* Roses: open garden roses. Three cupped rings of shell petals (6 outer, 5 mid, 4 inner)
+       share a base at the centre, so each ring's lips frame the next; a spiral of nested
+       crescents and a small furled bud make the heart. There are no outline strokes: every
+       ring's gradient runs from a light lip to a darker base, focused off-centre so overlapping
+       petals separate by light and shade. Every outline is a smooth closed cubic spline
+       (absolute M/C/Z only). */}
+  <symbol id="rose-pink" viewBox="0 0 64 64">
+    <ellipse cx="33.5" cy="34.2" rx="25" ry="24" fill="url(#flower-seat-shadow)" />
+    <path d="M32 31C24.94 30 18.39 26 17.89 19C17.48 13 20.41 8 24.44 6.5C26.96 5.6 29.48 6.2 32 6C34.52 6.2 37.04 5.6 39.56 6.5C43.59 8 46.52 13 46.11 19C45.61 26 39.06 30 32 31Z" fill="url(#rose-pink-outer)" transform="rotate(0 32 32)" />
+    <path d="M32 31C23.92 30 16.41 26 15.83 19C15.37 13 18.72 8 23.34 6.5C26.23 5.6 29.11 6.2 32 6C34.89 6.2 37.78 5.6 40.66 6.5C45.28 8 48.63 13 48.17 19C47.59 26 40.09 30 32 31Z" fill="url(#rose-pink-outer)" transform="rotate(65 32 32)" />
+    <path d="M32 31C24.94 30 18.39 26 17.89 19C17.48 13 20.41 8 24.44 6.5C26.96 5.6 29.48 6.2 32 6C34.52 6.2 37.04 5.6 39.56 6.5C43.59 8 46.52 13 46.11 19C45.61 26 39.06 30 32 31Z" fill="url(#rose-pink-outer)" transform="rotate(116 32 32)" />
+    <path d="M32 31C23.92 30 16.41 26 15.83 19C15.37 13 18.72 8 23.34 6.5C26.23 5.6 29.11 6.2 32 6C34.89 6.2 37.78 5.6 40.66 6.5C45.28 8 48.63 13 48.17 19C47.59 26 40.09 30 32 31Z" fill="url(#rose-pink-outer)" transform="rotate(183 32 32)" />
+    <path d="M32 31C24.94 30 18.39 26 17.89 19C17.48 13 20.41 8 24.44 6.5C26.96 5.6 29.48 6.2 32 6C34.52 6.2 37.04 5.6 39.56 6.5C43.59 8 46.52 13 46.11 19C45.61 26 39.06 30 32 31Z" fill="url(#rose-pink-outer)" transform="rotate(234 32 32)" />
+    <path d="M32 31C23.92 30 16.41 26 15.83 19C15.37 13 18.72 8 23.34 6.5C26.23 5.6 29.11 6.2 32 6C34.89 6.2 37.78 5.6 40.66 6.5C45.28 8 48.63 13 48.17 19C47.59 26 40.09 30 32 31Z" fill="url(#rose-pink-outer)" transform="rotate(304 32 32)" />
+    <path d="M32 31.24C26.89 30.48 22.15 27.44 21.79 22.12C21.49 17.56 23.61 13.76 26.53 12.62C28.35 11.94 30.18 12.39 32 12.24C33.82 12.39 35.65 11.94 37.47 12.62C40.39 13.76 42.51 17.56 42.21 22.12C41.85 27.44 37.11 30.48 32 31.24Z" fill="url(#rose-pink-mid)" transform="rotate(36 32 32)" />
+    <path d="M32 31.24C26.15 30.48 20.71 27.44 20.3 22.12C19.96 17.56 22.39 13.76 25.73 12.62C27.82 11.94 29.91 12.39 32 12.24C34.09 12.39 36.18 11.94 38.27 12.62C41.61 13.76 44.04 17.56 43.7 22.12C43.29 27.44 37.85 30.48 32 31.24Z" fill="url(#rose-pink-mid)" transform="rotate(113 32 32)" />
+    <path d="M32 31.24C26.89 30.48 22.15 27.44 21.79 22.12C21.49 17.56 23.61 13.76 26.53 12.62C28.35 11.94 30.18 12.39 32 12.24C33.82 12.39 35.65 11.94 37.47 12.62C40.39 13.76 42.51 17.56 42.21 22.12C41.85 27.44 37.11 30.48 32 31.24Z" fill="url(#rose-pink-mid)" transform="rotate(176 32 32)" />
+    <path d="M32 31.24C26.15 30.48 20.71 27.44 20.3 22.12C19.96 17.56 22.39 13.76 25.73 12.62C27.82 11.94 29.91 12.39 32 12.24C34.09 12.39 36.18 11.94 38.27 12.62C41.61 13.76 44.04 17.56 43.7 22.12C43.29 27.44 37.85 30.48 32 31.24Z" fill="url(#rose-pink-mid)" transform="rotate(255 32 32)" />
+    <path d="M32 31.24C26.89 30.48 22.15 27.44 21.79 22.12C21.49 17.56 23.61 13.76 26.53 12.62C28.35 11.94 30.18 12.39 32 12.24C33.82 12.39 35.65 11.94 37.47 12.62C40.39 13.76 42.51 17.56 42.21 22.12C41.85 27.44 37.11 30.48 32 31.24Z" fill="url(#rose-pink-mid)" transform="rotate(318 32 32)" />
+    <path d="M32 31.45C28.3 30.9 24.87 28.7 24.61 24.85C24.4 21.55 25.93 18.8 28.04 17.98C29.36 17.48 30.68 17.81 32 17.7C33.32 17.81 34.64 17.48 35.96 17.98C38.07 18.8 39.6 21.55 39.39 24.85C39.13 28.7 35.7 30.9 32 31.45Z" fill="url(#rose-pink-inner)" transform="rotate(18 32 32)" />
+    <path d="M32 31.45C27.77 30.9 23.83 28.7 23.53 24.85C23.29 21.55 25.04 18.8 27.46 17.98C28.98 17.48 30.49 17.81 32 17.7C33.51 17.81 35.03 17.48 36.54 17.98C38.96 18.8 40.71 21.55 40.47 24.85C40.17 28.7 36.24 30.9 32 31.45Z" fill="url(#rose-pink-inner)" transform="rotate(113 32 32)" />
+    <path d="M32 31.45C28.3 30.9 24.87 28.7 24.61 24.85C24.4 21.55 25.93 18.8 28.04 17.98C29.36 17.48 30.68 17.81 32 17.7C33.32 17.81 34.64 17.48 35.96 17.98C38.07 18.8 39.6 21.55 39.39 24.85C39.13 28.7 35.7 30.9 32 31.45Z" fill="url(#rose-pink-inner)" transform="rotate(194 32 32)" />
+    <path d="M32 31.45C27.77 30.9 23.83 28.7 23.53 24.85C23.29 21.55 25.04 18.8 27.46 17.98C28.98 17.48 30.49 17.81 32 17.7C33.51 17.81 35.03 17.48 36.54 17.98C38.96 18.8 40.71 21.55 40.47 24.85C40.17 28.7 36.24 30.9 32 31.45Z" fill="url(#rose-pink-inner)" transform="rotate(291 32 32)" />
+    <path d="M23.95 29.35C25.69 24.58 30.97 22.12 35.75 23.85C40.52 25.59 42.98 30.87 41.25 35.65C39.51 40.42 34.23 42.88 29.45 41.15C27.35 40.38 28.44 37.37 30.55 38.14C33.66 39.27 37.1 37.67 38.24 34.55C39.37 31.44 37.77 28 34.65 26.86C31.54 25.73 28.1 27.33 26.96 30.45C26.2 32.55 23.19 31.46 23.95 29.35Z" fill="url(#rose-pink-heart)" />
+    <path d="M38.27 34.76C37.07 38.05 33.69 40 30.25 39.39C26.81 38.78 24.3 35.79 24.3 32.3C24.3 28.81 26.81 25.82 30.25 25.21C32.18 24.87 32.67 27.63 30.74 27.97C28.63 28.34 27.1 30.16 27.1 32.3C27.1 34.44 28.63 36.26 30.74 36.63C32.84 37 34.9 35.81 35.63 33.8C36.31 31.96 38.94 32.92 38.27 34.76Z" fill="url(#rose-pink-heart)" />
+    <path d="M28.93 27.56C30.67 26.1 33.13 25.89 35.1 27.02C37.07 28.16 38.11 30.4 37.72 32.64C37.32 34.87 35.57 36.62 33.34 37.02C31.68 37.31 31.27 34.95 32.92 34.65C34.16 34.44 35.14 33.46 35.35 32.22C35.57 30.98 34.99 29.73 33.9 29.1C32.81 28.47 31.44 28.59 30.47 29.4C29.18 30.48 27.64 28.64 28.93 27.56Z" fill="url(#rose-pink-heart)" />
+    <path d="M33.7 35.49C32.46 36.21 30.91 36.16 29.71 35.37C28.51 34.59 27.86 33.19 28.03 31.76C28.19 30.33 29.15 29.12 30.5 28.63C31.82 28.15 32.5 30.03 31.18 30.51C30.54 30.74 30.09 31.31 30.01 31.99C29.93 32.67 30.24 33.33 30.81 33.7C31.38 34.08 32.11 34.1 32.7 33.76C33.91 33.06 34.91 34.79 33.7 35.49Z" fill="url(#rose-pink-heart)" />
+    <path d="M32 29.6C33.16 29.6 34.16 30.44 34.36 31.58C34.57 32.73 33.92 33.86 32.82 34.26C31.83 34.61 31.32 33.2 32.31 32.85C32.72 32.7 32.96 32.27 32.89 31.84C32.81 31.41 32.44 31.1 32 31.1C30.95 31.1 30.95 29.6 32 29.6Z" fill="url(#rose-pink-heart)" />
+    <path d="M32 30.4C33.4 30.4 34 31.6 33.5 32.6C33 33.6 31.5 33.7 30.9 32.8C30.5 32.1 31 31.4 31.8 31.6C32.4 31.8 32.5 32.4 32.1 32.6Z" fill="var(--c-rose-700)" fill-opacity="0.7" />
+  </symbol>
+
+  <symbol id="rose-cream" viewBox="0 0 64 64">
+    <ellipse cx="33.5" cy="34.2" rx="25" ry="24" fill="url(#flower-seat-shadow)" />
+    <path d="M32 30.95C24.38 29.9 17.3 25.7 16.76 18.35C16.32 12.05 19.48 6.8 23.84 5.22C26.56 4.28 29.28 4.91 32 4.7C34.72 4.91 37.44 4.28 40.16 5.22C44.52 6.8 47.68 12.05 47.24 18.35C46.7 25.7 39.62 29.9 32 30.95Z" fill="url(#rose-cream-outer)" transform="rotate(15 32 32)" />
+    <path d="M32 30.95C23.27 29.9 15.16 25.7 14.54 18.35C14.04 12.05 17.65 6.8 22.64 5.22C25.76 4.28 28.88 4.91 32 4.7C35.12 4.91 38.24 4.28 41.36 5.22C46.35 6.8 49.96 12.05 49.46 18.35C48.84 25.7 40.73 29.9 32 30.95Z" fill="url(#rose-cream-outer)" transform="rotate(80 32 32)" />
+    <path d="M32 30.95C24.38 29.9 17.3 25.7 16.76 18.35C16.32 12.05 19.48 6.8 23.84 5.22C26.56 4.28 29.28 4.91 32 4.7C34.72 4.91 37.44 4.28 40.16 5.22C44.52 6.8 47.68 12.05 47.24 18.35C46.7 25.7 39.62 29.9 32 30.95Z" fill="url(#rose-cream-outer)" transform="rotate(131 32 32)" />
+    <path d="M32 30.95C23.27 29.9 15.16 25.7 14.54 18.35C14.04 12.05 17.65 6.8 22.64 5.22C25.76 4.28 28.88 4.91 32 4.7C35.12 4.91 38.24 4.28 41.36 5.22C46.35 6.8 49.96 12.05 49.46 18.35C48.84 25.7 40.73 29.9 32 30.95Z" fill="url(#rose-cream-outer)" transform="rotate(198 32 32)" />
+    <path d="M32 30.95C24.38 29.9 17.3 25.7 16.76 18.35C16.32 12.05 19.48 6.8 23.84 5.22C26.56 4.28 29.28 4.91 32 4.7C34.72 4.91 37.44 4.28 40.16 5.22C44.52 6.8 47.68 12.05 47.24 18.35C46.7 25.7 39.62 29.9 32 30.95Z" fill="url(#rose-cream-outer)" transform="rotate(249 32 32)" />
+    <path d="M32 30.95C23.27 29.9 15.16 25.7 14.54 18.35C14.04 12.05 17.65 6.8 22.64 5.22C25.76 4.28 28.88 4.91 32 4.7C35.12 4.91 38.24 4.28 41.36 5.22C46.35 6.8 49.96 12.05 49.46 18.35C48.84 25.7 40.73 29.9 32 30.95Z" fill="url(#rose-cream-outer)" transform="rotate(319 32 32)" />
+    <path d="M32 31.2C26.41 30.4 21.22 27.2 20.82 21.6C20.5 16.8 22.81 12.8 26.01 11.6C28.01 10.88 30 11.36 32 11.2C34 11.36 35.99 10.88 37.99 11.6C41.19 12.8 43.5 16.8 43.18 21.6C42.78 27.2 37.59 30.4 32 31.2Z" fill="url(#rose-cream-mid)" transform="rotate(51 32 32)" />
+    <path d="M32 31.2C25.59 30.4 19.64 27.2 19.19 21.6C18.82 16.8 21.48 12.8 25.14 11.6C27.42 10.88 29.71 11.36 32 11.2C34.29 11.36 36.58 10.88 38.86 11.6C42.52 12.8 45.18 16.8 44.81 21.6C44.36 27.2 38.41 30.4 32 31.2Z" fill="url(#rose-cream-mid)" transform="rotate(128 32 32)" />
+    <path d="M32 31.2C26.41 30.4 21.22 27.2 20.82 21.6C20.5 16.8 22.81 12.8 26.01 11.6C28.01 10.88 30 11.36 32 11.2C34 11.36 35.99 10.88 37.99 11.6C41.19 12.8 43.5 16.8 43.18 21.6C42.78 27.2 37.59 30.4 32 31.2Z" fill="url(#rose-cream-mid)" transform="rotate(191 32 32)" />
+    <path d="M32 31.2C25.59 30.4 19.64 27.2 19.19 21.6C18.82 16.8 21.48 12.8 25.14 11.6C27.42 10.88 29.71 11.36 32 11.2C34.29 11.36 36.58 10.88 38.86 11.6C42.52 12.8 45.18 16.8 44.81 21.6C44.36 27.2 38.41 30.4 32 31.2Z" fill="url(#rose-cream-mid)" transform="rotate(270 32 32)" />
+    <path d="M32 31.2C26.41 30.4 21.22 27.2 20.82 21.6C20.5 16.8 22.81 12.8 26.01 11.6C28.01 10.88 30 11.36 32 11.2C34 11.36 35.99 10.88 37.99 11.6C41.19 12.8 43.5 16.8 43.18 21.6C42.78 27.2 37.59 30.4 32 31.2Z" fill="url(#rose-cream-mid)" transform="rotate(333 32 32)" />
+    <path d="M32 31.42C28.02 30.84 24.33 28.52 24.05 24.46C23.82 20.98 25.47 18.08 27.74 17.21C29.16 16.69 30.58 17.04 32 16.92C33.42 17.04 34.84 16.69 36.26 17.21C38.53 18.08 40.18 20.98 39.95 24.46C39.67 28.52 35.98 30.84 32 31.42Z" fill="url(#rose-cream-inner)" transform="rotate(33 32 32)" />
+    <path d="M32 31.42C27.44 30.84 23.21 28.52 22.89 24.46C22.63 20.98 24.52 18.08 27.12 17.21C28.75 16.69 30.37 17.04 32 16.92C33.63 17.04 35.25 16.69 36.88 17.21C39.48 18.08 41.37 20.98 41.11 24.46C40.79 28.52 36.56 30.84 32 31.42Z" fill="url(#rose-cream-inner)" transform="rotate(128 32 32)" />
+    <path d="M32 31.42C28.02 30.84 24.33 28.52 24.05 24.46C23.82 20.98 25.47 18.08 27.74 17.21C29.16 16.69 30.58 17.04 32 16.92C33.42 17.04 34.84 16.69 36.26 17.21C38.53 18.08 40.18 20.98 39.95 24.46C39.67 28.52 35.98 30.84 32 31.42Z" fill="url(#rose-cream-inner)" transform="rotate(209 32 32)" />
+    <path d="M32 31.42C27.44 30.84 23.21 28.52 22.89 24.46C22.63 20.98 24.52 18.08 27.12 17.21C28.75 16.69 30.37 17.04 32 16.92C33.63 17.04 35.25 16.69 36.88 17.21C39.48 18.08 41.37 20.98 41.11 24.46C40.79 28.52 36.56 30.84 32 31.42Z" fill="url(#rose-cream-inner)" transform="rotate(306 32 32)" />
+    <path d="M25.06 27.22C27.98 23.06 33.71 22.05 37.88 24.96C42.04 27.88 43.05 33.61 40.14 37.78C37.22 41.94 31.49 42.95 27.32 40.04C25.49 38.75 27.32 36.13 29.16 37.41C31.87 39.32 35.61 38.66 37.51 35.94C39.42 33.23 38.76 29.49 36.04 27.59C33.33 25.68 29.59 26.34 27.69 29.06C26.4 30.89 23.78 29.06 25.06 27.22Z" fill="url(#rose-cream-heart)" />
+    <path d="M37.4 36.43C35.39 39.29 31.62 40.3 28.46 38.83C25.29 37.35 23.64 33.81 24.55 30.44C25.45 27.06 28.65 24.82 32.13 25.13C34.08 25.3 33.84 28.09 31.88 27.92C29.76 27.73 27.8 29.1 27.25 31.16C26.7 33.22 27.71 35.39 29.64 36.29C31.58 37.19 33.88 36.57 35.1 34.82C36.23 33.22 38.52 34.82 37.4 36.43Z" fill="url(#rose-cream-heart)" />
+    <path d="M30.12 26.81C32.18 25.85 34.61 26.28 36.22 27.88C37.82 29.49 38.25 31.92 37.29 33.98C36.33 36.04 34.19 37.28 31.93 37.08C30.26 36.93 30.46 34.54 32.14 34.69C33.39 34.8 34.59 34.11 35.12 32.97C35.65 31.82 35.41 30.47 34.52 29.58C33.63 28.69 32.28 28.45 31.13 28.98C29.61 29.69 28.6 27.52 30.12 26.81Z" fill="url(#rose-cream-heart)" />
+    <path d="M32.78 35.87C31.4 36.24 29.92 35.8 28.96 34.73C28.01 33.65 27.74 32.13 28.27 30.8C28.8 29.46 30.04 28.54 31.47 28.41C32.86 28.29 33.04 30.28 31.64 30.41C30.97 30.47 30.38 30.9 30.13 31.54C29.88 32.17 30 32.89 30.46 33.4C30.91 33.91 31.61 34.11 32.27 33.94C33.62 33.58 34.14 35.51 32.78 35.87Z" fill="url(#rose-cream-heart)" />
+    <path d="M32.62 29.68C33.75 29.98 34.49 31.05 34.39 32.21C34.29 33.37 33.37 34.29 32.21 34.39C31.16 34.48 31.03 32.99 32.08 32.9C32.51 32.86 32.86 32.51 32.9 32.08C32.93 31.64 32.65 31.24 32.23 31.13C31.22 30.86 31.61 29.41 32.62 29.68Z" fill="url(#rose-cream-heart)" />
+    <path d="M32 30.4C33.4 30.4 34 31.6 33.5 32.6C33 33.6 31.5 33.7 30.9 32.8C30.5 32.1 31 31.4 31.8 31.6C32.4 31.8 32.5 32.4 32.1 32.6Z" fill="var(--c-champagne-700)" fill-opacity="0.6" />
+  </symbol>
+
+  {/* Peonies: lush open blooms. Three rings of ruffled petals (8 outer, 6 mid, 5 inner), each
+       lip a smooth wave rather than a dome, with gold stamens peeking from the heart.
+       `peony-ivory` repaints the very same petal outlines from ivory gradients. */}
+  <symbol id="peony-blush" viewBox="0 0 72 72">
+    <ellipse cx="37.8" cy="38.6" rx="29" ry="27.5" fill="url(#flower-seat-shadow)" />
+    <path d="M36 33.86C34.22 33.86 32.44 32.97 30.66 31.72C28.88 30.47 26.75 28.33 25.33 26.37C23.9 24.41 22.75 22.09 22.12 19.95C21.5 17.81 21.32 15.49 21.59 13.53C21.86 11.57 22.75 9.62 23.73 8.18C24.7 6.74 26.13 5.16 27.46 4.92C28.8 4.68 30.31 6.84 31.73 6.74C33.15 6.63 34.58 4.27 36 4.27C37.42 4.27 38.85 6.63 40.27 6.74C41.69 6.84 43.2 4.68 44.54 4.92C45.87 5.16 47.3 6.74 48.27 8.18C49.25 9.62 50.14 11.57 50.41 13.53C50.68 15.49 50.5 17.81 49.88 19.95C49.25 22.09 48.1 24.41 46.67 26.37C45.25 28.33 43.12 30.47 41.34 31.72C39.56 32.97 37.78 33.86 36 33.86Z" fill="url(#peony-blush-outer)" transform="rotate(0 36 36)" />
+    <path d="M36 33.86C33.98 33.86 31.96 32.97 29.93 31.72C27.91 30.47 25.48 28.33 23.87 26.37C22.25 24.41 20.93 22.09 20.23 19.95C19.52 17.81 19.32 15.49 19.62 13.53C19.92 11.57 20.93 9.31 22.05 8.18C23.16 7.05 24.78 7.28 26.29 6.74C27.81 6.19 29.53 5.02 31.15 4.92C32.76 4.81 34.38 6.09 36 6.09C37.62 6.09 39.24 4.81 40.85 4.92C42.47 5.02 44.19 6.19 45.71 6.74C47.22 7.28 48.84 7.05 49.95 8.18C51.07 9.31 52.08 11.57 52.38 13.53C52.68 15.49 52.48 17.81 51.77 19.95C51.07 22.09 49.75 24.41 48.13 26.37C46.52 28.33 44.09 30.47 42.07 31.72C40.04 32.97 38.02 33.86 36 33.86Z" fill="url(#peony-blush-outer)" transform="rotate(49 36 36)" />
+    <path d="M36 33.86C34.22 33.86 32.44 32.97 30.66 31.72C28.88 30.47 26.75 28.33 25.33 26.37C23.9 24.41 22.75 22.09 22.12 19.95C21.5 17.81 21.32 15.49 21.59 13.53C21.86 11.57 22.75 9.62 23.73 8.18C24.7 6.74 26.13 5.16 27.46 4.92C28.8 4.68 30.31 6.84 31.73 6.74C33.15 6.63 34.58 4.27 36 4.27C37.42 4.27 38.85 6.63 40.27 6.74C41.69 6.84 43.2 4.68 44.54 4.92C45.87 5.16 47.3 6.74 48.27 8.18C49.25 9.62 50.14 11.57 50.41 13.53C50.68 15.49 50.5 17.81 49.88 19.95C49.25 22.09 48.1 24.41 46.67 26.37C45.25 28.33 43.12 30.47 41.34 31.72C39.56 32.97 37.78 33.86 36 33.86Z" fill="url(#peony-blush-outer)" transform="rotate(87 36 36)" />
+    <path d="M36 33.86C33.98 33.86 31.96 32.97 29.93 31.72C27.91 30.47 25.48 28.33 23.87 26.37C22.25 24.41 20.93 22.09 20.23 19.95C19.52 17.81 19.32 15.49 19.62 13.53C19.92 11.57 20.93 9.31 22.05 8.18C23.16 7.05 24.78 7.28 26.29 6.74C27.81 6.19 29.53 5.02 31.15 4.92C32.76 4.81 34.38 6.09 36 6.09C37.62 6.09 39.24 4.81 40.85 4.92C42.47 5.02 44.19 6.19 45.71 6.74C47.22 7.28 48.84 7.05 49.95 8.18C51.07 9.31 52.08 11.57 52.38 13.53C52.68 15.49 52.48 17.81 51.77 19.95C51.07 22.09 49.75 24.41 48.13 26.37C46.52 28.33 44.09 30.47 42.07 31.72C40.04 32.97 38.02 33.86 36 33.86Z" fill="url(#peony-blush-outer)" transform="rotate(140 36 36)" />
+    <path d="M36 33.86C34.22 33.86 32.44 32.97 30.66 31.72C28.88 30.47 26.75 28.33 25.33 26.37C23.9 24.41 22.75 22.09 22.12 19.95C21.5 17.81 21.32 15.49 21.59 13.53C21.86 11.57 22.75 9.62 23.73 8.18C24.7 6.74 26.13 5.16 27.46 4.92C28.8 4.68 30.31 6.84 31.73 6.74C33.15 6.63 34.58 4.27 36 4.27C37.42 4.27 38.85 6.63 40.27 6.74C41.69 6.84 43.2 4.68 44.54 4.92C45.87 5.16 47.3 6.74 48.27 8.18C49.25 9.62 50.14 11.57 50.41 13.53C50.68 15.49 50.5 17.81 49.88 19.95C49.25 22.09 48.1 24.41 46.67 26.37C45.25 28.33 43.12 30.47 41.34 31.72C39.56 32.97 37.78 33.86 36 33.86Z" fill="url(#peony-blush-outer)" transform="rotate(176 36 36)" />
+    <path d="M36 33.86C33.98 33.86 31.96 32.97 29.93 31.72C27.91 30.47 25.48 28.33 23.87 26.37C22.25 24.41 20.93 22.09 20.23 19.95C19.52 17.81 19.32 15.49 19.62 13.53C19.92 11.57 20.93 9.31 22.05 8.18C23.16 7.05 24.78 7.28 26.29 6.74C27.81 6.19 29.53 5.02 31.15 4.92C32.76 4.81 34.38 6.09 36 6.09C37.62 6.09 39.24 4.81 40.85 4.92C42.47 5.02 44.19 6.19 45.71 6.74C47.22 7.28 48.84 7.05 49.95 8.18C51.07 9.31 52.08 11.57 52.38 13.53C52.68 15.49 52.48 17.81 51.77 19.95C51.07 22.09 49.75 24.41 48.13 26.37C46.52 28.33 44.09 30.47 42.07 31.72C40.04 32.97 38.02 33.86 36 33.86Z" fill="url(#peony-blush-outer)" transform="rotate(227 36 36)" />
+    <path d="M36 33.86C34.22 33.86 32.44 32.97 30.66 31.72C28.88 30.47 26.75 28.33 25.33 26.37C23.9 24.41 22.75 22.09 22.12 19.95C21.5 17.81 21.32 15.49 21.59 13.53C21.86 11.57 22.75 9.62 23.73 8.18C24.7 6.74 26.13 5.16 27.46 4.92C28.8 4.68 30.31 6.84 31.73 6.74C33.15 6.63 34.58 4.27 36 4.27C37.42 4.27 38.85 6.63 40.27 6.74C41.69 6.84 43.2 4.68 44.54 4.92C45.87 5.16 47.3 6.74 48.27 8.18C49.25 9.62 50.14 11.57 50.41 13.53C50.68 15.49 50.5 17.81 49.88 19.95C49.25 22.09 48.1 24.41 46.67 26.37C45.25 28.33 43.12 30.47 41.34 31.72C39.56 32.97 37.78 33.86 36 33.86Z" fill="url(#peony-blush-outer)" transform="rotate(265 36 36)" />
+    <path d="M36 33.86C33.98 33.86 31.96 32.97 29.93 31.72C27.91 30.47 25.48 28.33 23.87 26.37C22.25 24.41 20.93 22.09 20.23 19.95C19.52 17.81 19.32 15.49 19.62 13.53C19.92 11.57 20.93 9.31 22.05 8.18C23.16 7.05 24.78 7.28 26.29 6.74C27.81 6.19 29.53 5.02 31.15 4.92C32.76 4.81 34.38 6.09 36 6.09C37.62 6.09 39.24 4.81 40.85 4.92C42.47 5.02 44.19 6.19 45.71 6.74C47.22 7.28 48.84 7.05 49.95 8.18C51.07 9.31 52.08 11.57 52.38 13.53C52.68 15.49 52.48 17.81 51.77 19.95C51.07 22.09 49.75 24.41 48.13 26.37C46.52 28.33 44.09 30.47 42.07 31.72C40.04 32.97 38.02 33.86 36 33.86Z" fill="url(#peony-blush-outer)" transform="rotate(318 36 36)" />
+    <path d="M36 34.36C34.7 34.36 33.4 33.68 32.11 32.72C30.81 31.76 29.25 30.12 28.21 28.62C27.17 27.12 26.33 25.34 25.87 23.7C25.42 22.06 25.29 20.28 25.48 18.78C25.68 17.28 26.33 15.77 27.04 14.68C27.76 13.59 28.79 12.41 29.77 12.22C30.74 12.03 31.85 13.61 32.88 13.53C33.92 13.45 34.96 11.73 36 11.73C37.04 11.73 38.08 13.45 39.12 13.53C40.15 13.61 41.26 12.03 42.23 12.22C43.21 12.41 44.24 13.59 44.96 14.68C45.67 15.77 46.32 17.28 46.52 18.78C46.71 20.28 46.58 22.06 46.13 23.7C45.67 25.34 44.83 27.12 43.79 28.62C42.75 30.12 41.19 31.76 39.89 32.72C38.6 33.68 37.3 34.36 36 34.36Z" fill="url(#peony-blush-mid)" transform="rotate(22 36 36)" />
+    <path d="M36 34.36C34.52 34.36 33.05 33.68 31.57 32.72C30.1 31.76 28.32 30.12 27.14 28.62C25.96 27.12 25 25.34 24.49 23.7C23.97 22.06 23.82 20.28 24.04 18.78C24.27 17.28 25 15.55 25.82 14.68C26.63 13.81 27.81 13.94 28.92 13.53C30.02 13.12 31.28 12.3 32.46 12.22C33.64 12.14 34.82 13.04 36 13.04C37.18 13.04 38.36 12.14 39.54 12.22C40.72 12.3 41.98 13.12 43.08 13.53C44.19 13.94 45.37 13.81 46.18 14.68C47 15.55 47.73 17.28 47.96 18.78C48.18 20.28 48.03 22.06 47.51 23.7C47 25.34 46.04 27.12 44.86 28.62C43.68 30.12 41.9 31.76 40.43 32.72C38.95 33.68 37.48 34.36 36 34.36Z" fill="url(#peony-blush-mid)" transform="rotate(86 36 36)" />
+    <path d="M36 34.36C34.7 34.36 33.4 33.68 32.11 32.72C30.81 31.76 29.25 30.12 28.21 28.62C27.17 27.12 26.33 25.34 25.87 23.7C25.42 22.06 25.29 20.28 25.48 18.78C25.68 17.28 26.33 15.77 27.04 14.68C27.76 13.59 28.79 12.41 29.77 12.22C30.74 12.03 31.85 13.61 32.88 13.53C33.92 13.45 34.96 11.73 36 11.73C37.04 11.73 38.08 13.45 39.12 13.53C40.15 13.61 41.26 12.03 42.23 12.22C43.21 12.41 44.24 13.59 44.96 14.68C45.67 15.77 46.32 17.28 46.52 18.78C46.71 20.28 46.58 22.06 46.13 23.7C45.67 25.34 44.83 27.12 43.79 28.62C42.75 30.12 41.19 31.76 39.89 32.72C38.6 33.68 37.3 34.36 36 34.36Z" fill="url(#peony-blush-mid)" transform="rotate(139 36 36)" />
+    <path d="M36 34.36C34.52 34.36 33.05 33.68 31.57 32.72C30.1 31.76 28.32 30.12 27.14 28.62C25.96 27.12 25 25.34 24.49 23.7C23.97 22.06 23.82 20.28 24.04 18.78C24.27 17.28 25 15.55 25.82 14.68C26.63 13.81 27.81 13.94 28.92 13.53C30.02 13.12 31.28 12.3 32.46 12.22C33.64 12.14 34.82 13.04 36 13.04C37.18 13.04 38.36 12.14 39.54 12.22C40.72 12.3 41.98 13.12 43.08 13.53C44.19 13.94 45.37 13.81 46.18 14.68C47 15.55 47.73 17.28 47.96 18.78C48.18 20.28 48.03 22.06 47.51 23.7C47 25.34 46.04 27.12 44.86 28.62C43.68 30.12 41.9 31.76 40.43 32.72C38.95 33.68 37.48 34.36 36 34.36Z" fill="url(#peony-blush-mid)" transform="rotate(207 36 36)" />
+    <path d="M36 34.36C34.7 34.36 33.4 33.68 32.11 32.72C30.81 31.76 29.25 30.12 28.21 28.62C27.17 27.12 26.33 25.34 25.87 23.7C25.42 22.06 25.29 20.28 25.48 18.78C25.68 17.28 26.33 15.77 27.04 14.68C27.76 13.59 28.79 12.41 29.77 12.22C30.74 12.03 31.85 13.61 32.88 13.53C33.92 13.45 34.96 11.73 36 11.73C37.04 11.73 38.08 13.45 39.12 13.53C40.15 13.61 41.26 12.03 42.23 12.22C43.21 12.41 44.24 13.59 44.96 14.68C45.67 15.77 46.32 17.28 46.52 18.78C46.71 20.28 46.58 22.06 46.13 23.7C45.67 25.34 44.83 27.12 43.79 28.62C42.75 30.12 41.19 31.76 39.89 32.72C38.6 33.68 37.3 34.36 36 34.36Z" fill="url(#peony-blush-mid)" transform="rotate(258 36 36)" />
+    <path d="M36 34.36C34.52 34.36 33.05 33.68 31.57 32.72C30.1 31.76 28.32 30.12 27.14 28.62C25.96 27.12 25 25.34 24.49 23.7C23.97 22.06 23.82 20.28 24.04 18.78C24.27 17.28 25 15.55 25.82 14.68C26.63 13.81 27.81 13.94 28.92 13.53C30.02 13.12 31.28 12.3 32.46 12.22C33.64 12.14 34.82 13.04 36 13.04C37.18 13.04 38.36 12.14 39.54 12.22C40.72 12.3 41.98 13.12 43.08 13.53C44.19 13.94 45.37 13.81 46.18 14.68C47 15.55 47.73 17.28 47.96 18.78C48.18 20.28 48.03 22.06 47.51 23.7C47 25.34 46.04 27.12 44.86 28.62C43.68 30.12 41.9 31.76 40.43 32.72C38.95 33.68 37.48 34.36 36 34.36Z" fill="url(#peony-blush-mid)" transform="rotate(324 36 36)" />
+    <path d="M36 34.96C35.14 34.96 34.27 34.53 33.41 33.92C32.54 33.31 31.5 32.27 30.81 31.32C30.12 30.37 29.56 29.24 29.26 28.2C28.95 27.16 28.87 26.03 29 25.08C29.13 24.13 29.56 23.16 30.03 22.48C30.51 21.8 31.2 21.1 31.85 20.97C32.5 20.84 33.23 21.75 33.93 21.7C34.62 21.65 35.31 20.66 36 20.66C36.69 20.66 37.38 21.65 38.07 21.7C38.77 21.75 39.5 20.84 40.15 20.97C40.8 21.1 41.49 21.8 41.97 22.48C42.44 23.16 42.87 24.13 43 25.08C43.13 26.03 43.05 27.16 42.74 28.2C42.44 29.24 41.88 30.37 41.19 31.32C40.5 32.27 39.46 33.31 38.59 33.92C37.73 34.53 36.86 34.96 36 34.96Z" fill="url(#peony-blush-inner)" transform="rotate(10 36 36)" />
+    <path d="M36 34.96C35.02 34.96 34.03 34.53 33.05 33.92C32.07 33.31 30.89 32.27 30.1 31.32C29.32 30.37 28.68 29.24 28.33 28.2C27.99 27.16 27.89 26.03 28.04 25.08C28.19 24.13 28.68 23.04 29.22 22.48C29.76 21.92 30.55 21.95 31.28 21.7C32.02 21.45 32.86 21.02 33.64 20.97C34.43 20.92 35.21 21.39 36 21.39C36.79 21.39 37.57 20.92 38.36 20.97C39.14 21.02 39.98 21.45 40.72 21.7C41.45 21.95 42.24 21.92 42.78 22.48C43.32 23.04 43.81 24.13 43.96 25.08C44.11 26.03 44.01 27.16 43.67 28.2C43.32 29.24 42.68 30.37 41.9 31.32C41.11 32.27 39.93 33.31 38.95 33.92C37.97 34.53 36.98 34.96 36 34.96Z" fill="url(#peony-blush-inner)" transform="rotate(86 36 36)" />
+    <path d="M36 34.96C35.14 34.96 34.27 34.53 33.41 33.92C32.54 33.31 31.5 32.27 30.81 31.32C30.12 30.37 29.56 29.24 29.26 28.2C28.95 27.16 28.87 26.03 29 25.08C29.13 24.13 29.56 23.16 30.03 22.48C30.51 21.8 31.2 21.1 31.85 20.97C32.5 20.84 33.23 21.75 33.93 21.7C34.62 21.65 35.31 20.66 36 20.66C36.69 20.66 37.38 21.65 38.07 21.7C38.77 21.75 39.5 20.84 40.15 20.97C40.8 21.1 41.49 21.8 41.97 22.48C42.44 23.16 42.87 24.13 43 25.08C43.13 26.03 43.05 27.16 42.74 28.2C42.44 29.24 41.88 30.37 41.19 31.32C40.5 32.27 39.46 33.31 38.59 33.92C37.73 34.53 36.86 34.96 36 34.96Z" fill="url(#peony-blush-inner)" transform="rotate(151 36 36)" />
+    <path d="M36 34.96C35.02 34.96 34.03 34.53 33.05 33.92C32.07 33.31 30.89 32.27 30.1 31.32C29.32 30.37 28.68 29.24 28.33 28.2C27.99 27.16 27.89 26.03 28.04 25.08C28.19 24.13 28.68 23.04 29.22 22.48C29.76 21.92 30.55 21.95 31.28 21.7C32.02 21.45 32.86 21.02 33.64 20.97C34.43 20.92 35.21 21.39 36 21.39C36.79 21.39 37.57 20.92 38.36 20.97C39.14 21.02 39.98 21.45 40.72 21.7C41.45 21.95 42.24 21.92 42.78 22.48C43.32 23.04 43.81 24.13 43.96 25.08C44.11 26.03 44.01 27.16 43.67 28.2C43.32 29.24 42.68 30.37 41.9 31.32C41.11 32.27 39.93 33.31 38.95 33.92C37.97 34.53 36.98 34.96 36 34.96Z" fill="url(#peony-blush-inner)" transform="rotate(231 36 36)" />
+    <path d="M36 34.96C35.14 34.96 34.27 34.53 33.41 33.92C32.54 33.31 31.5 32.27 30.81 31.32C30.12 30.37 29.56 29.24 29.26 28.2C28.95 27.16 28.87 26.03 29 25.08C29.13 24.13 29.56 23.16 30.03 22.48C30.51 21.8 31.2 21.1 31.85 20.97C32.5 20.84 33.23 21.75 33.93 21.7C34.62 21.65 35.31 20.66 36 20.66C36.69 20.66 37.38 21.65 38.07 21.7C38.77 21.75 39.5 20.84 40.15 20.97C40.8 21.1 41.49 21.8 41.97 22.48C42.44 23.16 42.87 24.13 43 25.08C43.13 26.03 43.05 27.16 42.74 28.2C42.44 29.24 41.88 30.37 41.19 31.32C40.5 32.27 39.46 33.31 38.59 33.92C37.73 34.53 36.86 34.96 36 34.96Z" fill="url(#peony-blush-inner)" transform="rotate(294 36 36)" />
+    <circle cx="36" cy="32.6" r="1.4" fill="var(--c-champagne-500)" />
+    <circle cx="39.2" cy="34.8" r="1.3" fill="var(--c-champagne-700)" />
+    <circle cx="38.2" cy="38.8" r="1.4" fill="var(--c-champagne-500)" />
+    <circle cx="33.7" cy="38.8" r="1.3" fill="var(--c-champagne-700)" />
+    <circle cx="32.7" cy="35" r="1.4" fill="var(--c-champagne-500)" />
+    <circle cx="37.6" cy="33.4" r="1" fill="var(--c-champagne-700)" />
+    <circle cx="34.2" cy="33.2" r="1" fill="var(--c-champagne-500)" />
+    <circle cx="39.4" cy="37.2" r="1" fill="var(--c-champagne-700)" />
+    <circle cx="36.3" cy="36.1" r="1.8" fill="var(--c-champagne-300)" />
+  </symbol>
+
+  <symbol id="peony-ivory" viewBox="0 0 72 72">
+    <ellipse cx="37.8" cy="38.6" rx="29" ry="27.5" fill="url(#flower-seat-shadow)" />
+    <path d="M36 33.86C34.22 33.86 32.44 32.97 30.66 31.72C28.88 30.47 26.75 28.33 25.33 26.37C23.9 24.41 22.75 22.09 22.12 19.95C21.5 17.81 21.32 15.49 21.59 13.53C21.86 11.57 22.75 9.62 23.73 8.18C24.7 6.74 26.13 5.16 27.46 4.92C28.8 4.68 30.31 6.84 31.73 6.74C33.15 6.63 34.58 4.27 36 4.27C37.42 4.27 38.85 6.63 40.27 6.74C41.69 6.84 43.2 4.68 44.54 4.92C45.87 5.16 47.3 6.74 48.27 8.18C49.25 9.62 50.14 11.57 50.41 13.53C50.68 15.49 50.5 17.81 49.88 19.95C49.25 22.09 48.1 24.41 46.67 26.37C45.25 28.33 43.12 30.47 41.34 31.72C39.56 32.97 37.78 33.86 36 33.86Z" fill="url(#peony-ivory-outer)" transform="rotate(0 36 36)" />
+    <path d="M36 33.86C33.98 33.86 31.96 32.97 29.93 31.72C27.91 30.47 25.48 28.33 23.87 26.37C22.25 24.41 20.93 22.09 20.23 19.95C19.52 17.81 19.32 15.49 19.62 13.53C19.92 11.57 20.93 9.31 22.05 8.18C23.16 7.05 24.78 7.28 26.29 6.74C27.81 6.19 29.53 5.02 31.15 4.92C32.76 4.81 34.38 6.09 36 6.09C37.62 6.09 39.24 4.81 40.85 4.92C42.47 5.02 44.19 6.19 45.71 6.74C47.22 7.28 48.84 7.05 49.95 8.18C51.07 9.31 52.08 11.57 52.38 13.53C52.68 15.49 52.48 17.81 51.77 19.95C51.07 22.09 49.75 24.41 48.13 26.37C46.52 28.33 44.09 30.47 42.07 31.72C40.04 32.97 38.02 33.86 36 33.86Z" fill="url(#peony-ivory-outer)" transform="rotate(49 36 36)" />
+    <path d="M36 33.86C34.22 33.86 32.44 32.97 30.66 31.72C28.88 30.47 26.75 28.33 25.33 26.37C23.9 24.41 22.75 22.09 22.12 19.95C21.5 17.81 21.32 15.49 21.59 13.53C21.86 11.57 22.75 9.62 23.73 8.18C24.7 6.74 26.13 5.16 27.46 4.92C28.8 4.68 30.31 6.84 31.73 6.74C33.15 6.63 34.58 4.27 36 4.27C37.42 4.27 38.85 6.63 40.27 6.74C41.69 6.84 43.2 4.68 44.54 4.92C45.87 5.16 47.3 6.74 48.27 8.18C49.25 9.62 50.14 11.57 50.41 13.53C50.68 15.49 50.5 17.81 49.88 19.95C49.25 22.09 48.1 24.41 46.67 26.37C45.25 28.33 43.12 30.47 41.34 31.72C39.56 32.97 37.78 33.86 36 33.86Z" fill="url(#peony-ivory-outer)" transform="rotate(87 36 36)" />
+    <path d="M36 33.86C33.98 33.86 31.96 32.97 29.93 31.72C27.91 30.47 25.48 28.33 23.87 26.37C22.25 24.41 20.93 22.09 20.23 19.95C19.52 17.81 19.32 15.49 19.62 13.53C19.92 11.57 20.93 9.31 22.05 8.18C23.16 7.05 24.78 7.28 26.29 6.74C27.81 6.19 29.53 5.02 31.15 4.92C32.76 4.81 34.38 6.09 36 6.09C37.62 6.09 39.24 4.81 40.85 4.92C42.47 5.02 44.19 6.19 45.71 6.74C47.22 7.28 48.84 7.05 49.95 8.18C51.07 9.31 52.08 11.57 52.38 13.53C52.68 15.49 52.48 17.81 51.77 19.95C51.07 22.09 49.75 24.41 48.13 26.37C46.52 28.33 44.09 30.47 42.07 31.72C40.04 32.97 38.02 33.86 36 33.86Z" fill="url(#peony-ivory-outer)" transform="rotate(140 36 36)" />
+    <path d="M36 33.86C34.22 33.86 32.44 32.97 30.66 31.72C28.88 30.47 26.75 28.33 25.33 26.37C23.9 24.41 22.75 22.09 22.12 19.95C21.5 17.81 21.32 15.49 21.59 13.53C21.86 11.57 22.75 9.62 23.73 8.18C24.7 6.74 26.13 5.16 27.46 4.92C28.8 4.68 30.31 6.84 31.73 6.74C33.15 6.63 34.58 4.27 36 4.27C37.42 4.27 38.85 6.63 40.27 6.74C41.69 6.84 43.2 4.68 44.54 4.92C45.87 5.16 47.3 6.74 48.27 8.18C49.25 9.62 50.14 11.57 50.41 13.53C50.68 15.49 50.5 17.81 49.88 19.95C49.25 22.09 48.1 24.41 46.67 26.37C45.25 28.33 43.12 30.47 41.34 31.72C39.56 32.97 37.78 33.86 36 33.86Z" fill="url(#peony-ivory-outer)" transform="rotate(176 36 36)" />
+    <path d="M36 33.86C33.98 33.86 31.96 32.97 29.93 31.72C27.91 30.47 25.48 28.33 23.87 26.37C22.25 24.41 20.93 22.09 20.23 19.95C19.52 17.81 19.32 15.49 19.62 13.53C19.92 11.57 20.93 9.31 22.05 8.18C23.16 7.05 24.78 7.28 26.29 6.74C27.81 6.19 29.53 5.02 31.15 4.92C32.76 4.81 34.38 6.09 36 6.09C37.62 6.09 39.24 4.81 40.85 4.92C42.47 5.02 44.19 6.19 45.71 6.74C47.22 7.28 48.84 7.05 49.95 8.18C51.07 9.31 52.08 11.57 52.38 13.53C52.68 15.49 52.48 17.81 51.77 19.95C51.07 22.09 49.75 24.41 48.13 26.37C46.52 28.33 44.09 30.47 42.07 31.72C40.04 32.97 38.02 33.86 36 33.86Z" fill="url(#peony-ivory-outer)" transform="rotate(227 36 36)" />
+    <path d="M36 33.86C34.22 33.86 32.44 32.97 30.66 31.72C28.88 30.47 26.75 28.33 25.33 26.37C23.9 24.41 22.75 22.09 22.12 19.95C21.5 17.81 21.32 15.49 21.59 13.53C21.86 11.57 22.75 9.62 23.73 8.18C24.7 6.74 26.13 5.16 27.46 4.92C28.8 4.68 30.31 6.84 31.73 6.74C33.15 6.63 34.58 4.27 36 4.27C37.42 4.27 38.85 6.63 40.27 6.74C41.69 6.84 43.2 4.68 44.54 4.92C45.87 5.16 47.3 6.74 48.27 8.18C49.25 9.62 50.14 11.57 50.41 13.53C50.68 15.49 50.5 17.81 49.88 19.95C49.25 22.09 48.1 24.41 46.67 26.37C45.25 28.33 43.12 30.47 41.34 31.72C39.56 32.97 37.78 33.86 36 33.86Z" fill="url(#peony-ivory-outer)" transform="rotate(265 36 36)" />
+    <path d="M36 33.86C33.98 33.86 31.96 32.97 29.93 31.72C27.91 30.47 25.48 28.33 23.87 26.37C22.25 24.41 20.93 22.09 20.23 19.95C19.52 17.81 19.32 15.49 19.62 13.53C19.92 11.57 20.93 9.31 22.05 8.18C23.16 7.05 24.78 7.28 26.29 6.74C27.81 6.19 29.53 5.02 31.15 4.92C32.76 4.81 34.38 6.09 36 6.09C37.62 6.09 39.24 4.81 40.85 4.92C42.47 5.02 44.19 6.19 45.71 6.74C47.22 7.28 48.84 7.05 49.95 8.18C51.07 9.31 52.08 11.57 52.38 13.53C52.68 15.49 52.48 17.81 51.77 19.95C51.07 22.09 49.75 24.41 48.13 26.37C46.52 28.33 44.09 30.47 42.07 31.72C40.04 32.97 38.02 33.86 36 33.86Z" fill="url(#peony-ivory-outer)" transform="rotate(318 36 36)" />
+    <path d="M36 34.36C34.7 34.36 33.4 33.68 32.11 32.72C30.81 31.76 29.25 30.12 28.21 28.62C27.17 27.12 26.33 25.34 25.87 23.7C25.42 22.06 25.29 20.28 25.48 18.78C25.68 17.28 26.33 15.77 27.04 14.68C27.76 13.59 28.79 12.41 29.77 12.22C30.74 12.03 31.85 13.61 32.88 13.53C33.92 13.45 34.96 11.73 36 11.73C37.04 11.73 38.08 13.45 39.12 13.53C40.15 13.61 41.26 12.03 42.23 12.22C43.21 12.41 44.24 13.59 44.96 14.68C45.67 15.77 46.32 17.28 46.52 18.78C46.71 20.28 46.58 22.06 46.13 23.7C45.67 25.34 44.83 27.12 43.79 28.62C42.75 30.12 41.19 31.76 39.89 32.72C38.6 33.68 37.3 34.36 36 34.36Z" fill="url(#peony-ivory-mid)" transform="rotate(22 36 36)" />
+    <path d="M36 34.36C34.52 34.36 33.05 33.68 31.57 32.72C30.1 31.76 28.32 30.12 27.14 28.62C25.96 27.12 25 25.34 24.49 23.7C23.97 22.06 23.82 20.28 24.04 18.78C24.27 17.28 25 15.55 25.82 14.68C26.63 13.81 27.81 13.94 28.92 13.53C30.02 13.12 31.28 12.3 32.46 12.22C33.64 12.14 34.82 13.04 36 13.04C37.18 13.04 38.36 12.14 39.54 12.22C40.72 12.3 41.98 13.12 43.08 13.53C44.19 13.94 45.37 13.81 46.18 14.68C47 15.55 47.73 17.28 47.96 18.78C48.18 20.28 48.03 22.06 47.51 23.7C47 25.34 46.04 27.12 44.86 28.62C43.68 30.12 41.9 31.76 40.43 32.72C38.95 33.68 37.48 34.36 36 34.36Z" fill="url(#peony-ivory-mid)" transform="rotate(86 36 36)" />
+    <path d="M36 34.36C34.7 34.36 33.4 33.68 32.11 32.72C30.81 31.76 29.25 30.12 28.21 28.62C27.17 27.12 26.33 25.34 25.87 23.7C25.42 22.06 25.29 20.28 25.48 18.78C25.68 17.28 26.33 15.77 27.04 14.68C27.76 13.59 28.79 12.41 29.77 12.22C30.74 12.03 31.85 13.61 32.88 13.53C33.92 13.45 34.96 11.73 36 11.73C37.04 11.73 38.08 13.45 39.12 13.53C40.15 13.61 41.26 12.03 42.23 12.22C43.21 12.41 44.24 13.59 44.96 14.68C45.67 15.77 46.32 17.28 46.52 18.78C46.71 20.28 46.58 22.06 46.13 23.7C45.67 25.34 44.83 27.12 43.79 28.62C42.75 30.12 41.19 31.76 39.89 32.72C38.6 33.68 37.3 34.36 36 34.36Z" fill="url(#peony-ivory-mid)" transform="rotate(139 36 36)" />
+    <path d="M36 34.36C34.52 34.36 33.05 33.68 31.57 32.72C30.1 31.76 28.32 30.12 27.14 28.62C25.96 27.12 25 25.34 24.49 23.7C23.97 22.06 23.82 20.28 24.04 18.78C24.27 17.28 25 15.55 25.82 14.68C26.63 13.81 27.81 13.94 28.92 13.53C30.02 13.12 31.28 12.3 32.46 12.22C33.64 12.14 34.82 13.04 36 13.04C37.18 13.04 38.36 12.14 39.54 12.22C40.72 12.3 41.98 13.12 43.08 13.53C44.19 13.94 45.37 13.81 46.18 14.68C47 15.55 47.73 17.28 47.96 18.78C48.18 20.28 48.03 22.06 47.51 23.7C47 25.34 46.04 27.12 44.86 28.62C43.68 30.12 41.9 31.76 40.43 32.72C38.95 33.68 37.48 34.36 36 34.36Z" fill="url(#peony-ivory-mid)" transform="rotate(207 36 36)" />
+    <path d="M36 34.36C34.7 34.36 33.4 33.68 32.11 32.72C30.81 31.76 29.25 30.12 28.21 28.62C27.17 27.12 26.33 25.34 25.87 23.7C25.42 22.06 25.29 20.28 25.48 18.78C25.68 17.28 26.33 15.77 27.04 14.68C27.76 13.59 28.79 12.41 29.77 12.22C30.74 12.03 31.85 13.61 32.88 13.53C33.92 13.45 34.96 11.73 36 11.73C37.04 11.73 38.08 13.45 39.12 13.53C40.15 13.61 41.26 12.03 42.23 12.22C43.21 12.41 44.24 13.59 44.96 14.68C45.67 15.77 46.32 17.28 46.52 18.78C46.71 20.28 46.58 22.06 46.13 23.7C45.67 25.34 44.83 27.12 43.79 28.62C42.75 30.12 41.19 31.76 39.89 32.72C38.6 33.68 37.3 34.36 36 34.36Z" fill="url(#peony-ivory-mid)" transform="rotate(258 36 36)" />
+    <path d="M36 34.36C34.52 34.36 33.05 33.68 31.57 32.72C30.1 31.76 28.32 30.12 27.14 28.62C25.96 27.12 25 25.34 24.49 23.7C23.97 22.06 23.82 20.28 24.04 18.78C24.27 17.28 25 15.55 25.82 14.68C26.63 13.81 27.81 13.94 28.92 13.53C30.02 13.12 31.28 12.3 32.46 12.22C33.64 12.14 34.82 13.04 36 13.04C37.18 13.04 38.36 12.14 39.54 12.22C40.72 12.3 41.98 13.12 43.08 13.53C44.19 13.94 45.37 13.81 46.18 14.68C47 15.55 47.73 17.28 47.96 18.78C48.18 20.28 48.03 22.06 47.51 23.7C47 25.34 46.04 27.12 44.86 28.62C43.68 30.12 41.9 31.76 40.43 32.72C38.95 33.68 37.48 34.36 36 34.36Z" fill="url(#peony-ivory-mid)" transform="rotate(324 36 36)" />
+    <path d="M36 34.96C35.14 34.96 34.27 34.53 33.41 33.92C32.54 33.31 31.5 32.27 30.81 31.32C30.12 30.37 29.56 29.24 29.26 28.2C28.95 27.16 28.87 26.03 29 25.08C29.13 24.13 29.56 23.16 30.03 22.48C30.51 21.8 31.2 21.1 31.85 20.97C32.5 20.84 33.23 21.75 33.93 21.7C34.62 21.65 35.31 20.66 36 20.66C36.69 20.66 37.38 21.65 38.07 21.7C38.77 21.75 39.5 20.84 40.15 20.97C40.8 21.1 41.49 21.8 41.97 22.48C42.44 23.16 42.87 24.13 43 25.08C43.13 26.03 43.05 27.16 42.74 28.2C42.44 29.24 41.88 30.37 41.19 31.32C40.5 32.27 39.46 33.31 38.59 33.92C37.73 34.53 36.86 34.96 36 34.96Z" fill="url(#peony-ivory-inner)" transform="rotate(10 36 36)" />
+    <path d="M36 34.96C35.02 34.96 34.03 34.53 33.05 33.92C32.07 33.31 30.89 32.27 30.1 31.32C29.32 30.37 28.68 29.24 28.33 28.2C27.99 27.16 27.89 26.03 28.04 25.08C28.19 24.13 28.68 23.04 29.22 22.48C29.76 21.92 30.55 21.95 31.28 21.7C32.02 21.45 32.86 21.02 33.64 20.97C34.43 20.92 35.21 21.39 36 21.39C36.79 21.39 37.57 20.92 38.36 20.97C39.14 21.02 39.98 21.45 40.72 21.7C41.45 21.95 42.24 21.92 42.78 22.48C43.32 23.04 43.81 24.13 43.96 25.08C44.11 26.03 44.01 27.16 43.67 28.2C43.32 29.24 42.68 30.37 41.9 31.32C41.11 32.27 39.93 33.31 38.95 33.92C37.97 34.53 36.98 34.96 36 34.96Z" fill="url(#peony-ivory-inner)" transform="rotate(86 36 36)" />
+    <path d="M36 34.96C35.14 34.96 34.27 34.53 33.41 33.92C32.54 33.31 31.5 32.27 30.81 31.32C30.12 30.37 29.56 29.24 29.26 28.2C28.95 27.16 28.87 26.03 29 25.08C29.13 24.13 29.56 23.16 30.03 22.48C30.51 21.8 31.2 21.1 31.85 20.97C32.5 20.84 33.23 21.75 33.93 21.7C34.62 21.65 35.31 20.66 36 20.66C36.69 20.66 37.38 21.65 38.07 21.7C38.77 21.75 39.5 20.84 40.15 20.97C40.8 21.1 41.49 21.8 41.97 22.48C42.44 23.16 42.87 24.13 43 25.08C43.13 26.03 43.05 27.16 42.74 28.2C42.44 29.24 41.88 30.37 41.19 31.32C40.5 32.27 39.46 33.31 38.59 33.92C37.73 34.53 36.86 34.96 36 34.96Z" fill="url(#peony-ivory-inner)" transform="rotate(151 36 36)" />
+    <path d="M36 34.96C35.02 34.96 34.03 34.53 33.05 33.92C32.07 33.31 30.89 32.27 30.1 31.32C29.32 30.37 28.68 29.24 28.33 28.2C27.99 27.16 27.89 26.03 28.04 25.08C28.19 24.13 28.68 23.04 29.22 22.48C29.76 21.92 30.55 21.95 31.28 21.7C32.02 21.45 32.86 21.02 33.64 20.97C34.43 20.92 35.21 21.39 36 21.39C36.79 21.39 37.57 20.92 38.36 20.97C39.14 21.02 39.98 21.45 40.72 21.7C41.45 21.95 42.24 21.92 42.78 22.48C43.32 23.04 43.81 24.13 43.96 25.08C44.11 26.03 44.01 27.16 43.67 28.2C43.32 29.24 42.68 30.37 41.9 31.32C41.11 32.27 39.93 33.31 38.95 33.92C37.97 34.53 36.98 34.96 36 34.96Z" fill="url(#peony-ivory-inner)" transform="rotate(231 36 36)" />
+    <path d="M36 34.96C35.14 34.96 34.27 34.53 33.41 33.92C32.54 33.31 31.5 32.27 30.81 31.32C30.12 30.37 29.56 29.24 29.26 28.2C28.95 27.16 28.87 26.03 29 25.08C29.13 24.13 29.56 23.16 30.03 22.48C30.51 21.8 31.2 21.1 31.85 20.97C32.5 20.84 33.23 21.75 33.93 21.7C34.62 21.65 35.31 20.66 36 20.66C36.69 20.66 37.38 21.65 38.07 21.7C38.77 21.75 39.5 20.84 40.15 20.97C40.8 21.1 41.49 21.8 41.97 22.48C42.44 23.16 42.87 24.13 43 25.08C43.13 26.03 43.05 27.16 42.74 28.2C42.44 29.24 41.88 30.37 41.19 31.32C40.5 32.27 39.46 33.31 38.59 33.92C37.73 34.53 36.86 34.96 36 34.96Z" fill="url(#peony-ivory-inner)" transform="rotate(294 36 36)" />
+    <circle cx="36" cy="32.6" r="1.4" fill="var(--c-champagne-500)" />
+    <circle cx="39.2" cy="34.8" r="1.3" fill="var(--c-champagne-700)" />
+    <circle cx="38.2" cy="38.8" r="1.4" fill="var(--c-champagne-500)" />
+    <circle cx="33.7" cy="38.8" r="1.3" fill="var(--c-champagne-700)" />
+    <circle cx="32.7" cy="35" r="1.4" fill="var(--c-champagne-500)" />
+    <circle cx="37.6" cy="33.4" r="1" fill="var(--c-champagne-700)" />
+    <circle cx="34.2" cy="33.2" r="1" fill="var(--c-champagne-500)" />
+    <circle cx="39.4" cy="37.2" r="1" fill="var(--c-champagne-700)" />
+    <circle cx="36.3" cy="36.1" r="1.8" fill="var(--c-champagne-300)" />
+  </symbol>
+
+  {/* `rosebud`: a small furled bud — upright teardrop petals wrapped around a darker furled tip,
+       with a couple of sepals curling out at the base. Reuses the rose-pink petal/heart gradients
+       and the olive sepal gradient — no new gradient defs. */}
+  <symbol id="rosebud" viewBox="0 0 48 48">
+    <ellipse cx="25.3" cy="25.8" rx="8.4" ry="7.8" fill="url(#flower-seat-shadow)" />
+    <path d="M20 23C21.8 23 23.1 25.2 22.7 28C22.3 30.6 20.9 32.6 20 35C19.1 32.6 17.7 30.6 17.3 28C16.9 25.2 18.2 23 20 23Z" fill="url(#rose-pink-outer)" />
+    <path d="M28 23C29.8 23 31.1 25.2 30.7 28C30.3 30.6 28.9 32.6 28 35C27.1 32.6 25.7 30.6 25.3 28C24.9 25.2 26.2 23 28 23Z" fill="url(#rose-pink-mid)" />
+    <path d="M24 4C27.3 4 29.7 8.4 28.9 14C28.2 19 25.6 23 24 27C22.4 23 19.8 19 19.1 14C18.3 8.4 20.7 4 24 4Z" fill="url(#rose-pink-outer)" />
+    <path d="M24 13C25.4 13 26.3 14.6 26 16.6C25.7 18.4 24.6 19.8 24 21.2C23.4 19.8 22.3 18.4 22 16.6C21.7 14.6 22.6 13 24 13Z" fill="url(#rose-pink-heart)" />
+    <path d="M0 0C2.1 -2.1 2.1 -4.5 0 -6C-2.1 -4.5 -2.1 -2.1 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(20 29) rotate(-130)" />
+    <path d="M0 0C2.1 -2.1 2.1 -4.5 0 -6C-2.1 -4.5 -2.1 -2.1 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(28 29) rotate(130)" />
+  </symbol>
+
+  {/* `blossom`: 5 petals from a single radial gradient (darker base, pale rose rim), one
+       multi-subpath vein path (a crease per petal) and one multi-subpath highlight (a glint per
+       petal, inside the petal only), a champagne centre disk with its own gradient and a stamen
+       cluster of 10 filaments + 10 anthers — both multi-subpath paths rather than 20 separate
+       elements, to stay inside the symbol's element budget. */}
+  <symbol id="blossom" viewBox="0 0 48 48">
+    <ellipse cx="25.5" cy="26" rx="20" ry="19" fill="url(#flower-seat-shadow)" />
+    <g transform="translate(24 24)">
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" />
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(72)" />
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(144)" />
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(216)" />
+      <path d="M0 -22C3.9 -22 7 -17.5 7 -12C7 -6.5 3.9 -2 0 -2C-3.9 -2 -7 -6.5 -7 -12C-7 -17.5 -3.9 -22 0 -22Z" fill="url(#blossom-petal)" transform="rotate(288)" />
+      <path
+        d="M0 -2C0.6 -4.33 0.6 -6.67 0 -9 M1.9 -0.62C4.3 -0.77 6.53 -1.49 8.56 -2.78 M1.18 1.62C2.06 3.86 3.44 5.75 5.29 7.28 M-1.18 1.62C-3.03 3.15 -4.41 5.04 -5.29 7.28 M-1.9 -0.62C-3.93 -1.91 -6.16 -2.63 -8.56 -2.78"
+        fill="none"
+        stroke="var(--c-rose-400)"
+        stroke-width="0.4"
+        stroke-opacity="0.28"
+        stroke-linecap="round"
+      />
+      <path
+        d="M3 -18C3.6 -14 2.6 -9 2 -6 M18 -2.7C14.4 -0.9 9.4 -0.3 6.3 0 M8.2 16.3C5.3 13.4 3.2 8.8 1.9 6 M-13 12.8C-11.1 9.2 -7.4 5.8 -5.1 3.7 M-16.2 -8.4C-12.2 -7.8 -7.8 -5.3 -5.1 -3.8"
+        fill="none"
+        stroke="var(--c-white)"
+        stroke-width="0.5"
+        stroke-opacity="0.35"
+        stroke-linecap="round"
+      />
+      <circle r="6" fill="url(#blossom-center)" />
+      <path
+        d="M0 -3C0 -4.3 0 -5.7 0 -7 M1.8 -2.4C2.5 -3.5 3.4 -4.6 4.1 -5.7 M2.9 -0.9C4.1 -1.3 5.4 -1.8 6.7 -2.2 M2.9 0.9C4.1 1.3 5.4 1.8 6.7 2.2 M1.8 2.4C2.5 3.5 3.4 4.6 4.1 5.7 M0 3C0 4.3 0 5.7 0 7 M-1.8 2.4C-2.5 3.5 -3.4 4.6 -4.1 5.7 M-2.9 0.9C-4.1 1.3 -5.4 1.8 -6.7 2.2 M-2.9 -0.9C-4.1 -1.3 -5.4 -1.8 -6.7 -2.2 M-1.8 -2.4C-2.5 -3.5 -3.4 -4.6 -4.1 -5.7"
+        fill="none"
+        stroke="var(--c-champagne-500)"
+        stroke-width="0.6"
+        stroke-linecap="round"
+      />
+      <path
+        d="M2.3 -7.8C2.8 -7.8 3.2 -7.4 3.2 -6.9C3.2 -6.4 2.8 -6 2.3 -6C1.8 -6 1.4 -6.4 1.4 -6.9C1.4 -7.4 1.8 -7.8 2.3 -7.8Z M5.9 -5.2C6.4 -5.2 6.8 -4.8 6.8 -4.3C6.8 -3.8 6.4 -3.4 5.9 -3.4C5.4 -3.4 5 -3.8 5 -4.3C5 -4.8 5.4 -5.2 5.9 -5.2Z M7.3 -0.9C7.8 -0.9 8.2 -0.5 8.2 0C8.2 0.5 7.8 0.9 7.3 0.9C6.8 0.9 6.4 0.5 6.4 0C6.4 -0.5 6.8 -0.9 7.3 -0.9Z M5.9 3.4C6.4 3.4 6.8 3.8 6.8 4.3C6.8 4.8 6.4 5.2 5.9 5.2C5.4 5.2 5 4.8 5 4.3C5 3.8 5.4 3.4 5.9 3.4Z M2.3 6C2.8 6 3.2 6.4 3.2 6.9C3.2 7.4 2.8 7.8 2.3 7.8C1.8 7.8 1.4 7.4 1.4 6.9C1.4 6.4 1.8 6 2.3 6Z M-2.3 6C-1.8 6 -1.4 6.4 -1.4 6.9C-1.4 7.4 -1.8 7.8 -2.3 7.8C-2.8 7.8 -3.2 7.4 -3.2 6.9C-3.2 6.4 -2.8 6 -2.3 6Z M-5.9 3.4C-5.4 3.4 -5 3.8 -5 4.3C-5 4.8 -5.4 5.2 -5.9 5.2C-6.4 5.2 -6.8 4.8 -6.8 4.3C-6.8 3.8 -6.4 3.4 -5.9 3.4Z M-7.3 -0.9C-6.8 -0.9 -6.4 -0.5 -6.4 0C-6.4 0.5 -6.8 0.9 -7.3 0.9C-7.8 0.9 -8.2 0.5 -8.2 0C-8.2 -0.5 -7.8 -0.9 -7.3 -0.9Z M-5.9 -5.2C-5.4 -5.2 -5 -4.8 -5 -4.3C-5 -3.8 -5.4 -3.4 -5.9 -3.4C-6.4 -3.4 -6.8 -3.8 -6.8 -4.3C-6.8 -4.8 -6.4 -5.2 -5.9 -5.2Z M-2.3 -7.8C-1.8 -7.8 -1.4 -7.4 -1.4 -6.9C-1.4 -6.4 -1.8 -6 -2.3 -6C-2.8 -6 -3.2 -6.4 -3.2 -6.9C-3.2 -7.4 -2.8 -7.8 -2.3 -7.8Z"
+        fill="var(--c-champagne-700)"
+      />
+    </g>
+  </symbol>
+
+  {/* `leaf-laurel-cluster`: 5 bowed stems fan from one hidden root at (60, 114) — far left, near
+       left-of-centre, straight up, near right-of-centre, far right — each carrying broad elliptic
+       laurel leaves that overlap along the stem for a lush mass rather than a thin spine. Roughly
+       a third of the leaves are gold foil, several of the sage ones carry a gilt edge, and one
+       multi-subpath path traces every leaf's midrib. No new gradient defs: it reuses
+       `leaf-olive-gradient` and `leaf-gold-metal` from the shared gradient defs above. */}
+  <symbol id="leaf-laurel-cluster" viewBox="0 0 120 120">
+    <path d="M60 114C39.23 95.85 28.63 71.34 17.61 46.16" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
+    <path d="M60 114C54 100 46 86 36 60" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.6" />
+    <path d="M60 114C63.2 87.6 61.6 61.2 60 34" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.3" stroke-opacity="0.65" />
+    <path d="M60 114C66 100 74 86 84 60" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.6" />
+    <path d="M60 114C80.77 95.85 91.37 71.34 102.39 46.16" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="translate(49.4 97.04) rotate(-6)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(43.04 86.86) rotate(-58)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(36.68 76.69) rotate(-6)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(30.32 66.51) rotate(-58)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(23.97 56.33) rotate(-6)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(19.73 49.55) rotate(-58)" />
+    <path d="M0 0C3.2 -3.8 3.2 -11 0 -18C-3.2 -11 -3.2 -3.8 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(55 104) rotate(-15)" />
+    <path d="M0 0C2.5 -3 2.5 -8.6 0 -14C-2.5 -8.6 -2.5 -3 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(51 96) rotate(-40)" />
+    <path d="M0 0C3.2 -3.8 3.2 -11 0 -18C-3.2 -11 -3.2 -3.8 0 0Z" fill="url(#leaf-olive-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="translate(47 88) rotate(-15)" />
+    <path d="M0 0C2.5 -3 2.5 -8.6 0 -14C-2.5 -8.6 -2.5 -3 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(43 80) rotate(-40)" />
+    <path d="M0 0C3.2 -3.8 3.2 -11 0 -18C-3.2 -11 -3.2 -3.8 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(39 70) rotate(-15)" />
+    <path d="M0 0C2.5 -3 2.5 -8.6 0 -14C-2.5 -8.6 -2.5 -3 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(36 60) rotate(-40)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(60 94) rotate(26)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(60 82) rotate(-26)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(60 70) rotate(26)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(60 58) rotate(-26)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(60 46) rotate(26)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(60 38) rotate(-26)" />
+    <path d="M0 0C3.2 -3.8 3.2 -11 0 -18C-3.2 -11 -3.2 -3.8 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(65 104) rotate(15)" />
+    <path d="M0 0C2.5 -3 2.5 -8.6 0 -14C-2.5 -8.6 -2.5 -3 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(69 96) rotate(40)" />
+    <path d="M0 0C3.2 -3.8 3.2 -11 0 -18C-3.2 -11 -3.2 -3.8 0 0Z" fill="url(#leaf-olive-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="translate(73 88) rotate(15)" />
+    <path d="M0 0C2.5 -3 2.5 -8.6 0 -14C-2.5 -8.6 -2.5 -3 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(77 80) rotate(40)" />
+    <path d="M0 0C3.2 -3.8 3.2 -11 0 -18C-3.2 -11 -3.2 -3.8 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(81 70) rotate(15)" />
+    <path d="M0 0C2.5 -3 2.5 -8.6 0 -14C-2.5 -8.6 -2.5 -3 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(84 60) rotate(40)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(70.6 97.04) rotate(58)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(76.96 86.86) rotate(6)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(83.32 76.69) rotate(58)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="translate(89.68 66.51) rotate(6)" />
+    <path d="M0 0C5.3 -5.25 5.3 -11.25 0 -15C-5.3 -11.25 -5.3 -5.25 0 0Z" fill="url(#leaf-gold-metal)" transform="translate(96.03 56.33) rotate(58)" />
+    <path d="M0 0C4.1 -4.02 4.1 -8.62 0 -11.5C-4.1 -8.62 -4.1 -4.02 0 0Z" fill="url(#leaf-olive-gradient)" transform="translate(100.27 49.55) rotate(6)" />
+    <path
+      d="M49.4 97.04L47.83 82.12 M43.04 86.86L33.29 80.77 M36.68 76.69L35.11 61.77 M30.32 66.51L20.57 60.42 M23.97 56.33L22.4 41.41 M19.73 49.55L9.98 43.46 M55 104L51 96 M47 88L43 80 M39 70L36 60 M60 94L66.58 80.52 M60 82L54.96 71.66 M60 70L66.58 56.52 M60 58L54.96 47.66 M60 46L66.58 32.52 M60 38L54.96 27.66 M65 104L69 96 M73 88L77 80 M81 70L84 60 M70.6 97.04L83.32 89.09 M76.96 86.86L78.16 75.42 M83.32 76.69L96.04 68.74 M89.68 66.51L90.88 55.07 M96.03 56.33L108.75 48.38 M100.27 49.55L101.47 38.11"
+      fill="none"
+      stroke="var(--c-leaf-deep)"
+      stroke-width="0.4"
+      stroke-opacity="0.45"
+      stroke-linecap="round"
+    />
+  </symbol>
+
+  {/* `leaf-eucalyptus-cluster`: 4 bowed stems fan from one hidden root at (60, 114); round
+       silver-dollar leaves overlap in pairs along each stem (radial-lit, `leaf-eucalyptus-gradient`
+       from the shared gradient defs above), with short creases and gilt touches. No new gradient
+       defs. */}
+  <symbol id="leaf-eucalyptus-cluster" viewBox="0 0 120 120">
+    <path d="M60 114C37.24 97.77 22.91 74.47 7.29 51.18" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
+    <path d="M60 114C54 98 48 80 40 58" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.6" />
+    <path d="M60 114C50.67 87.65 52.29 60.35 52.85 32.31" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.3" stroke-opacity="0.65" />
+    <path d="M60 114C79.59 94.07 89.66 68.63 101 42.99" fill="none" stroke="var(--c-leaf-deep)" stroke-width="1.2" stroke-opacity="0.65" />
+    <ellipse cx="56" cy="104" rx="9" ry="10.8" fill="url(#leaf-gold-metal)" transform="rotate(-40 56 104)" />
+    <ellipse cx="50" cy="92" rx="8" ry="9.6" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-20 50 92)" />
+    <ellipse cx="45" cy="78" rx="8" ry="9.6" fill="url(#leaf-gold-metal)" transform="rotate(-40 45 78)" />
+    <ellipse cx="41" cy="64" rx="7" ry="8.4" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-20 41 64)" />
+    <ellipse cx="36.81" cy="92.75" rx="11.5" ry="13.8" fill="url(#leaf-gold-metal)" transform="rotate(-54 36.81 92.75)" />
+    <ellipse cx="49.46" cy="95.05" rx="11.5" ry="13.8" fill="url(#leaf-gold-metal)" transform="rotate(-26 49.46 95.05)" />
+    <ellipse cx="25.35" cy="78.42" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-54 25.35 78.42)" />
+    <ellipse cx="36.68" cy="80.48" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="rotate(-26 36.68 80.48)" />
+    <ellipse cx="13.88" cy="64.09" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-54 13.88 64.09)" />
+    <ellipse cx="23.89" cy="65.91" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" stroke="var(--c-champagne-500)" stroke-width="0.6" transform="rotate(-26 23.89 65.91)" />
+    <ellipse cx="51.39" cy="86.71" rx="11.5" ry="13.8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-19 51.39 86.71)" />
+    <ellipse cx="64.04" cy="89.01" rx="11.5" ry="13.8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(9 64.04 89.01)" />
+    <ellipse cx="50.4" cy="68.04" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-19 50.4 68.04)" />
+    <ellipse cx="61.73" cy="70.1" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(9 61.73 70.1)" />
+    <ellipse cx="49.42" cy="49.37" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(-19 49.42 49.37)" />
+    <ellipse cx="59.43" cy="51.19" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(9 59.43 51.19)" />
+    <ellipse cx="66.8" cy="90.13" rx="11.5" ry="13.8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(16 66.8 90.13)" />
+    <ellipse cx="79.45" cy="92.43" rx="11.5" ry="13.8" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(44 79.45 92.43)" />
+    <ellipse cx="76.88" cy="73.91" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(16 76.88 73.91)" />
+    <ellipse cx="88.22" cy="75.97" rx="10.3" ry="12.36" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(44 88.22 75.97)" />
+    <ellipse cx="86.98" cy="57.7" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(16 86.98 57.7)" />
+    <ellipse cx="96.98" cy="59.52" rx="9.1" ry="10.92" fill="url(#leaf-eucalyptus-gradient)" transform="rotate(44 96.98 59.52)" />
+    <path
+      d="M30.3 88.02L43.32 97.48 M45.93 87.81L52.99 102.29 M19.52 74.18L31.18 82.66 M33.52 74L39.84 86.96 M8.73 60.35L19.03 67.83 M21.1 60.18L26.68 71.64 M48.77 79.1L54.01 94.32 M65.3 81.06L62.78 96.96 M48.05 61.22L52.75 74.86 M62.86 62.98L60.6 77.22 M47.35 43.35L51.49 55.39 M60.43 44.9L58.43 57.48 M69.02 82.39L64.58 97.87 M85.04 86.64L73.86 98.22 M78.87 66.98L74.89 80.84 M93.23 70.78L83.21 81.16 M88.74 51.58L85.22 63.82 M101.4 54.94L92.56 64.1"
+      fill="none"
+      stroke="var(--c-leaf-deep)"
+      stroke-width="0.4"
+      stroke-opacity="0.45"
+      stroke-linecap="round"
+    />
+  </symbol>
+
+  <symbol id="sparkle-star" viewBox="0 0 24 24">
+    <path
+      d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+      fill="var(--c-champagne-300)"
+    />
+    <path
+      d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+      fill="var(--c-champagne-100)"
+      transform="translate(12 12) scale(0.55) translate(-12 -12)"
+    />
+  </symbol>
+</svg>
