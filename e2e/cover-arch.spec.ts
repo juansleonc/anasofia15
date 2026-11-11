@@ -195,6 +195,10 @@ test.describe('Balloon arch', () => {
       { width: 2560, height: 950 },
       { width: 2560, height: 740 },
       { width: 2560, height: 1080 },
+      // Near-square portrait windows.
+      { width: 720, height: 792 },
+      { width: 1000, height: 1001 },
+      { width: 960, height: 980 },
     ];
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);

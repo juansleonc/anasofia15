@@ -121,10 +121,15 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     min-height: 100dvh;
     padding: clamp(3.75rem, 14vh, 6rem) 1.25rem;
     /* Never let the title sit under the garland: clear at least as far down as the garland's
-       clear top (see garlandCoverVars in cover-garland.ts), whichever is taller than the
-       cosmetic clamp above, or the 36vh tall-phone floor the portrait garland keeps (see
-       BalloonArch.astro). */
-    padding-top: max(clamp(3.75rem, 14vh, 6rem), calc(var(--arch-band-portrait) * 100%), 36vh);
+       clear top (see garlandCoverVars in cover-garland.ts), or the 36vh tall-phone floor the
+       portrait garland keeps (see BalloonArch.astro), and never less than the cosmetic clamp
+       above. The cover is a single scroll-locked screen, so that clear top is also capped by
+       `--cover-arch-band-cap` (below) to leave room for the text block and the open button
+       underneath it. */
+    padding-top: max(
+      clamp(3.75rem, 14vh, 6rem),
+      min(max(calc(var(--arch-band-portrait) * 100%), 36vh), var(--cover-arch-band-cap))
+    );
     text-align: center;
     isolation: isolate;
     /* A warm, luminous, festive base: a champagne glow under the garland, rose blooms in both
@@ -199,8 +204,8 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, var(--c-white), transparent 75%);
   }
 
-  /* One viewport-height unit for the landscape height caps below: the dynamic viewport where
-     supported (so mobile browser chrome is accounted for), plain `vh` elsewhere. */
+  /* One viewport-height unit for the height caps below: the dynamic viewport where supported (so
+     mobile browser chrome is accounted for), plain `vh` elsewhere. */
   .cover {
     --cover-vh: 1vh;
   }
@@ -211,6 +216,19 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
     }
   }
 
+  /* How far down the portrait garland's clear top may sit: the viewport height less a reserve for
+     the text block and the open button, which grows with width the way that block does (two lead
+     lines and the smallest name on phones, one lead line and the largest name from about 840px
+     wide). Tall screens never reach the cap, so their layout is untouched; near-square portrait
+     windows pick it up and BalloonArch lifts the portrait garland by the same amount, so the text
+     and the garland stay aligned. */
+  .cover {
+    --cover-arch-band-cap: max(
+      clamp(3.75rem, 14vh, 6rem),
+      calc(100 * var(--cover-vh) - clamp(19.25rem, 10rem + 31vw, 25.3rem))
+    );
+  }
+
   /* Landscape sizes are driven by width (the garland and the clear zone scale with it), but the
      cover is a single scroll-locked screen, so every vertical dimension of the landscape layout
      is also capped by a share of the viewport height: whichever is smaller wins, which keeps the
@@ -218,12 +236,16 @@ const nameFitVar = `--name-fit-ratio:${(NAME_FIT_SAFETY / NAME_WIDTH_PER_EM).toF
      jump at. Each cap is tuned to sit at or just above that dimension's width-driven size at
      1366x768 and 1440x800, so those screens, and any no wider relative to their height, keep
      their width-driven layout; only wider or shorter windows pick up a cap.
-     `--cover-arch-band-cap` limits how far down the garland's clear top may sit; BalloonArch
-     shifts the landscape garland up by the same amount, so the text and the garland stay
-     aligned. */
+     `--cover-arch-band-cap` limits how far down the garland's clear top may sit (on the very
+     shortest windows, also to the viewport height less a fixed reserve for the text block);
+     BalloonArch shifts the landscape garland up by the same amount, so the text and the garland
+     stay aligned. */
   @media (min-aspect-ratio: 1/1) {
     .cover {
-      --cover-arch-band-cap: calc(41 * var(--cover-vh));
+      --cover-arch-band-cap: min(
+        calc(41 * var(--cover-vh)),
+        max(clamp(3.75rem, 14vh, 6rem), calc(100 * var(--cover-vh) - 12rem))
+      );
       padding-top: max(
         clamp(3.75rem, 14vh, 6rem),
         min(calc(var(--arch-band-landscape) * 100%), var(--cover-arch-band-cap))

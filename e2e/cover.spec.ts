@@ -575,67 +575,92 @@ test.describe('Cover section', () => {
     });
   }
 
-  test('the open button is fully visible and clickable without scrolling at every landscape window shape', async ({
-    page,
-  }) => {
-    test.setTimeout(120_000);
-    const widths = [568, 667, 844, 1024, 1280, 1366, 1440, 1536, 1680, 1920, 2048, 2560];
-    const heights = [320, 375, 430, 600, 657, 700, 740, 761, 800, 900, 950, 1080];
-    const viewports = widths.flatMap((width) =>
-      heights.filter((height) => width > height).map((height) => ({ width, height })),
-    );
-    // Wide-but-short desktop windows that used to push the button below the locked screen.
-    viewports.push(
-      { width: 1680, height: 761 },
-      { width: 1920, height: 761 },
-      { width: 2000, height: 761 },
-      { width: 1920, height: 800 },
-      { width: 2048, height: 800 },
-      { width: 2560, height: 950 },
-      { width: 2560, height: 740 },
-    );
-    expect(viewports.length).toBeGreaterThan(100);
+  test.describe('across window shapes', () => {
+    // Layout is in CSS px, so pixel density doesn't change it; rendering the tallest windows at
+    // the phone's 3x density only makes every resize crawl.
+    test.use({ deviceScaleFactor: 1 });
 
-    await page.goto('./');
-    await page.evaluate(() => document.fonts.ready.then(() => undefined));
-    const button = page.getByTestId('open-invitation-button');
+    test('the open button is fully visible and clickable without scrolling at every window shape', async ({
+      page,
+    }) => {
+      test.setTimeout(180_000);
+      // Every width crossed with height-to-width ratios from very wide landscape to tall phone,
+      // packed around the 1:1 boundary where the portrait and landscape layouts meet.
+      const widths = [320, 360, 390, 430, 480, 600, 720, 768, 840, 900, 960, 1000, 1080, 1280, 1440, 1920, 2560];
+      const ratios = [0.3, 0.45, 0.56, 0.62, 0.75, 0.9, 1.0, 1.001, 1.05, 1.1, 1.15, 1.2, 1.33, 1.5, 1.78, 2.0, 2.17];
+      const viewports = widths.flatMap((width) =>
+        ratios
+          .map((ratio) => ({ width, height: Math.round(width * ratio) }))
+          .filter(({ height }) => height >= 250),
+      );
+      // Landscape desktop and phone heights, including wide-but-short windows that used to push the
+      // button below the locked screen.
+      const landscapeWidths = [568, 667, 844, 1024, 1280, 1366, 1440, 1536, 1680, 1920, 2048, 2560];
+      const landscapeHeights = [320, 375, 430, 600, 657, 700, 740, 761, 800, 900, 950, 1080];
+      viewports.push(
+        ...landscapeWidths.flatMap((width) =>
+          landscapeHeights.filter((height) => width > height).map((height) => ({ width, height })),
+        ),
+      );
+      viewports.push(
+        { width: 1680, height: 761 },
+        { width: 1920, height: 761 },
+        { width: 2000, height: 761 },
+        { width: 1920, height: 800 },
+        { width: 2048, height: 800 },
+        { width: 2560, height: 950 },
+        { width: 2560, height: 740 },
+        // Near-square portrait windows, where the deep portrait garland used to push the button
+        // below the locked screen.
+        { width: 720, height: 792 },
+        { width: 840, height: 924 },
+        { width: 960, height: 980 },
+        { width: 1000, height: 1001 },
+        { width: 999, height: 1000 },
+      );
+      expect(viewports.length).toBeGreaterThan(350);
 
-    const failures: string[] = [];
-    for (const viewport of viewports) {
-      // No reload needed: the layout is pure CSS, so it re-resolves on resize.
-      await page.setViewportSize(viewport);
-      const label = `${viewport.width}x${viewport.height}`;
-      const result = await button.evaluate((el) => {
-        const rect = el.getBoundingClientRect();
-        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-        return {
-          top: rect.top,
-          bottom: rect.bottom,
-          left: rect.left,
-          right: rect.right,
-          centreIsButton: hit !== null && el.contains(hit),
-        };
-      });
-      if (
-        result.top < 0 ||
-        result.left < 0 ||
-        result.bottom > viewport.height ||
-        result.right > viewport.width
-      ) {
-        failures.push(`${label}: button ${result.top}-${result.bottom} outside viewport`);
-        continue;
+      await page.goto('./');
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      const button = page.getByTestId('open-invitation-button');
+
+      const failures: string[] = [];
+      for (const viewport of viewports) {
+        // No reload needed: the layout is pure CSS, so it re-resolves on resize.
+        await page.setViewportSize(viewport);
+        const label = `${viewport.width}x${viewport.height}`;
+        const result = await button.evaluate((el) => {
+          const rect = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          return {
+            top: rect.top,
+            bottom: rect.bottom,
+            left: rect.left,
+            right: rect.right,
+            centreIsButton: hit !== null && el.contains(hit),
+          };
+        });
+        if (
+          result.top < 0 ||
+          result.left < 0 ||
+          result.bottom > viewport.height ||
+          result.right > viewport.width
+        ) {
+          failures.push(`${label}: button ${result.top}-${result.bottom} outside viewport`);
+          continue;
+        }
+        if (!result.centreIsButton) {
+          failures.push(`${label}: button centre is covered`);
+          continue;
+        }
+        try {
+          await button.click({ trial: true, timeout: 2000 });
+        } catch {
+          failures.push(`${label}: trial click failed`);
+        }
       }
-      if (!result.centreIsButton) {
-        failures.push(`${label}: button centre is covered`);
-        continue;
-      }
-      try {
-        await button.click({ trial: true, timeout: 2000 });
-      } catch {
-        failures.push(`${label}: trial click failed`);
-      }
-    }
-    expect(failures).toEqual([]);
+      expect(failures).toEqual([]);
+    });
   });
 
   test('at 1366x768 the button stays above the fold', async ({ page }) => {

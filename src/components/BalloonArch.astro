@@ -91,6 +91,18 @@ const portraitAspect = GARLAND.portrait.width / GARLAND.portrait.clear.top;
     transform: translateX(-50%);
   }
 
+  /* On a near-square portrait window the cover caps how far down the text starts
+     (`--cover-arch-band-cap`, see Cover.astro); lift the garland by the same amount so its clear
+     top (the larger of its width-scaled crown and the 36vh floor above) still meets the text,
+     letting the top edge crop instead. `%` here is the cover's width, matching the cover's own
+     padding-top. */
+  .balloon-arch__layout[data-arch-layout='portrait'] {
+    margin-top: min(
+      0px,
+      calc(var(--cover-arch-band-cap) - max(var(--arch-band-portrait) * 100%, 36vh))
+    );
+  }
+
   .balloon-arch__layout[data-arch-layout='landscape'] {
     display: none;
   }
