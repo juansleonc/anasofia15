@@ -10,7 +10,10 @@
 // module stays a pure, atomic scorer; the transient "which option was just tapped" state is a DOM
 // concern owned entirely by this island.
 import { triviaQuestions } from '../data/trivia';
+import { event } from '../data/event';
+import { siteConfig } from '../data/site.config';
 
+const accessKey = siteConfig.web3formsAccessKey;
 const firstQuestion = triviaQuestions[0];
 const totalQuestions = triviaQuestions.length;
 ---
@@ -48,6 +51,28 @@ const totalQuestions = triviaQuestions.length;
     <p class="trivia-result__eyebrow">Tu resultado</p>
     <p class="trivia-result__message" data-testid="trivia-message"></p>
     <button type="button" class="trivia-restart" data-testid="trivia-restart">Jugar otra vez</button>
+
+    <form class="trivia-send" data-testid="trivia-send-form" data-access-key={accessKey} novalidate hidden>
+      <p class="trivia-send__intro">Envíale tu resultado a {event.celebrantName} 💌</p>
+      <label class="trivia-send__label" for="trivia-send-name">Tu nombre</label>
+      <input
+        class="trivia-send__input"
+        id="trivia-send-name"
+        data-testid="trivia-send-name"
+        name="name"
+        autocomplete="name"
+      />
+      <p class="trivia-send__error" data-testid="trivia-send-error" role="alert"></p>
+      {/* honeypot — Astro comment, so nothing ships to dist */}
+      <div class="trivia-send__honeypot" aria-hidden="true">
+        <input name="botcheck" data-testid="trivia-send-honeypot" tabindex="-1" autocomplete="off" />
+      </div>
+      <p class="trivia-send__status" data-testid="trivia-send-status" role="status" aria-live="polite"></p>
+      <button type="submit" class="trivia-send__button" data-testid="trivia-send-button">Enviar mi resultado</button>
+    </form>
+    <p class="trivia-send__sent" data-testid="trivia-send-sent" hidden>
+      ¡Listo! Tu resultado le llegó a {event.celebrantName} 💌
+    </p>
   </div>
 
   <canvas class="trivia-confetti" data-testid="trivia-confetti" aria-hidden="true"></canvas>
@@ -196,6 +221,98 @@ const totalQuestions = triviaQuestions.length;
     cursor: pointer;
   }
 
+  .trivia-send {
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid color-mix(in srgb, var(--c-rose-700) 18%, transparent);
+    text-align: left;
+  }
+
+  .trivia-send[hidden],
+  .trivia-send__sent[hidden] {
+    display: none;
+  }
+
+  .trivia-send__intro {
+    text-align: center;
+    color: var(--c-ink);
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .trivia-send__label {
+    display: block;
+    font-size: 0.8125rem;
+    letter-spacing: 0.03em;
+    color: var(--c-ink-soft);
+    opacity: 0.85;
+    margin-bottom: 0.5rem;
+  }
+
+  .trivia-send__input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 1rem 1.125rem;
+    border-radius: 0.875rem;
+    background: color-mix(in srgb, var(--c-white) 4%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c-rose-700) 18%, transparent);
+    color: var(--c-ink-soft);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    outline: none;
+  }
+
+  .trivia-send__error {
+    min-height: 1.125rem;
+    color: var(--c-error);
+    font-size: 0.8125rem;
+    margin-top: 0.375rem;
+  }
+
+  .trivia-send__honeypot {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .trivia-send__status {
+    min-height: 1.125rem;
+    color: var(--c-ink-soft);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0.25rem 0 0.75rem;
+  }
+
+  .trivia-send__button {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 1.125rem;
+    border-radius: 0.875rem;
+    border: none;
+    background: var(--gradient-button);
+    color: var(--c-white);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.9375rem;
+    cursor: pointer;
+  }
+
+  .trivia-send__button:disabled {
+    opacity: 0.65;
+    cursor: default;
+  }
+
+  .trivia-send__sent {
+    margin-top: 1.75rem;
+    color: var(--c-ink);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
   .trivia-confetti {
     position: absolute;
     inset: 0;
@@ -206,6 +323,8 @@ const totalQuestions = triviaQuestions.length;
 <script>
   import { createTriviaState, answer, progress, isDone, score, resultMessage, type TriviaState } from '../lib/trivia';
   import { triviaQuestions } from '../data/trivia';
+  import { readSubmission } from '../lib/rsvp';
+  import { isWeb3FormsKeyConfigured } from '../lib/web3forms';
 
   // Brief reveal window before advancing to the next question — the island's own choreography,
   // not part of `src/lib/trivia.ts`'s atomic `answer()`.
@@ -222,6 +341,10 @@ const totalQuestions = triviaQuestions.length;
   const messageEl = document.querySelector('[data-testid="trivia-message"]');
   const restartButton = document.querySelector('[data-testid="trivia-restart"]');
   const confettiCanvas = document.querySelector('[data-testid="trivia-confetti"]') as HTMLCanvasElement | null;
+
+  const sendForm = document.querySelector('[data-testid="trivia-send-form"]') as HTMLFormElement | null;
+  const sendNameInput = document.querySelector('[data-testid="trivia-send-name"]') as HTMLInputElement | null;
+  const sendIsConfigured = isWeb3FormsKeyConfigured(sendForm?.dataset.accessKey);
 
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -311,11 +434,26 @@ const totalQuestions = triviaQuestions.length;
     draw();
   }
 
+  function savedName(): string {
+    try {
+      return readSubmission()?.name ?? '';
+    } catch {
+      return '';
+    }
+  }
+
+  function showSendForm(): void {
+    if (!sendForm || !sendIsConfigured) return;
+    if (sendNameInput) sendNameInput.value = savedName();
+    sendForm.hidden = false;
+  }
+
   function showResult(): void {
     if (questionView) questionView.hidden = true;
     if (resultView) resultView.hidden = false;
     if (scoreEl) scoreEl.textContent = `${score(state)}/${triviaQuestions.length}`;
     if (messageEl) messageEl.textContent = resultMessage(state);
+    showSendForm();
   }
 
   function onOptionClick(i: number): void {

@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 
 export const TEST_ACCESS_KEY = '11111111-1111-1111-1111-111111111111';
 
-const MIN_REPLACEMENTS = 1;
+const MIN_REPLACEMENTS = 2;
 
 /**
  * Test-only seam: intercepts the page document and swaps every `data-access-key` attribute for a
