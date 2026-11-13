@@ -6,6 +6,7 @@
  */
 
 import { triviaQuestions, resultMessages } from '../data/trivia';
+import { event } from '../data/event';
 
 export interface TriviaState {
   /** Chosen option index for each answered question, in the order they were answered. */
@@ -42,4 +43,39 @@ export function answer(state: TriviaState, optionIndex: number): TriviaState {
 /** The closing message matching the player's final score, once `isDone(state)` is true. */
 export function resultMessage(state: TriviaState): string {
   return resultMessages[score(state)];
+}
+
+export interface TriviaResultPayload {
+  access_key: string;
+  subject: string;
+  name: string;
+  from_name: string;
+  puntaje: string;
+  respuestas: string;
+  botcheck: string;
+}
+
+/** Web3Forms payload reporting a finished game: score plus one line per question with the chosen option. */
+export function buildTriviaResultPayload(
+  name: string,
+  state: TriviaState,
+  accessKey: string,
+): TriviaResultPayload {
+  const trimmed = name.trim();
+  const puntaje = `${score(state)}/${triviaQuestions.length}`;
+  const respuestas = triviaQuestions
+    .map((q, i) => {
+      const mark = state.answers[i] === q.correctIndex ? '✓' : '✗';
+      return `${i + 1}. ${q.prompt} → ${q.options[state.answers[i]]} ${mark}`;
+    })
+    .join('\n');
+  return {
+    access_key: accessKey,
+    subject: `Resultado de trivia · XV años · ${event.celebrantName} · ${trimmed} · ${puntaje}`,
+    name: trimmed,
+    from_name: trimmed,
+    puntaje,
+    respuestas,
+    botcheck: '',
+  };
 }

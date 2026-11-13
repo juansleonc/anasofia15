@@ -1,6 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { createTriviaState, answer, progress, isDone, score, resultMessage } from '../trivia';
+import {
+  createTriviaState,
+  answer,
+  progress,
+  isDone,
+  score,
+  resultMessage,
+  buildTriviaResultPayload,
+} from '../trivia';
 import { triviaQuestions, resultMessages } from '../../data/trivia';
 
 describe('trivia pure logic', () => {
@@ -267,5 +275,46 @@ describe('trivia pure logic', () => {
     expect(state.answers).toBe(before);
     expect(state.answers).toEqual([]);
     expect(next.answers).not.toBe(before);
+  });
+});
+
+describe('buildTriviaResultPayload', () => {
+  const accessKey = '00000000-0000-4000-8000-000000000000';
+  // Even questions answered correctly, odd ones answered wrongly (the next option over).
+  const alternating = triviaQuestions.map((q, i) =>
+    i % 2 === 0 ? q.correctIndex : (q.correctIndex + 1) % q.options.length,
+  );
+  const state = alternating.reduce(answer, createTriviaState());
+  const payload = buildTriviaResultPayload('  Laura Gómez  ', state, accessKey);
+
+  it('titles the subject as a trivia result with the name and score, never as an RSVP', () => {
+    expect(payload.subject.startsWith('Resultado de trivia')).toBe(true);
+    expect(payload.subject).toContain('Laura Gómez');
+    expect(payload.subject).toContain('5/10');
+    expect(payload.subject).not.toContain('RSVP');
+  });
+
+  it('reports the score as x/10', () => {
+    expect(score(state)).toBe(5);
+    expect(payload.puntaje).toBe('5/10');
+  });
+
+  it('uses the trimmed name for both name and from_name', () => {
+    expect(payload.name).toBe('Laura Gómez');
+    expect(payload.from_name).toBe('Laura Gómez');
+  });
+
+  it('lists one numbered line per question with the chosen option and a verdict mark', () => {
+    const lines = payload.respuestas.split('\n');
+    expect(lines).toHaveLength(10);
+    triviaQuestions.forEach((q, i) => {
+      const mark = alternating[i] === q.correctIndex ? '✓' : '✗';
+      expect(lines[i]).toBe(`${i + 1}. ${q.prompt} → ${q.options[alternating[i]]} ${mark}`);
+    });
+  });
+
+  it('leaves the honeypot empty and passes the access key through', () => {
+    expect(payload.botcheck).toBe('');
+    expect(payload.access_key).toBe(accessKey);
   });
 });
