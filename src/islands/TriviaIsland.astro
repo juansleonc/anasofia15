@@ -509,10 +509,12 @@ const totalQuestions = triviaQuestions.length;
 
     sending = false;
     if (sendButton) sendButton.disabled = false;
-    if (sendStatus) sendStatus.textContent = '';
     if (ok) {
+      if (sendStatus) sendStatus.textContent = '';
       sendForm.hidden = true;
       if (sendSent) sendSent.hidden = false;
+    } else if (sendStatus) {
+      sendStatus.textContent = 'No pudimos enviar tu resultado. Intenta de nuevo.';
     }
   }
 

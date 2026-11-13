@@ -85,4 +85,47 @@ test.describe('Trivia send form', () => {
     expect(payload.botcheck).toBe('');
     expect(payload.access_key).toBe(TEST_ACCESS_KEY);
   });
+
+  for (const [label, response] of [
+    ['an HTTP 500', { status: 500, body: '{}' }],
+    ['a success:false body', { status: 200, body: JSON.stringify({ success: false }) }],
+  ] as const) {
+    test(`shows a retryable error on ${label}, then sends once the route recovers`, async ({ page }) => {
+      test.setTimeout(60_000);
+      await withConfiguredAccessKey(page);
+      let posts = 0;
+      let fail = true;
+      await page.route('https://api.web3forms.com/submit', async (route) => {
+        posts += 1;
+        if (fail) {
+          await route.fulfill({ status: response.status, contentType: 'application/json', body: response.body });
+        } else {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true }),
+          });
+        }
+      });
+      await playToEnd(page);
+
+      await page.getByTestId('trivia-send-name').fill('Camila Torres');
+      const button = page.getByTestId('trivia-send-button');
+      await button.click();
+
+      await expect(page.getByTestId('trivia-send-status')).toHaveText(
+        'No pudimos enviar tu resultado. Intenta de nuevo.',
+      );
+      await expect(button).toBeEnabled();
+      await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
+      await expect(page.getByTestId('trivia-send-form')).toBeVisible();
+      expect(posts).toBe(1);
+
+      fail = false;
+      await button.click();
+      await expect(page.getByTestId('trivia-send-sent')).toBeVisible();
+      await expect(page.getByTestId('trivia-send-form')).toBeHidden();
+      expect(posts).toBe(2);
+    });
+  }
 });
