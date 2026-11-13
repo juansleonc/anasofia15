@@ -355,6 +355,7 @@ const totalQuestions = triviaQuestions.length;
 
   let state: TriviaState = createTriviaState();
   let revealing = false;
+  let sending = false;
 
   function renderProgress(): void {
     if (!progressEl) return;
@@ -488,16 +489,24 @@ const totalQuestions = triviaQuestions.length;
     }, REVEAL_DELAY_MS);
   }
 
+  function resetSendUi(): void {
+    sending = false;
+    if (sendButton) sendButton.disabled = false;
+    if (sendStatus) sendStatus.textContent = '';
+    if (sendError) sendError.textContent = '';
+    if (sendSent) sendSent.hidden = true;
+    showSendForm();
+  }
+
   function restart(): void {
     state = createTriviaState();
     revealing = false;
+    resetSendUi();
     if (resultView) resultView.hidden = true;
     if (questionView) questionView.hidden = false;
     renderQuestion();
     setOptionsDisabled(false);
   }
-
-  let sending = false;
 
   async function onSendSubmit(submitEvent: Event): Promise<void> {
     submitEvent.preventDefault();

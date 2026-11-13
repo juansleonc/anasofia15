@@ -172,4 +172,44 @@ test.describe('Trivia send form', () => {
     await expect(page.getByTestId('trivia-send-status')).toHaveText('');
     expect(posts).toBe(0);
   });
+  test('without a configured key the form stays hidden, nothing is sent and the quiz restarts', async ({ page }) => {
+    test.setTimeout(60_000);
+    let posts = 0;
+    await page.route('https://api.web3forms.com/submit', async (route) => {
+      posts += 1;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+    });
+    await playToEnd(page);
+
+    await expect(page.getByTestId('trivia-send-form')).toBeHidden();
+    await page.getByTestId('trivia-restart').click();
+    await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta 1 de ${triviaQuestions.length}`);
+    await expect(page.getByTestId('trivia-result')).toBeHidden();
+    expect(posts).toBe(0);
+  });
+
+  test('after a successful send, restarting and replaying shows an idle send form again', async ({ page }) => {
+    test.setTimeout(90_000);
+    await withConfiguredAccessKey(page);
+    await page.route('https://api.web3forms.com/submit', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+    });
+    await playToEnd(page);
+    await page.getByTestId('trivia-send-name').fill('Camila Torres');
+    await page.getByTestId('trivia-send-button').click();
+    await expect(page.getByTestId('trivia-send-sent')).toBeVisible();
+
+    await page.getByTestId('trivia-restart').click();
+    for (let i = 0; i < triviaQuestions.length; i += 1) {
+      await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta ${i + 1} de`);
+      await page.getByTestId(`trivia-option-${triviaQuestions[i].correctIndex}`).click();
+    }
+    await expect(page.getByTestId('trivia-result')).toBeVisible();
+
+    await expect(page.getByTestId('trivia-send-form')).toBeVisible();
+    await expect(page.getByTestId('trivia-send-button')).toBeEnabled();
+    await expect(page.getByTestId('trivia-send-status')).toHaveText('');
+    await expect(page.getByTestId('trivia-send-error')).toHaveText('');
+    await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
+  });
 });
