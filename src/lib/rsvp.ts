@@ -1,7 +1,7 @@
 /**
  * Pure RSVP logic: validate the form input, build the payload posted to Web3Forms, and a
  * localStorage-backed one-submission-per-device guard. No DOM/fetch here — `islands/RsvpForm`
- * wires this to the real form + `fetch('https://api.web3forms.com/submit')`.
+ * wires this to the real form and to the Web3Forms transport helpers in `lib/web3forms`.
  */
 
 export type Attending = 'yes' | 'no';
@@ -45,11 +45,6 @@ export function validateRsvp(input: {
   }
 
   return { ok: Object.keys(errors).length === 0, errors };
-}
-
-/** Honeypot convention: a hidden field that only a bot fills in. Non-empty ⇒ block the send. */
-export function isHoneypotTripped(rawForm: { botcheck?: unknown }): boolean {
-  return typeof rawForm.botcheck === 'string' && rawForm.botcheck.trim().length > 0;
 }
 
 export interface Web3FormsPayload {
@@ -149,15 +144,4 @@ export function readSubmission(storage?: Storage): { name: string; attending: At
   } catch {
     return null;
   }
-}
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * True only for a real-looking Web3Forms access key (a UUID) — false for the shipped placeholder
- * literal, an empty value, or anything non-string. Drives whether the RSVP form submits at all:
- * while false, the island shows a "not configured" notice and never calls `fetch`.
- */
-export function isWeb3FormsKeyConfigured(key: unknown): boolean {
-  return typeof key === 'string' && UUID_PATTERN.test(key);
 }

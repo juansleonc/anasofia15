@@ -1,0 +1,19 @@
+/** Web3Forms transport helpers shared by the site's forms: endpoint, key check, honeypot check. */
+
+export const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
+
+/** Honeypot convention: a hidden field that only a bot fills in. Non-empty ⇒ block the send. */
+export function isHoneypotTripped(rawForm: { botcheck?: unknown }): boolean {
+  return typeof rawForm.botcheck === 'string' && rawForm.botcheck.trim().length > 0;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * True only for a real-looking Web3Forms access key (a UUID) — false for the shipped placeholder
+ * literal, an empty value, or anything non-string. Drives whether the RSVP form submits at all:
+ * while false, the island shows a "not configured" notice and never calls `fetch`.
+ */
+export function isWeb3FormsKeyConfigured(key: unknown): boolean {
+  return typeof key === 'string' && UUID_PATTERN.test(key);
+}
