@@ -61,8 +61,12 @@ test.describe('Secrets sweep over dist/', () => {
 
   test('the public Web3Forms access_key is allowed and present (sweep is not vacuous)', () => {
     const textFiles = listFilesRecursive(DIST_DIR).filter((file) => TEXT_FILE_PATTERN.test(file));
+    // Astro renders an empty value as a bare attribute (no `=""`), so match both shapes exactly.
+    const key = siteConfig.web3formsAccessKey;
+    const attributePattern =
+      key === '' ? /data-access-key(?=[\s>])(?!=)/ : new RegExp(`data-access-key="${key}"`);
     const hasAccessKey = textFiles.some((file) =>
-      readFileSync(file, 'utf-8').includes(siteConfig.web3formsAccessKey),
+      attributePattern.test(readFileSync(file, 'utf-8')),
     );
 
     expect(hasAccessKey).toBe(true);
