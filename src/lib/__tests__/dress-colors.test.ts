@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dressColors } from '../../data/dress-colors';
+import { dressColors, reservedColors, reservedColorsNote } from '../../data/dress-colors';
 
 describe('dressColors', () => {
   it('has exactly twelve colors', () => {
@@ -31,6 +31,42 @@ describe('dressColors', () => {
   it('gives no color a note', () => {
     for (const color of dressColors) {
       expect(color).not.toHaveProperty('note');
+    }
+  });
+
+  it('keeps every hex dark enough to read as a jewel tone', () => {
+    const luminance = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => {
+        const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    for (const { hex } of dressColors) {
+      expect(luminance(hex)).toBeGreaterThanOrEqual(0.01);
+      expect(luminance(hex)).toBeLessThanOrEqual(0.4);
+    }
+  });
+});
+
+describe('reservedColors', () => {
+  it('words the note exactly', () => {
+    expect(reservedColorsNote).toBe(
+      'Para tu vestido, evita los colores blanco, marfil, champagne, dorado rosado y negro: están reservados para la quinceañera.',
+    );
+  });
+
+  it('mentions every reserved color in the note', () => {
+    for (const reserved of reservedColors) {
+      expect(reservedColorsNote).toContain(reserved);
+    }
+  });
+
+  it('never names a wheel color after a reserved one', () => {
+    for (const { name } of dressColors) {
+      for (const reserved of reservedColors) {
+        expect(name.toLowerCase()).not.toContain(reserved);
+      }
     }
   });
 });

@@ -18,3 +18,8 @@ export const dressColors: DressColor[] = [
   { name: 'Verde botella', hex: '#013A1C' },
   { name: 'Terracota', hex: '#812A0B' },
 ];
+
+/** Colors the quinceañera wears, so guests should not. */
+export const reservedColors = ['blanco', 'marfil', 'champagne', 'dorado rosado', 'negro'] as const;
+
+export const reservedColorsNote = `Para tu vestido, evita los colores ${new Intl.ListFormat('es', { type: 'conjunction' }).format(reservedColors)}: están reservados para la quinceañera.`;
