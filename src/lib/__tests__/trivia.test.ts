@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { createTriviaState, answer, progress, resultMessage } from '../trivia';
 import { triviaQuestions, resultMessages } from '../../data/trivia';
@@ -6,7 +7,109 @@ describe('trivia pure logic', () => {
   // Adversarial cases first: the ways this could silently score wrong or drift from the data file.
 
   it('consumes all questions from the trivia data module', () => {
-    expect(triviaQuestions).toHaveLength(11);
+    expect(triviaQuestions).toHaveLength(10);
+  });
+
+  it('holds the ten confirmed questions with their exact options and answer keys', () => {
+    expect(triviaQuestions).toEqual([
+      {
+        prompt: '¿Cuál es el color favorito de Ana Sofía?',
+        options: ['Morado', 'Azul', 'Rosado', 'Verde'],
+        correctIndex: 2,
+      },
+      {
+        prompt: '¿Cuál es la comida favorita de Ana Sofía?',
+        options: ['Pizza', 'Sushi', 'Hamburguesa', 'Pasta'],
+        correctIndex: 1,
+      },
+      {
+        prompt: '¿Cuáles son las canciones favoritas de Ana Sofía?',
+        options: [
+          'Tusa y Mamiii',
+          'Provenza y La Bachata',
+          'Mónaco y Hey Mor',
+          'Spicy y Do You Mind',
+        ],
+        correctIndex: 3,
+      },
+      {
+        prompt: '¿Quiénes son los artistas favoritos de Ana Sofía?',
+        options: ['Myke Towers y Anuel AA', 'Bad Bunny y Feid', 'Karol G y Shakira', 'J Balvin y Maluma'],
+        correctIndex: 0,
+      },
+      {
+        prompt: '¿Cuál es la película favorita de Ana Sofía?',
+        options: [
+          'Yo antes de ti',
+          'Después de',
+          'A todos los chicos de los que me enamoré',
+          'El stand de los besos',
+        ],
+        correctIndex: 2,
+      },
+      {
+        prompt: '¿Qué prefiere Ana Sofía?',
+        options: ['Perros', 'Gatos', 'Conejos', 'Hámsters'],
+        correctIndex: 2,
+      },
+      {
+        prompt: '¿Qué prefiere Ana Sofía?',
+        options: ['Día', 'Tarde', 'Noche', 'Madrugada'],
+        correctIndex: 0,
+      },
+      {
+        prompt: '¿Qué prefiere Ana Sofía?',
+        options: ['Piscina', 'Río', 'Lago', 'Playa'],
+        correctIndex: 3,
+      },
+      {
+        prompt: '¿Cuáles son los géneros musicales favoritos de Ana Sofía?',
+        options: [
+          'Pop y rock',
+          'Rap, reguetón y salsa',
+          'Vallenato y merengue',
+          'Electrónica y K-pop',
+        ],
+        correctIndex: 1,
+      },
+      {
+        prompt: '¿Qué le gusta hacer a Ana Sofía en su tiempo libre?',
+        options: [
+          'Ver series y maquillarse',
+          'Cocinar y cantar',
+          'Dibujar y leer',
+          'Jugar fútbol y correr',
+        ],
+        correctIndex: 0,
+      },
+    ]);
+  });
+
+  it('marks the confirmed answer as the correct option of each question', () => {
+    const confirmed = [
+      'Rosado',
+      'Sushi',
+      'Spicy y Do You Mind',
+      'Myke Towers y Anuel AA',
+      'A todos los chicos de los que me enamoré',
+      'Conejos',
+      'Día',
+      'Playa',
+      'Rap, reguetón y salsa',
+      'Ver series y maquillarse',
+    ];
+    expect(triviaQuestions.map((q) => q.options[q.correctIndex])).toEqual(confirmed);
+  });
+
+  it('leaves no placeholder marker in the data file source', () => {
+    const source = readFileSync(new URL('../../data/trivia.ts', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/PLACEHOLDER|confirmar con la familia/i);
+  });
+
+  it('asks nothing about school subjects or a favourite month', () => {
+    for (const question of triviaQuestions) {
+      expect(question.prompt).not.toMatch(/materias|mes favorito/i);
+    }
   });
 
   it('keeps every correctIndex within its own options array (no out-of-range answer key)', () => {

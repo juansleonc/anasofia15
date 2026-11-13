@@ -3,8 +3,7 @@
  * The Trivia section/island renders these questions; none are hardcoded in markup. Edit the
  * `prompt`/`options`/`correctIndex` fields below to change the quiz, and `resultMessages` to
  * change the closing message shown for each possible score (index = number of correct answers,
- * 0..11). Every question below is a placeholder — confirm the real answer with the family before
- * launch (see the inline marker on each entry).
+ * 0..10). Keep exactly one more message than there are questions (11 entries for 10 questions).
  */
 
 export interface TriviaQuestion {
@@ -18,75 +17,59 @@ export interface TriviaQuestion {
 
 export const triviaQuestions: TriviaQuestion[] = [
   {
-    // PLACEHOLDER — confirmar con la familia
     prompt: '¿Cuál es el color favorito de Ana Sofía?',
-    options: ['Rosado', 'Morado', 'Verde', 'Azul'],
+    options: ['Morado', 'Azul', 'Rosado', 'Verde'],
+    correctIndex: 2,
+  },
+  {
+    prompt: '¿Cuál es la comida favorita de Ana Sofía?',
+    options: ['Pizza', 'Sushi', 'Hamburguesa', 'Pasta'],
+    correctIndex: 1,
+  },
+  {
+    prompt: '¿Cuáles son las canciones favoritas de Ana Sofía?',
+    options: ['Tusa y Mamiii', 'Provenza y La Bachata', 'Mónaco y Hey Mor', 'Spicy y Do You Mind'],
+    correctIndex: 3,
+  },
+  {
+    prompt: '¿Quiénes son los artistas favoritos de Ana Sofía?',
+    options: ['Myke Towers y Anuel AA', 'Bad Bunny y Feid', 'Karol G y Shakira', 'J Balvin y Maluma'],
     correctIndex: 0,
   },
   {
-    // PLACEHOLDER — confirmar con la familia
-    prompt: '¿Cuál es la comida favorita de Ana Sofía?',
-    options: ['Pizza', 'Arroz con pollo', 'Hamburguesa', 'Pasta'],
-    correctIndex: 1,
-  },
-  {
-    // PLACEHOLDER — confirmar con la familia
-    prompt: '¿Cuál es la canción favorita de Ana Sofía?',
-    options: ['Provenza', 'TQG', 'Cositas que hacíamos', 'La bicicleta'],
-    correctIndex: 2,
-  },
-  {
-    // PLACEHOLDER — confirmar con la familia
-    prompt: '¿Cuál es la artista favorita de Ana Sofía?',
-    options: ['Feid', 'Karol G', 'Bad Bunny', 'Shakira'],
-    correctIndex: 1,
-  },
-  {
-    // PLACEHOLDER — confirmar con la familia
     prompt: '¿Cuál es la película favorita de Ana Sofía?',
-    options: ['Frozen', 'Moana', 'Enredados', 'La Sirenita'],
+    options: [
+      'Yo antes de ti',
+      'Después de',
+      'A todos los chicos de los que me enamoré',
+      'El stand de los besos',
+    ],
     correctIndex: 2,
   },
   {
-    // PLACEHOLDER — confirmar con la familia
     prompt: '¿Qué prefiere Ana Sofía?',
-    options: ['Gatos', 'Perros', 'Conejos', 'Hámsters'],
-    correctIndex: 1,
+    options: ['Perros', 'Gatos', 'Conejos', 'Hámsters'],
+    correctIndex: 2,
   },
   {
-    // PLACEHOLDER — confirmar con la familia
     prompt: '¿Qué prefiere Ana Sofía?',
     options: ['Día', 'Tarde', 'Noche', 'Madrugada'],
-    correctIndex: 2,
+    correctIndex: 0,
   },
   {
-    // PLACEHOLDER — confirmar con la familia
     prompt: '¿Qué prefiere Ana Sofía?',
-    options: ['Piscina', 'Playa', 'Río', 'Lago'],
+    options: ['Piscina', 'Río', 'Lago', 'Playa'],
+    correctIndex: 3,
+  },
+  {
+    prompt: '¿Cuáles son los géneros musicales favoritos de Ana Sofía?',
+    options: ['Pop y rock', 'Rap, reguetón y salsa', 'Vallenato y merengue', 'Electrónica y K-pop'],
     correctIndex: 1,
   },
   {
-    // PLACEHOLDER — confirmar con la familia
-    prompt: '¿Cuáles son las materias favoritas de Ana Sofía?',
-    options: [
-      'Español y Sociales',
-      'Inglés y Artística',
-      'Matemáticas y Ciencias Naturales',
-      'Educación Física y Tecnología',
-    ],
-    correctIndex: 1,
-  },
-  {
-    // PLACEHOLDER — confirmar con la familia
-    prompt: '¿Cuál es el mes favorito de Ana Sofía?',
-    options: ['Enero', 'Junio', 'Diciembre', 'Agosto'],
-    correctIndex: 2,
-  },
-  {
-    // PLACEHOLDER — confirmar con la familia
-    prompt: '¿Cuáles son los hobbies de Ana Sofía?',
-    options: ['Cocinar y cantar', 'Bailar y maquillarse', 'Dibujar y leer', 'Jugar y correr'],
-    correctIndex: 2,
+    prompt: '¿Qué le gusta hacer a Ana Sofía en su tiempo libre?',
+    options: ['Ver series y maquillarse', 'Cocinar y cantar', 'Dibujar y leer', 'Jugar fútbol y correr'],
+    correctIndex: 0,
   },
 ];
 
