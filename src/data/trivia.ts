@@ -86,7 +86,6 @@ export const resultMessages: string[] = [
   '¡Vas por la mitad y la conoces bien! 🎉',
   '¡Muy bien! Se nota que le pones atención a Ana Sofía.',
   '¡Impresionante! La conoces de verdad.',
-  '¡Casi perfecto! Solo te faltaron poquitas.',
   '¡Wow! Eres de sus personas más cercanas 🌸',
   '¡Solo una te faltó! Casi fan #1.',
   '¡Perfecto! Eres su fan #1 🌸',
