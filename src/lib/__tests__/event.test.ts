@@ -4,20 +4,20 @@ import { event } from '../../data/event';
 describe('event data', () => {
   // Adversarial first: the ways the event constants could silently drift or be timezone-wrong.
   it('resolves the event datetime to the correct UTC instant regardless of the ISO string\'s literal text', () => {
-    // 2026-12-19 19:00 America/Bogota (-05:00, no DST) must be 2026-12-20 00:00 UTC.
-    expect(new Date(event.eventDateTimeIso).getTime()).toBe(Date.UTC(2026, 11, 20, 0, 0, 0));
+    // 2026-12-19 18:00 America/Bogota (-05:00, no DST) must be 2026-12-19 23:00 UTC.
+    expect(new Date(event.eventDateTimeIso).getTime()).toBe(Date.UTC(2026, 11, 19, 23, 0, 0));
   });
 
   it('carries the -05:00 offset explicitly in the stored ISO string (not a bare UTC/Z string)', () => {
-    expect(event.eventDateTimeIso).toBe('2026-12-19T19:00:00-05:00');
+    expect(event.eventDateTimeIso).toBe('2026-12-19T18:00:00-05:00');
   });
 
   it('exposes the celebrant\'s full name, used whole everywhere (no first-name-only derivation)', () => {
     expect(event.celebrantName).toBe('Ana Sofía');
   });
 
-  it('exposes the time as "por confirmar" rather than faking a confirmed hour', () => {
-    expect(event.eventTimeDisplay).toBe('Hora por confirmar');
+  it('exposes the confirmed 6 PM time', () => {
+    expect(event.eventTimeDisplay).toBe('6:00 p. m.');
   });
 
   it('exposes the exact human-readable day string', () => {
@@ -26,17 +26,26 @@ describe('event data', () => {
 
   it('derives the date display from the day + time strings rather than a duplicate literal', () => {
     expect(event.eventDateDisplay).toBe(`${event.eventDayDisplay} · ${event.eventTimeDisplay}`);
-    expect(event.eventDateDisplay).toBe('Sábado 19 de diciembre de 2026 · Hora por confirmar');
+    expect(event.eventDateDisplay).toBe('Sábado 19 de diciembre de 2026 · 6:00 p. m.');
   });
 
   it('exposes the exact dress-code summary string, character for character', () => {
     expect(event.dressCode.summary).toBe('Formal, elegante');
   });
 
-  it('exposes a dress-code description distinct from the summary', () => {
-    expect(event.dressCode.description).toBe(
-      'Hombres: camisa blanca manga larga y pantalón beige. Mujeres: vestidos largos según la rueda de colores.',
+  it('exposes the exact men and women dress-code wording and no description key', () => {
+    expect(event.dressCode.men).toBe(
+      'Tonos beige, café y similares. Camisa blanca manga larga y pantalón de vestir.',
     );
+    expect(event.dressCode.women).toBe('Colores planos. Vestido largo de color plano.');
+    expect('description' in event.dressCode).toBe(false);
+  });
+
+  it('derives the dress timeline description from men and women on separate lines', () => {
+    const item = event.timeline.find((i) => i.tag === 'Código de vestimenta');
+    expect(item?.description).toBe(`Hombres: ${event.dressCode.men}\nMujeres: ${event.dressCode.women}`);
+    expect(item?.description).not.toContain('pantalón beige');
+    expect(item?.description).not.toContain('rueda de colores');
   });
 
   it('labels the dress-code timeline entry in Spanish, matching the rest of the timeline', () => {
@@ -88,7 +97,8 @@ describe('event data', () => {
   it('derives the Cuándo item from the day/time display strings, not a duplicate literal', () => {
     const cuando = event.timeline[0];
     expect(cuando.title).toBe(event.eventDayDisplay);
-    expect(cuando.description).toBe(`${event.eventTimeDisplay}.`);
+    expect(cuando.description).toBe(`A las ${event.eventTimeDisplay}`);
+    expect(cuando.description).not.toMatch(/\.\.$/);
   });
 
   it('appends the envelope-shower entry as the fourth and final timeline item, with no description', () => {

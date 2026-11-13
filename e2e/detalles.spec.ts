@@ -29,15 +29,21 @@ test.describe('Detalles section', () => {
     await expect(items.nth(3)).toContainText('Lluvia de sobres');
   });
 
-  test('reproduces the exact dress-code summary and description', async ({ page }) => {
+  test('reproduces the dress-code summary and renders men and women on separate lines', async ({
+    page,
+  }) => {
     await page.goto('./');
 
-    await expect(page.getByText('Formal, elegante', { exact: true })).toBeVisible();
-    await expect(
-      page.getByText(
-        'Hombres: camisa blanca manga larga y pantalón beige. Mujeres: vestidos largos según la rueda de colores.',
-      ),
-    ).toBeVisible();
+    await expect(page.getByText(event.dressCode.summary, { exact: true })).toBeVisible();
+
+    const desc = page.getByTestId('detalles-item').nth(2).locator('.detalles__item-desc');
+    await expect(desc).toBeVisible();
+    await expect(desc).toContainText(`Hombres: ${event.dressCode.men}`);
+    await expect(desc).toContainText(`Mujeres: ${event.dressCode.women}`);
+    await expect(desc).toHaveCSS('white-space', 'pre-line');
+
+    const lines = await desc.evaluate((el) => (el as HTMLElement).innerText.split('\n'));
+    expect(lines).toEqual([`Hombres: ${event.dressCode.men}`, `Mujeres: ${event.dressCode.women}`]);
   });
 
   test('renders the envelope-shower item without an empty description paragraph', async ({

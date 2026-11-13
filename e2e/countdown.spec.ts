@@ -33,7 +33,7 @@ test.describe('Countdown section', () => {
     await expect(grid).toHaveAttribute('data-target-iso', event.eventDateTimeIso);
   });
 
-  test('shows the display date beneath the cards, including the pending time note', async ({
+  test('shows the display date beneath the cards, including the confirmed time', async ({
     page,
   }) => {
     await page.goto('./');
@@ -42,7 +42,9 @@ test.describe('Countdown section', () => {
       exact: false,
     });
     await expect(dateLine).toBeVisible();
-    await expect(dateLine).toContainText('por confirmar');
+    await expect(dateLine).toContainText('6:00 p. m.');
+    await expect(page.getByTestId('countdown')).not.toHaveText(/por confirmar/i);
+    expect(await page.locator('body').innerText()).not.toMatch(/por confirmar/i);
   });
 
   test('shows the "llegó el día" arrived state once the target is in the past', async ({

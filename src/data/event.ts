@@ -28,8 +28,10 @@ export interface Venue {
 export interface DressCode {
   /** Exact dress-code line shown verbatim in the "Detalles" timeline. */
   summary: string;
-  /** Longer supporting description shown under the summary. */
-  description: string;
+  /** Dress-code wording for men. */
+  men: string;
+  /** Dress-code wording for women. */
+  women: string;
 }
 
 /** One entry in the "Detalles" vertical timeline (Cuándo / Dónde / Código de vestimenta / Regalos). */
@@ -52,7 +54,7 @@ export interface EventDetails {
   eventDateTimeIso: string;
   /** Human-readable Spanish day string (no time of day), shown as part of `eventDateDisplay`. */
   eventDayDisplay: string;
-  /** Human-readable Spanish time-of-day string, e.g. "Hora por confirmar" while pending. */
+  /** Human-readable Spanish time-of-day string, e.g. "6:00 p. m.". */
   eventTimeDisplay: string;
   /** Derived `${eventDayDisplay} · ${eventTimeDisplay}` for display (not used for countdown math). */
   eventDateDisplay: string;
@@ -70,9 +72,9 @@ export interface EventDetails {
 }
 
 const celebrantName = 'Ana Sofía';
-const eventDateTimeIso = '2026-12-19T19:00:00-05:00';
+const eventDateTimeIso = '2026-12-19T18:00:00-05:00';
 const eventDayDisplay = 'Sábado 19 de diciembre de 2026';
-const eventTimeDisplay = 'Hora por confirmar';
+const eventTimeDisplay = '6:00 p. m.';
 const eventDateDisplay = `${eventDayDisplay} · ${eventTimeDisplay}`;
 const venue: Venue = {
   name: 'El Edén Country Hotel y Club Residencial',
@@ -85,8 +87,8 @@ const venue: Venue = {
 };
 const dressCode: DressCode = {
   summary: 'Formal, elegante',
-  description:
-    'Hombres: camisa blanca manga larga y pantalón beige. Mujeres: vestidos largos según la rueda de colores.',
+  men: 'Tonos beige, café y similares. Camisa blanca manga larga y pantalón de vestir.',
+  women: 'Colores planos. Vestido largo de color plano.',
 };
 const footerText = 'Ana Sofía · 19.12.2026';
 const admissionNote = `${celebrantName} reservó un lugar especial para ti: esta invitación es válida para una sola persona.`;
@@ -105,7 +107,7 @@ export const event: EventDetails = {
     {
       tag: 'Cuándo',
       title: eventDayDisplay,
-      description: `${eventTimeDisplay}.`,
+      description: `A las ${eventTimeDisplay}`,
     },
     {
       tag: 'Dónde',
@@ -115,7 +117,7 @@ export const event: EventDetails = {
     {
       tag: 'Código de vestimenta',
       title: dressCode.summary,
-      description: dressCode.description,
+      description: `Hombres: ${dressCode.men}\nMujeres: ${dressCode.women}`,
     },
     {
       tag: 'Regalos',
