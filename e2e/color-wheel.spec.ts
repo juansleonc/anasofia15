@@ -103,6 +103,60 @@ test.describe('Color wheel section', () => {
   });
 });
 
+test.describe('Color wheel phone ergonomics', () => {
+  test('slices are tappable and labels readable at 390px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openInvitation(page);
+
+    const rotor = page.getByTestId('color-wheel-rotor');
+    await rotor.scrollIntoViewIfNeeded();
+
+    const count = dressColors.length;
+    const hubRadius = 20;
+    const sliceRadius = 82;
+    const viewBoxSize = 200;
+    const midRadiusUnits = (hubRadius + sliceRadius) / 2;
+
+    const result = await page.evaluate(
+      ({ count, midRadiusUnits, viewBoxSize }) => {
+        const rotorEl = document.querySelector('[data-testid="color-wheel-rotor"]') as HTMLElement;
+        const box = rotorEl.getBoundingClientRect();
+        const cx = box.left + box.width / 2;
+        const cy = box.top + box.height / 2;
+        const radiusPx = (midRadiusUnits / viewBoxSize) * box.width;
+        const slices = Array.from(document.querySelectorAll('[data-testid="color-wheel-slice"]'));
+        const hits = slices.map((_, i) => {
+          const angle = ((i + 0.5) * (360 / count) - 90) * (Math.PI / 180);
+          const x = cx + radiusPx * Math.cos(angle);
+          const y = cy + radiusPx * Math.sin(angle);
+          const hit = document.elementFromPoint(x, y);
+          return slices.indexOf(hit as Element);
+        });
+        const labels = Array.from(document.querySelectorAll('.color-wheel__label')).map((el) => ({
+          height: el.getBoundingClientRect().height,
+          color: getComputedStyle(el).color,
+        }));
+        return { radiusPx, hits, labels };
+      },
+      { count, midRadiusUnits, viewBoxSize },
+    );
+
+    expect(result.hits).toEqual(dressColors.map((_, i) => i));
+    expect((2 * Math.PI * result.radiusPx) / count).toBeGreaterThanOrEqual(24);
+    expect(result.labels).toHaveLength(count);
+    for (const label of result.labels) {
+      expect(label.height).toBeGreaterThanOrEqual(24);
+      expect(label.color).toBe('rgb(74, 38, 50)');
+    }
+
+    const { scrollWidth, innerWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+  });
+});
+
 test.describe('Color wheel tap selection', () => {
   for (const [index, color] of dressColors.entries()) {
     test(`tapping the "${color.name}" slice selects it and shows its detail`, async ({ page }) => {
