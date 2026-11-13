@@ -128,4 +128,48 @@ test.describe('Trivia send form', () => {
       expect(posts).toBe(2);
     });
   }
+
+  for (const [label, name] of [
+    ['empty', ''],
+    ['whitespace-only', '   '],
+  ] as const) {
+    test(`asks for a name and sends nothing when the name is ${label}`, async ({ page }) => {
+      test.setTimeout(60_000);
+      await withConfiguredAccessKey(page);
+      let posts = 0;
+      await page.route('https://api.web3forms.com/submit', async (route) => {
+        posts += 1;
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+      });
+      await playToEnd(page);
+
+      await page.getByTestId('trivia-send-name').fill(name);
+      await page.getByTestId('trivia-send-button').click();
+
+      await expect(page.getByTestId('trivia-send-error')).toContainText('Escribe tu nombre');
+      await expect(page.getByTestId('trivia-send-button')).toBeEnabled();
+      await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
+      expect(posts).toBe(0);
+    });
+  }
+
+  test('silently ignores a filled honeypot: no request and no sent state', async ({ page }) => {
+    test.setTimeout(60_000);
+    await withConfiguredAccessKey(page);
+    let posts = 0;
+    await page.route('https://api.web3forms.com/submit', async (route) => {
+      posts += 1;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+    });
+    await playToEnd(page);
+
+    await page.getByTestId('trivia-send-honeypot').fill('bot', { force: true });
+    await page.getByTestId('trivia-send-name').fill('Camila Torres');
+    await page.getByTestId('trivia-send-button').click();
+
+    await expect(page.getByTestId('trivia-send-button')).toBeEnabled();
+    await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
+    await expect(page.getByTestId('trivia-send-status')).toHaveText('');
+    expect(posts).toBe(0);
+  });
 });

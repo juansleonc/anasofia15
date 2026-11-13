@@ -324,7 +324,7 @@ const totalQuestions = triviaQuestions.length;
   import { createTriviaState, answer, progress, isDone, score, resultMessage, buildTriviaResultPayload, type TriviaState } from '../lib/trivia';
   import { triviaQuestions } from '../data/trivia';
   import { readSubmission } from '../lib/rsvp';
-  import { isWeb3FormsKeyConfigured, postToWeb3Forms } from '../lib/web3forms';
+  import { isHoneypotTripped, isWeb3FormsKeyConfigured, postToWeb3Forms } from '../lib/web3forms';
 
   // Brief reveal window before advancing to the next question — the island's own choreography,
   // not part of `src/lib/trivia.ts`'s atomic `answer()`.
@@ -346,6 +346,8 @@ const totalQuestions = triviaQuestions.length;
   const sendNameInput = document.querySelector('[data-testid="trivia-send-name"]') as HTMLInputElement | null;
   const sendButton = document.querySelector('[data-testid="trivia-send-button"]') as HTMLButtonElement | null;
   const sendStatus = document.querySelector('[data-testid="trivia-send-status"]');
+  const sendError = document.querySelector('[data-testid="trivia-send-error"]');
+  const sendHoneypot = document.querySelector('[data-testid="trivia-send-honeypot"]') as HTMLInputElement | null;
   const sendSent = document.querySelector('[data-testid="trivia-send-sent"]') as HTMLElement | null;
   const sendIsConfigured = isWeb3FormsKeyConfigured(sendForm?.dataset.accessKey);
 
@@ -500,6 +502,12 @@ const totalQuestions = triviaQuestions.length;
   async function onSendSubmit(submitEvent: Event): Promise<void> {
     submitEvent.preventDefault();
     if (sending || !sendForm || !isDone(state)) return;
+    if (isHoneypotTripped({ botcheck: sendHoneypot?.value })) return;
+    if (!(sendNameInput?.value ?? '').trim()) {
+      if (sendError) sendError.textContent = 'Escribe tu nombre para enviar tu resultado.';
+      return;
+    }
+    if (sendError) sendError.textContent = '';
     sending = true;
     if (sendButton) sendButton.disabled = true;
     if (sendStatus) sendStatus.textContent = 'Enviando...';
