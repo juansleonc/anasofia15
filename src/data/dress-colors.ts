@@ -2,14 +2,24 @@
 export interface DressColor {
   name: string;
   hex: string;
-  note: string | null;
 }
 
 export const dressColors: DressColor[] = [
-  { name: 'Verde salvia', hex: '#C7D9C4', note: 'Mi favorito.' },
-  { name: 'Azul cielo', hex: '#BFD4E8', note: 'Delicado y elegante.' },
-  { name: 'Lavanda', hex: '#C8B6DC', note: 'Romántico.' },
-  { name: 'Malva', hex: '#DBB6C6', note: 'Sofisticado.' },
-  { name: 'Verde pistacho suave', hex: '#D6DDB0', note: null },
-  { name: 'Verde agua', hex: '#B8DBD5', note: 'Muy delicado.' },
+  { name: 'Vino tinto', hex: '#700119' },
+  { name: 'Rojo carmesí', hex: '#B1021E' },
+  { name: 'Ciruela', hex: '#5E1566' },
+  { name: 'Berenjena', hex: '#38015F' },
+  { name: 'Azul rey', hex: '#021B83' },
+  { name: 'Azul zafiro', hex: '#183E85' },
+  { name: 'Azul marino', hex: '#042155' },
+  { name: 'Azul petróleo', hex: '#02647F' },
+  { name: 'Verde azulado', hex: '#038D88' },
+  { name: 'Verde esmeralda', hex: '#016648' },
+  { name: 'Verde botella', hex: '#013A1C' },
+  { name: 'Terracota', hex: '#812A0B' },
 ];
+
+/** Colors the quinceañera wears, so guests should not. */
+export const reservedColors = ['blanco', 'marfil', 'champagne', 'dorado rosado', 'negro'] as const;
+
+export const reservedColorsNote = `Para tu vestido, evita los colores ${new Intl.ListFormat('es', { type: 'conjunction' }).format(reservedColors)}: están reservados para la quinceañera.`;
