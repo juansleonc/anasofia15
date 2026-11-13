@@ -3,7 +3,7 @@ import { dressColors } from '../src/data/dress-colors';
 
 // Dress-color wheel fidelity: a visually-hidden native radio group is the single source of truth
 // (tap on an SVG slice and keyboard navigation both resolve to the same radio `change`), paired
-// with a purely decorative `aria-hidden` SVG view built from the six colors in
+// with a purely decorative `aria-hidden` SVG view built from the colors in
 // `src/data/dress-colors.ts`.
 
 function hexToRgb(hex: string): string {
@@ -41,22 +41,22 @@ test.describe('Color wheel section', () => {
     expect(comoLlegarIndex).toBeGreaterThan(wheelIndex);
   });
 
-  test('renders six slices colored from the dress-colors data', async ({ page }) => {
+  test('renders one slice per color colored from the dress-colors data', async ({ page }) => {
     await openInvitation(page);
 
     const slices = page.getByTestId('color-wheel-slice');
-    await expect(slices).toHaveCount(6);
+    await expect(slices).toHaveCount(dressColors.length);
 
     for (let i = 0; i < dressColors.length; i += 1) {
       await expect(slices.nth(i)).toHaveCSS('fill', hexToRgb(dressColors[i].hex));
     }
   });
 
-  test('renders six radio options labelled with each color name', async ({ page }) => {
+  test('renders one radio option per color labelled with each color name', async ({ page }) => {
     await openInvitation(page);
 
     const options = page.getByTestId('color-wheel-option');
-    await expect(options).toHaveCount(6);
+    await expect(options).toHaveCount(dressColors.length);
 
     for (const color of dressColors) {
       await expect(page.getByLabel(color.name)).toBeAttached();
@@ -68,7 +68,7 @@ test.describe('Color wheel section', () => {
 
     await expect(page.getByTestId('color-wheel-hint')).toBeVisible();
     const options = page.getByTestId('color-wheel-option');
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < dressColors.length; i += 1) {
       await expect(options.nth(i)).not.toBeChecked();
     }
   });
@@ -95,13 +95,7 @@ test.describe('Color wheel tap selection', () => {
       await expect(page.getByTestId('color-wheel-option').nth(index)).toBeChecked();
       await expect(page.getByTestId('color-wheel-name')).toHaveText(color.name);
 
-      const noteEl = page.getByTestId('color-wheel-note');
-      if (color.note === null) {
-        await expect(noteEl).toBeHidden();
-      } else {
-        await expect(noteEl).toBeVisible();
-        await expect(noteEl).toHaveText(color.note);
-      }
+      await expect(page.getByTestId('color-wheel-note')).toHaveCount(0);
 
       await expect(page.getByTestId('color-wheel-hint')).toBeHidden();
 
@@ -147,8 +141,8 @@ test.describe('Color wheel keyboard navigation', () => {
 
     await options.nth(0).focus();
     await page.keyboard.press('ArrowLeft');
-    await expect(options.nth(5)).toBeChecked();
-    await expect(page.getByTestId('color-wheel-name')).toHaveText(dressColors[5].name);
+    await expect(options.nth(dressColors.length - 1)).toBeChecked();
+    await expect(page.getByTestId('color-wheel-name')).toHaveText(dressColors[dressColors.length - 1].name);
 
     await options.nth(3).focus();
     await page.keyboard.press(' ');
