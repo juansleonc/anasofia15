@@ -19,6 +19,8 @@ test.describe('Trivia section', () => {
 
   test('plays through all questions to the final result', async ({ page }) => {
     test.setTimeout(60_000);
+    // The quiz is specified as exactly ten questions; fail loudly if the data drifts from that.
+    expect(triviaQuestions).toHaveLength(10);
     await page.goto('./');
     // The cover gates scroll until opened — unlock it before reaching the trivia section below.
     await page.getByRole('button', { name: 'Abrir invitación' }).click();
@@ -30,6 +32,7 @@ test.describe('Trivia section', () => {
       await expect(page.getByTestId('trivia-counter')).toContainText(
         `Pregunta ${i + 1} de ${triviaQuestions.length}`,
       );
+      await expect(page.getByTestId('trivia-counter')).toContainText('de 10');
       await expect(page.getByTestId('trivia-prompt')).toContainText(triviaQuestions[i].prompt);
 
       // Progress advances: exactly i+1 segments are marked active for the current question.
@@ -47,6 +50,7 @@ test.describe('Trivia section', () => {
     await expect(page.getByTestId('trivia-score')).toContainText(
       `${triviaQuestions.length}/${triviaQuestions.length}`,
     );
+    await expect(page.getByTestId('trivia-score')).toContainText('10/10');
     await expect(page.getByTestId('trivia-message')).toContainText(
       resultMessages[triviaQuestions.length],
     );
