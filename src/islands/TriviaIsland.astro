@@ -321,10 +321,10 @@ const totalQuestions = triviaQuestions.length;
 </style>
 
 <script>
-  import { createTriviaState, answer, progress, isDone, score, resultMessage, type TriviaState } from '../lib/trivia';
+  import { createTriviaState, answer, progress, isDone, score, resultMessage, buildTriviaResultPayload, type TriviaState } from '../lib/trivia';
   import { triviaQuestions } from '../data/trivia';
   import { readSubmission } from '../lib/rsvp';
-  import { isWeb3FormsKeyConfigured } from '../lib/web3forms';
+  import { isWeb3FormsKeyConfigured, postToWeb3Forms } from '../lib/web3forms';
 
   // Brief reveal window before advancing to the next question — the island's own choreography,
   // not part of `src/lib/trivia.ts`'s atomic `answer()`.
@@ -344,6 +344,9 @@ const totalQuestions = triviaQuestions.length;
 
   const sendForm = document.querySelector('[data-testid="trivia-send-form"]') as HTMLFormElement | null;
   const sendNameInput = document.querySelector('[data-testid="trivia-send-name"]') as HTMLInputElement | null;
+  const sendButton = document.querySelector('[data-testid="trivia-send-button"]') as HTMLButtonElement | null;
+  const sendStatus = document.querySelector('[data-testid="trivia-send-status"]');
+  const sendSent = document.querySelector('[data-testid="trivia-send-sent"]') as HTMLElement | null;
   const sendIsConfigured = isWeb3FormsKeyConfigured(sendForm?.dataset.accessKey);
 
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -492,6 +495,28 @@ const totalQuestions = triviaQuestions.length;
     setOptionsDisabled(false);
   }
 
+  let sending = false;
+
+  async function onSendSubmit(submitEvent: Event): Promise<void> {
+    submitEvent.preventDefault();
+    if (sending || !sendForm || !isDone(state)) return;
+    sending = true;
+    if (sendButton) sendButton.disabled = true;
+    if (sendStatus) sendStatus.textContent = 'Enviando...';
+
+    const payload = buildTriviaResultPayload(sendNameInput?.value ?? '', state, sendForm.dataset.accessKey ?? '');
+    const ok = await postToWeb3Forms({ ...payload });
+
+    sending = false;
+    if (sendButton) sendButton.disabled = false;
+    if (sendStatus) sendStatus.textContent = '';
+    if (ok) {
+      sendForm.hidden = true;
+      if (sendSent) sendSent.hidden = false;
+    }
+  }
+
+  sendForm?.addEventListener('submit', onSendSubmit);
   restartButton?.addEventListener('click', restart);
   optionsEl?.querySelectorAll('button').forEach((button, i) => {
     button.addEventListener('click', () => onOptionClick(i));
