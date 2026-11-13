@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { createTriviaState, answer, progress, resultMessage } from '../trivia';
+import { createTriviaState, answer, progress, isDone, score, resultMessage } from '../trivia';
 import { triviaQuestions, resultMessages } from '../../data/trivia';
 
 describe('trivia pure logic', () => {
@@ -144,7 +144,7 @@ describe('trivia pure logic', () => {
 
     const next = answer(state, wrongIndex);
 
-    expect(next.score).toBe(0);
+    expect(score(next)).toBe(0);
   });
 
   it('increments the score on a correct answer', () => {
@@ -152,7 +152,7 @@ describe('trivia pure logic', () => {
 
     const next = answer(state, triviaQuestions[0].correctIndex);
 
-    expect(next.score).toBe(1);
+    expect(score(next)).toBe(1);
   });
 
   it('advances progress by one per answered question', () => {
@@ -181,8 +181,8 @@ describe('trivia pure logic', () => {
       }
     }
 
-    expect(state.done).toBe(true);
-    expect(state.score).toBe(expectedScore);
+    expect(isDone(state)).toBe(true);
+    expect(score(state)).toBe(expectedScore);
     expect(progress(state)).toBe(triviaQuestions.length);
   });
 
@@ -192,15 +192,19 @@ describe('trivia pure logic', () => {
       state = answer(state, q.correctIndex);
     }
 
-    expect(state.score).toBe(triviaQuestions.length);
+    expect(score(state)).toBe(triviaQuestions.length);
     expect(resultMessage(state)).toBe(resultMessages[triviaQuestions.length]);
   });
 
   it('has a defined, non-empty message for every achievable score', () => {
     expect(resultMessages).toHaveLength(triviaQuestions.length + 1);
 
-    for (let score = 0; score <= triviaQuestions.length; score++) {
-      const message = resultMessage({ step: triviaQuestions.length, score, done: true });
+    for (let correct = 0; correct <= triviaQuestions.length; correct++) {
+      // Build a finished state from answers: the first `correct` questions right, the rest wrong.
+      const answers = triviaQuestions.map((q, i) =>
+        i < correct ? q.correctIndex : (q.correctIndex + 1) % q.options.length,
+      );
+      const message = resultMessage({ answers });
       expect(typeof message).toBe('string');
       expect(message.trim().length).toBeGreaterThan(0);
     }
@@ -218,12 +222,41 @@ describe('trivia pure logic', () => {
     expect(afterExtraAnswer).toEqual(doneState);
   });
 
+  it('appends the chosen option index in order', () => {
+    let state = createTriviaState();
+    state = answer(state, 3);
+    state = answer(state, 0);
+    state = answer(state, 2);
+
+    expect(state.answers).toEqual([3, 0, 2]);
+  });
+
+  it('counts only answers that match the correct index in score', () => {
+    const q = triviaQuestions;
+    const state = { answers: [q[0].correctIndex, (q[1].correctIndex + 1) % 4, q[2].correctIndex] };
+
+    expect(score(state)).toBe(2);
+  });
+
+  it('flips isDone only after the 10th answer', () => {
+    let state = createTriviaState();
+    for (const [i, q] of triviaQuestions.entries()) {
+      expect(isDone(state)).toBe(false);
+      expect(progress(state)).toBe(i);
+      state = answer(state, q.correctIndex);
+    }
+
+    expect(isDone(state)).toBe(true);
+  });
+
   it('does not mutate the state passed to answer (immutability)', () => {
     const state = createTriviaState();
-    const frozenCopy = { ...state };
+    const before = state.answers;
 
-    answer(state, triviaQuestions[0].correctIndex);
+    const next = answer(state, triviaQuestions[0].correctIndex);
 
-    expect(state).toEqual(frozenCopy);
+    expect(state.answers).toBe(before);
+    expect(state.answers).toEqual([]);
+    expect(next.answers).not.toBe(before);
   });
 });

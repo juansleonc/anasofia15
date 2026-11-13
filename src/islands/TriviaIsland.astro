@@ -204,7 +204,7 @@ const totalQuestions = triviaQuestions.length;
 </style>
 
 <script>
-  import { createTriviaState, answer, resultMessage, type TriviaState } from '../lib/trivia';
+  import { createTriviaState, answer, progress, isDone, score, resultMessage, type TriviaState } from '../lib/trivia';
   import { triviaQuestions } from '../data/trivia';
 
   // Brief reveal window before advancing to the next question — the island's own choreography,
@@ -231,7 +231,7 @@ const totalQuestions = triviaQuestions.length;
   function renderProgress(): void {
     if (!progressEl) return;
     progressEl.querySelectorAll('[data-testid^="trivia-progress-segment-"]').forEach((segment, i) => {
-      segment.classList.toggle('trivia-progress__segment--active', i <= state.step);
+      segment.classList.toggle('trivia-progress__segment--active', i <= progress(state));
     });
   }
 
@@ -242,8 +242,8 @@ const totalQuestions = triviaQuestions.length;
   }
 
   function renderQuestion(): void {
-    const question = triviaQuestions[state.step];
-    if (counterEl) counterEl.textContent = `Pregunta ${state.step + 1} de ${triviaQuestions.length}`;
+    const question = triviaQuestions[progress(state)];
+    if (counterEl) counterEl.textContent = `Pregunta ${progress(state) + 1} de ${triviaQuestions.length}`;
     if (promptEl) promptEl.textContent = question.prompt;
 
     if (optionsEl) {
@@ -314,15 +314,15 @@ const totalQuestions = triviaQuestions.length;
   function showResult(): void {
     if (questionView) questionView.hidden = true;
     if (resultView) resultView.hidden = false;
-    if (scoreEl) scoreEl.textContent = `${state.score}/${triviaQuestions.length}`;
+    if (scoreEl) scoreEl.textContent = `${score(state)}/${triviaQuestions.length}`;
     if (messageEl) messageEl.textContent = resultMessage(state);
   }
 
   function onOptionClick(i: number): void {
-    if (revealing || state.done) return;
+    if (revealing || isDone(state)) return;
     revealing = true;
 
-    const question = triviaQuestions[state.step];
+    const question = triviaQuestions[progress(state)];
     const isCorrect = i === question.correctIndex;
 
     setOptionsDisabled(true);
@@ -336,7 +336,7 @@ const totalQuestions = triviaQuestions.length;
     setTimeout(() => {
       state = answer(state, i);
       revealing = false;
-      if (state.done) {
+      if (isDone(state)) {
         showResult();
       } else {
         renderQuestion();
