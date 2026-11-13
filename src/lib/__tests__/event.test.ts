@@ -33,10 +33,19 @@ describe('event data', () => {
     expect(event.dressCode.summary).toBe('Formal, elegante');
   });
 
-  it('exposes a dress-code description distinct from the summary', () => {
-    expect(event.dressCode.description).toBe(
-      'Hombres: camisa blanca manga larga y pantalón beige. Mujeres: vestidos largos según la rueda de colores.',
+  it('exposes the exact men and women dress-code wording and no description key', () => {
+    expect(event.dressCode.men).toBe(
+      'Tonos beige, café y similares. Camisa blanca manga larga y pantalón de vestir.',
     );
+    expect(event.dressCode.women).toBe('Colores planos. Vestido largo de color plano.');
+    expect('description' in event.dressCode).toBe(false);
+  });
+
+  it('derives the dress timeline description from men and women on separate lines', () => {
+    const item = event.timeline.find((i) => i.tag === 'Código de vestimenta');
+    expect(item?.description).toBe(`Hombres: ${event.dressCode.men}\nMujeres: ${event.dressCode.women}`);
+    expect(item?.description).not.toContain('pantalón beige');
+    expect(item?.description).not.toContain('rueda de colores');
   });
 
   it('labels the dress-code timeline entry in Spanish, matching the rest of the timeline', () => {

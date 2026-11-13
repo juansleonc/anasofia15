@@ -28,8 +28,10 @@ export interface Venue {
 export interface DressCode {
   /** Exact dress-code line shown verbatim in the "Detalles" timeline. */
   summary: string;
-  /** Longer supporting description shown under the summary. */
-  description: string;
+  /** Dress-code wording for men. */
+  men: string;
+  /** Dress-code wording for women. */
+  women: string;
 }
 
 /** One entry in the "Detalles" vertical timeline (Cuándo / Dónde / Código de vestimenta / Regalos). */
@@ -85,8 +87,8 @@ const venue: Venue = {
 };
 const dressCode: DressCode = {
   summary: 'Formal, elegante',
-  description:
-    'Hombres: camisa blanca manga larga y pantalón beige. Mujeres: vestidos largos según la rueda de colores.',
+  men: 'Tonos beige, café y similares. Camisa blanca manga larga y pantalón de vestir.',
+  women: 'Colores planos. Vestido largo de color plano.',
 };
 const footerText = 'Ana Sofía · 19.12.2026';
 const admissionNote = `${celebrantName} reservó un lugar especial para ti: esta invitación es válida para una sola persona.`;
@@ -115,7 +117,7 @@ export const event: EventDetails = {
     {
       tag: 'Código de vestimenta',
       title: dressCode.summary,
-      description: dressCode.description,
+      description: `Hombres: ${dressCode.men}\nMujeres: ${dressCode.women}`,
     },
     {
       tag: 'Regalos',
