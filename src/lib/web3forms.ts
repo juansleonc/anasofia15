@@ -17,3 +17,29 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export function isWeb3FormsKeyConfigured(key: unknown): boolean {
   return typeof key === 'string' && UUID_PATTERN.test(key);
 }
+
+/**
+ * POSTs a payload to Web3Forms. Resolves true only when the HTTP status is OK and the JSON body
+ * confirms `success: true`; any other outcome (non-2xx, `success:false`, unparseable body, network
+ * failure) resolves false. Never throws.
+ */
+export async function postToWeb3Forms(
+  payload: { access_key: string; subject: string; botcheck: string } & Record<string, string>,
+): Promise<boolean> {
+  try {
+    const response = await fetch(WEB3FORMS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body: unknown = await response.json().catch(() => null);
+    return (
+      response.ok &&
+      typeof body === 'object' &&
+      body !== null &&
+      (body as { success?: unknown }).success === true
+    );
+  } catch {
+    return false;
+  }
+}
