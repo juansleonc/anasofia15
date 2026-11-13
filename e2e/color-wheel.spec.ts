@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { dressColors } from '../src/data/dress-colors';
+import { dressColors, reservedColorsNote } from '../src/data/dress-colors';
 
 // Dress-color wheel fidelity: a visually-hidden native radio group is the single source of truth
 // (tap on an SVG slice and keyboard navigation both resolve to the same radio `change`), paired
@@ -39,6 +39,24 @@ test.describe('Color wheel section', () => {
     expect(detallesIndex).toBeGreaterThanOrEqual(0);
     expect(wheelIndex).toBeGreaterThan(detallesIndex);
     expect(comoLlegarIndex).toBeGreaterThan(wheelIndex);
+  });
+
+  test('shows the reserved-colors note before the wheel', async ({ page }) => {
+    await openInvitation(page);
+
+    const section = page.getByTestId('rueda-colores');
+    const note = section.getByTestId('reserved-colors-note');
+    await expect(note).toBeVisible();
+    await expect(note).toHaveText(reservedColorsNote);
+
+    const noteBeforeWheel = await section.evaluate((el) => {
+      const n = el.querySelector('[data-testid="reserved-colors-note"]');
+      const w = el.querySelector('[data-testid="color-wheel"]');
+      return Boolean(
+        n && w && n.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+    expect(noteBeforeWheel).toBe(true);
   });
 
   test('renders one slice per color colored from the dress-colors data', async ({ page }) => {
