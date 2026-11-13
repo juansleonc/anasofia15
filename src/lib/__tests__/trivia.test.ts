@@ -119,6 +119,15 @@ describe('trivia pure logic', () => {
     }
   });
 
+  it('spreads the answer keys across positions (no guessable pattern)', () => {
+    const indices = triviaQuestions.map((q) => q.correctIndex);
+    expect(new Set(indices).size).toBeGreaterThanOrEqual(3);
+    for (const position of new Set(indices)) {
+      const uses = indices.filter((i) => i === position).length;
+      expect(uses).toBeLessThanOrEqual(4);
+    }
+  });
+
   it('exposes exactly the eleven result messages, one per achievable score', () => {
     expect(resultMessages).toEqual([
       '¡Ups! Casi no conoces a Ana Sofía, pero seguro bailarás increíble igual 💃',
