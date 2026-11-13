@@ -272,10 +272,6 @@ const HUB_RADIUS = 20;
     if (detail) detail.hidden = false;
     if (swatch) swatch.style.backgroundColor = color.hex;
     if (nameEl) nameEl.textContent = color.name;
-    if (noteEl) {
-      noteEl.hidden = color.note === null;
-      noteEl.textContent = color.note ?? '';
-    }
     if (hint) hint.hidden = true;
 
     slices.forEach((slice, i) => {
