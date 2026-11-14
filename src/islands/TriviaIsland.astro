@@ -6,7 +6,7 @@
 //
 // The client script owns the reveal-then-advance choreography: tapping an option briefly colors
 // it correct/wrong (compared locally against the current question, before calling into the logic
-// module) and only THEN calls src/lib/trivia.ts's `answer` to atomically advance step/score — that
+// module) and only THEN calls src/lib/trivia.ts's `answer` to atomically record the answer — that
 // module stays a pure, atomic scorer; the transient "which option was just tapped" state is a DOM
 // concern owned entirely by this island.
 import { triviaQuestions } from '../data/trivia';

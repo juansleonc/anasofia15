@@ -21,5 +21,3 @@ export const dressColors: DressColor[] = [
 
 /** Colors the quinceañera wears, so guests should not. */
 export const reservedColors = ['blanco', 'marfil', 'champagne', 'dorado rosado', 'negro'] as const;
-
-export const reservedColorsNote = `Para tu vestido, evita los colores ${new Intl.ListFormat('es', { type: 'conjunction' }).format(reservedColors)}: están reservados para la quinceañera.`;

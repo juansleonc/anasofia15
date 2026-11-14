@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { dressColors, reservedColorsNote } from '../src/data/dress-colors';
+import { dressColors } from '../src/data/dress-colors';
+import { reservedColorsNote } from '../src/data/dress-colors-note';
 
 // Dress-color wheel fidelity: a visually-hidden native radio group is the single source of truth
 // (tap on an SVG slice and keyboard navigation both resolve to the same radio `change`), paired

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { dressColors, reservedColors, reservedColorsNote } from '../../data/dress-colors';
+import { dressColors, reservedColors } from '../../data/dress-colors';
+import { reservedColorsNote } from '../../data/dress-colors-note';
 
 const luminance = (hex: string) => {
   const [r, g, b] = [1, 3, 5].map((i) => {

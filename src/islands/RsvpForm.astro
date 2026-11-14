@@ -2,7 +2,7 @@
 // The RSVP form itself: nombre y apellido + asistencia toggle (sí/no) + suggested song, a hidden
 // honeypot field, and the idle -> submitting -> success | error state machine. All validation /
 // payload-shaping / storage-guard logic lives in `src/lib/rsvp.ts` — this island only wires that
-// pure logic to the real DOM + `fetch('https://api.web3forms.com/submit')` (client script below).
+// pure logic to the real DOM + `postToWeb3Forms` (client script below).
 // The access key is passed down via `data-access-key` rather than imported by the script, so the
 // script has exactly one source for it and can never silently read a different value than what
 // was actually rendered.

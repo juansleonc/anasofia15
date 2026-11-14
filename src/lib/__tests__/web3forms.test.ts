@@ -27,7 +27,7 @@ describe('isWeb3FormsKeyConfigured', () => {
     expect(isWeb3FormsKeyConfigured('3f9a2c71-5b44-4e2f-9c3d-7a1e5f082b6d')).toBe(true);
   });
 
-  it('is false for the shipped placeholder literal', () => {
+  it('is false for a non-UUID string', () => {
     expect(isWeb3FormsKeyConfigured('REEMPLAZAR-CON-LLAVE-WEB3FORMS')).toBe(false);
   });
 
