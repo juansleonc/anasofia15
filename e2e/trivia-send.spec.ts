@@ -212,4 +212,49 @@ test.describe('Trivia send form', () => {
     await expect(page.getByTestId('trivia-send-error')).toHaveText('');
     await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
   });
+
+  for (const [label, response] of [
+    ['success', { status: 200, body: JSON.stringify({ success: true }) }],
+    ['HTTP 500', { status: 500, body: '{}' }],
+  ] as const) {
+    test(`ignores a stale ${label} response after restarting mid-send`, async ({ page }) => {
+      test.setTimeout(90_000);
+      await withConfiguredAccessKey(page);
+      let posts = 0;
+      await page.route('https://api.web3forms.com/submit', async (route) => {
+        posts += 1;
+        if (posts === 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          await route.fulfill({ status: response.status, contentType: 'application/json', body: response.body });
+        } else {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+        }
+      });
+      await playToEnd(page);
+
+      await page.getByTestId('trivia-send-name').fill('Camila Torres');
+      await page.getByTestId('trivia-send-button').click();
+      await expect(page.getByTestId('trivia-send-status')).toHaveText('Enviando...');
+
+      await page.getByTestId('trivia-restart').click();
+      await page.waitForTimeout(2200);
+
+      for (let i = 0; i < triviaQuestions.length; i += 1) {
+        await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta ${i + 1} de`);
+        await page.getByTestId(`trivia-option-${triviaQuestions[i].correctIndex}`).click();
+      }
+      await expect(page.getByTestId('trivia-result')).toBeVisible();
+
+      await expect(page.getByTestId('trivia-send-form')).toBeVisible();
+      await expect(page.getByTestId('trivia-send-button')).toBeEnabled();
+      await expect(page.getByTestId('trivia-send-status')).toHaveText('');
+      await expect(page.getByTestId('trivia-send-error')).toHaveText('');
+      await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
+
+      await page.getByTestId('trivia-send-name').fill('Camila Torres');
+      await page.getByTestId('trivia-send-button').click();
+      await expect(page.getByTestId('trivia-send-sent')).toBeVisible();
+      expect(posts).toBe(2);
+    });
+  }
 });
