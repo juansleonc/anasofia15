@@ -357,6 +357,7 @@ const totalQuestions = triviaQuestions.length;
   let revealing = false;
   let sending = false;
   let sendGeneration = 0;
+  let sendAbortController: AbortController | null = null;
 
   function renderProgress(): void {
     if (!progressEl) return;
@@ -492,6 +493,8 @@ const totalQuestions = triviaQuestions.length;
 
   function resetSendUi(): void {
     sendGeneration += 1;
+    sendAbortController?.abort();
+    sendAbortController = null;
     sending = false;
     if (sendButton) sendButton.disabled = false;
     if (sendStatus) sendStatus.textContent = '';
@@ -524,8 +527,10 @@ const totalQuestions = triviaQuestions.length;
     if (sendStatus) sendStatus.textContent = 'Enviando...';
 
     const generation = sendGeneration;
+    const controller = new AbortController();
+    sendAbortController = controller;
     const payload = buildTriviaResultPayload(sendNameInput?.value ?? '', state, sendForm.dataset.accessKey ?? '');
-    const ok = await postToWeb3Forms({ ...payload });
+    const ok = await postToWeb3Forms({ ...payload }, controller.signal);
     if (generation !== sendGeneration) return;
 
     sending = false;

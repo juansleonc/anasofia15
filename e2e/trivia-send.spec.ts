@@ -213,18 +213,94 @@ test.describe('Trivia send form', () => {
     await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
   });
 
+  test('cancels a pending trivia send when the quiz restarts, then sends once from the next playthrough', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await withConfiguredAccessKey(page);
+    let posts = 0;
+    let releaseFirst: () => void = () => undefined;
+    const firstHeld = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const failedSubmits: string[] = [];
+    page.on('requestfailed', (request) => {
+      if (request.url() === 'https://api.web3forms.com/submit') {
+        failedSubmits.push(request.failure()?.errorText ?? 'unknown');
+      }
+    });
+    await page.route('https://api.web3forms.com/submit', async (route) => {
+      posts += 1;
+      if (posts === 1) {
+        await firstHeld;
+        await route
+          .fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' })
+          .catch(() => undefined);
+      } else {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+      }
+    });
+    await playToEnd(page);
+
+    await page.getByTestId('trivia-send-name').fill('Camila Torres');
+    await page.getByTestId('trivia-send-button').click();
+    await expect(page.getByTestId('trivia-send-status')).toHaveText('Enviando...');
+
+    await page.getByTestId('trivia-restart').click();
+    await expect.poll(() => failedSubmits.length).toBeGreaterThan(0);
+
+    await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta 1 de ${triviaQuestions.length}`);
+    await expect(page.getByTestId('trivia-result')).toBeHidden();
+
+    for (let i = 0; i < triviaQuestions.length; i += 1) {
+      await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta ${i + 1} de`);
+      await page.getByTestId(`trivia-option-${triviaQuestions[i].correctIndex}`).click();
+    }
+    await expect(page.getByTestId('trivia-result')).toBeVisible();
+
+    await expect(page.getByTestId('trivia-send-form')).toBeVisible();
+    await expect(page.getByTestId('trivia-send-button')).toBeEnabled();
+    await expect(page.getByTestId('trivia-send-status')).toHaveText('');
+    await expect(page.getByTestId('trivia-send-error')).toHaveText('');
+    await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
+
+    await page.getByTestId('trivia-send-name').fill('Camila Torres');
+    await page.getByTestId('trivia-send-button').click();
+    await expect(page.getByTestId('trivia-send-sent')).toBeVisible();
+    expect(posts).toBe(2);
+
+    releaseFirst();
+  });
+
   for (const [label, response] of [
     ['success', { status: 200, body: JSON.stringify({ success: true }) }],
     ['HTTP 500', { status: 500, body: '{}' }],
   ] as const) {
-    test(`ignores a stale ${label} response after restarting mid-send`, async ({ page }) => {
-      test.setTimeout(90_000);
+    test(`ignores a stale ${label} response after restarting mid-send when the abort loses the race`, async ({
+      page,
+    }) => {
+      test.setTimeout(60_000);
+      // Abort is best-effort: a request the server already answered by the time abort() runs
+      // can still resolve, so simulate that by stripping `signal` before the real fetch runs —
+      // the generation-token guard, not cancellation, is what this proves.
+      await page.addInitScript(() => {
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+          const rest = { ...init };
+          delete rest.signal;
+          return originalFetch(input, rest);
+        };
+      });
       await withConfiguredAccessKey(page);
       let posts = 0;
+      let releaseFirst: () => void = () => undefined;
+      const firstHeld = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
       await page.route('https://api.web3forms.com/submit', async (route) => {
         posts += 1;
         if (posts === 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1500));
+          await firstHeld;
           await route.fulfill({ status: response.status, contentType: 'application/json', body: response.body });
         } else {
           await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
@@ -237,7 +313,8 @@ test.describe('Trivia send form', () => {
       await expect(page.getByTestId('trivia-send-status')).toHaveText('Enviando...');
 
       await page.getByTestId('trivia-restart').click();
-      await page.waitForTimeout(2200);
+      releaseFirst();
+      await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta 1 de ${triviaQuestions.length}`);
 
       for (let i = 0; i < triviaQuestions.length; i += 1) {
         await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta ${i + 1} de`);

@@ -25,16 +25,18 @@ export function isWeb3FormsKeyConfigured(key: unknown): boolean {
 /**
  * POSTs a payload to Web3Forms. Resolves true only when the HTTP status is OK and the JSON body
  * confirms `success: true`; any other outcome (non-2xx, `success:false`, unparseable body, network
- * failure) resolves false. Never throws.
+ * failure, or an aborted `signal`) resolves false. Never throws.
  */
 export async function postToWeb3Forms(
   payload: { access_key: string; subject: string; botcheck: string } & Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<boolean> {
   try {
     const response = await fetch(WEB3FORMS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload),
+      signal,
     });
     const body: unknown = await response.json().catch(() => null);
     return (

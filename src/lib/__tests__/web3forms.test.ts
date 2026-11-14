@@ -51,7 +51,7 @@ describe('postToWeb3Forms', () => {
     vi.unstubAllGlobals();
   });
 
-  function stubFetch(impl: () => Promise<unknown>) {
+  function stubFetch(impl: (url: string, init: RequestInit) => Promise<unknown>) {
     const fetchMock = vi.fn(impl);
     vi.stubGlobal('fetch', fetchMock);
     return fetchMock;
@@ -106,5 +106,30 @@ describe('postToWeb3Forms', () => {
       throw new TypeError('network down');
     });
     await expect(postToWeb3Forms(payload)).resolves.toBe(false);
+  });
+
+  it('forwards the given signal to fetch', async () => {
+    const fetchMock = stubFetch(async () => jsonResponse({ success: true }));
+    const controller = new AbortController();
+
+    await postToWeb3Forms(payload, controller.signal);
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.signal).toBe(controller.signal);
+  });
+
+  it('resolves false instead of throwing when the signal aborts the fetch', async () => {
+    stubFetch(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+        }),
+    );
+    const controller = new AbortController();
+
+    const result = postToWeb3Forms(payload, controller.signal);
+    controller.abort();
+
+    await expect(result).resolves.toBe(false);
   });
 });
