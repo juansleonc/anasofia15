@@ -37,7 +37,7 @@ describe('event data', () => {
     expect(event.dressCode.men).toBe(
       'Tonos beige, café y similares. Camisa blanca manga larga y pantalón de vestir.',
     );
-    expect(event.dressCode.women).toBe('Colores planos. Vestido largo de color plano.');
+    expect(event.dressCode.women).toBe('Vestido largo, colores planos.');
     expect('description' in event.dressCode).toBe(false);
   });
 

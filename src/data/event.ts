@@ -88,7 +88,7 @@ const venue: Venue = {
 const dressCode: DressCode = {
   summary: 'Formal, elegante',
   men: 'Tonos beige, café y similares. Camisa blanca manga larga y pantalón de vestir.',
-  women: 'Colores planos. Vestido largo de color plano.',
+  women: 'Vestido largo, colores planos.',
 };
 const footerText = 'Ana Sofía · 19.12.2026';
 const admissionNote = `${celebrantName} reservó un lugar especial para ti: esta invitación es válida para una sola persona.`;
