@@ -87,5 +87,10 @@ test.describe('Hero section', () => {
     await expect(img).toBeVisible();
     await expect(img).toHaveAttribute('alt', 'Ana Sofía');
     await expect(page.getByTestId('hero-portrait-fallback')).toHaveCount(0);
+
+    // toBeVisible() alone passes even with a broken src; naturalWidth proves it decoded.
+    await expect
+      .poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth))
+      .toBeGreaterThan(0);
   });
 });
