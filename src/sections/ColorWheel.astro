@@ -3,6 +3,7 @@
 // owns the radio-group/rotation state machine built on the pure `color-wheel` geometry module).
 import ColorWheelIsland from '../islands/ColorWheelIsland.astro';
 import EyebrowEmoji from '../components/EyebrowEmoji.astro';
+import { reservedColorsNote } from '../data/dress-colors';
 ---
 
 <section class="color-wheel-section" data-testid="rueda-colores" aria-label="La rueda de colores">
@@ -10,6 +11,7 @@ import EyebrowEmoji from '../components/EyebrowEmoji.astro';
     <p class="color-wheel-section__eyebrow"><EyebrowEmoji emoji="👗" />Para ellas</p>
     <h2 class="color-wheel-section__title text-rose">La rueda de colores</h2>
   </div>
+  <p class="color-wheel-section__reserved" data-testid="reserved-colors-note">{reservedColorsNote}</p>
   <ColorWheelIsland />
 </section>
 
@@ -27,6 +29,15 @@ import EyebrowEmoji from '../components/EyebrowEmoji.astro';
     font-size: 0.75rem;
     letter-spacing: 0.5em;
     text-transform: uppercase;
+    color: var(--c-rose-700);
+  }
+
+  .color-wheel-section__reserved {
+    max-width: 22rem;
+    margin: -0.75rem auto 1.5rem;
+    text-align: center;
+    font-size: 0.9375rem;
+    line-height: 1.5;
     color: var(--c-rose-700);
   }
 

@@ -6,12 +6,12 @@
 
 export interface SiteConfig {
   /**
-   * Web3Forms public access key for this event's form. PLACEHOLDER until the family creates the
-   * real form — `isWeb3FormsKeyConfigured` (src/lib/rsvp.ts) keeps the RSVP form in a visible
-   * "not configured" state (no fetch ever sent) until this is swapped for a real UUID key. This
-   * key is public-by-design (safe to ship in the client bundle): it only identifies which
-   * Web3Forms form to submit to. The destination email address is configured on Web3Forms' own
-   * dashboard, NOT here — it never appears in this codebase or the bundle.
+   * Web3Forms public access key for this event's forms. Leave it empty ('') until the family
+   * generates one at web3forms.com, then paste the UUID here. While empty, `isWeb3FormsKeyConfigured`
+   * (src/lib/web3forms.ts) keeps the forms in a visible "not configured" state and no request is
+   * ever sent. The key is public-by-design (safe in the client bundle): it only identifies which
+   * Web3Forms form to submit to. The destination address is set on Web3Forms' own dashboard, NOT
+   * here — it never appears in this codebase or the bundle.
    */
   web3formsAccessKey: string;
   /** Full deployed site origin (must match `site` in astro.config.mjs). */
@@ -40,7 +40,7 @@ export interface SiteConfig {
 }
 
 export const siteConfig: SiteConfig = {
-  web3formsAccessKey: 'REEMPLAZAR-CON-LLAVE-WEB3FORMS',
+  web3formsAccessKey: '',
   siteUrl: 'https://juansleonc.github.io',
   base: '/anasofia15/',
   og: {

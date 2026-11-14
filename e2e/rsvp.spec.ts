@@ -1,34 +1,19 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { event } from '../src/data/event';
 import { RSVP_GUARD_STORAGE_KEY } from '../src/lib/rsvp';
-import { siteConfig } from '../src/data/site.config';
+import { withConfiguredAccessKey, TEST_ACCESS_KEY } from './web3forms-seam';
 
 // RSVP: nombre + asistencia (sí/no) + canción sugerida, submitted to a mocked Web3Forms endpoint
 // (never the real network). Covers the full state machine: idle -> submitting -> success | error,
 // plus the already-confirmed state on revisit (localStorage guard) and the "not configured" state
-// shipped while `siteConfig.web3formsAccessKey` is still the placeholder.
+// shipped while the access key is still empty.
 //
-// Test-only seam: the real build ships the placeholder key, so the success/error/revisit flows
-// below need the form to behave as "configured" to exercise them. `withConfiguredAccessKey`
-// intercepts the page document itself and replaces the placeholder with a test UUID before it
-// reaches the browser — there is no such seam in production code. If the family later configures
-// a real key, the replace becomes a no-op and these tests still pass unchanged.
+// Success/error/revisit flows need the form to behave as "configured"; the shared seam in
+// ./web3forms-seam swaps in a test key at the HTML level (no test hook in production code).
 
 const WEB3FORMS_URL = 'https://api.web3forms.com/submit';
-const TEST_ACCESS_KEY = '11111111-1111-1111-1111-111111111111';
 
-async function withConfiguredAccessKey(page: Page): Promise<void> {
-  await page.route('**/anasofia15/', async (route) => {
-    const response = await route.fetch();
-    const body = await response.text();
-    await route.fulfill({
-      response,
-      body: body.replaceAll(siteConfig.web3formsAccessKey, TEST_ACCESS_KEY),
-    });
-  });
-}
-
-test.describe('RSVP section: not configured (shipped placeholder key)', () => {
+test.describe('RSVP section: not configured (shipped empty key)', () => {
   test('shows the notice, disables the submit button, and sends zero requests', async ({
     page,
   }) => {

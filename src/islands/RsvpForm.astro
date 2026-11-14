@@ -232,17 +232,18 @@ const accessKey = siteConfig.web3formsAccessKey;
 <script>
   import {
     validateRsvp,
-    isHoneypotTripped,
     buildWeb3FormsPayload,
     hasSubmitted,
     markSubmitted,
     readSubmission,
-    isWeb3FormsKeyConfigured,
     type Attending,
   } from '../lib/rsvp';
+  import {
+    postToWeb3Forms,
+    isHoneypotTripped,
+    isWeb3FormsKeyConfigured,
+  } from '../lib/web3forms';
   import { event } from '../data/event';
-
-  const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
 
   const rootEl = document.querySelector('.rsvp-form-root') as HTMLElement | null;
   const form = document.querySelector('[data-testid="rsvp-form"]') as HTMLFormElement | null;
@@ -336,30 +337,18 @@ const accessKey = siteConfig.web3formsAccessKey;
     if (submitButton) submitButton.disabled = true;
     if (statusEl) statusEl.textContent = 'Enviando...';
 
-    try {
-      const response = await fetch(WEB3FORMS_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
-      });
+    const sent = await postToWeb3Forms({ ...payload });
 
-      const body: unknown = await response.json().catch(() => null);
-      const ok =
-        response.ok &&
-        typeof body === 'object' &&
-        body !== null &&
-        (body as { success?: unknown }).success === true;
-
-      if (!ok) throw new Error('Web3Forms did not confirm success');
-
+    if (sent) {
       markSubmitted(input);
       if (statusEl) statusEl.textContent = '';
       showConfirmed(personalizedMessage(input.name, input.attending));
-    } catch {
-      if (submitButton) submitButton.disabled = false;
-      if (statusEl) {
-        statusEl.textContent = 'No pudimos enviar tu confirmación. Intenta de nuevo en un momento.';
-      }
+      return;
+    }
+
+    if (submitButton) submitButton.disabled = false;
+    if (statusEl) {
+      statusEl.textContent = 'No pudimos enviar tu confirmación. Intenta de nuevo en un momento.';
     }
   });
 </script>

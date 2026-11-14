@@ -73,7 +73,6 @@ const HUB_RADIUS = 20;
   <div class="color-wheel__detail" data-testid="color-wheel-detail" aria-live="polite" hidden>
     <span class="color-wheel__detail-swatch" data-testid="color-wheel-swatch" aria-hidden="true" />
     <p class="color-wheel__detail-name" data-testid="color-wheel-name" />
-    <p class="color-wheel__detail-note" data-testid="color-wheel-note" hidden />
   </div>
 </div>
 
@@ -221,16 +220,6 @@ const HUB_RADIUS = 20;
     color: var(--c-ink);
     margin: 0;
   }
-
-  .color-wheel__detail-note {
-    font-size: 0.875rem;
-    color: var(--c-ink-soft);
-    margin: 0;
-  }
-
-  .color-wheel__detail-note[hidden] {
-    display: none;
-  }
 </style>
 
 <script>
@@ -255,7 +244,6 @@ const HUB_RADIUS = 20;
     '[data-testid="color-wheel-swatch"]',
   ) as HTMLElement | null;
   const nameEl = document.querySelector('[data-testid="color-wheel-name"]');
-  const noteEl = document.querySelector('[data-testid="color-wheel-note"]') as HTMLElement | null;
 
   let rotation = 0;
 
@@ -272,10 +260,6 @@ const HUB_RADIUS = 20;
     if (detail) detail.hidden = false;
     if (swatch) swatch.style.backgroundColor = color.hex;
     if (nameEl) nameEl.textContent = color.name;
-    if (noteEl) {
-      noteEl.hidden = color.note === null;
-      noteEl.textContent = color.note ?? '';
-    }
     if (hint) hint.hidden = true;
 
     slices.forEach((slice, i) => {
