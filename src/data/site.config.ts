@@ -33,8 +33,8 @@ export interface SiteConfig {
   musicSrc: string;
   /**
    * Path (relative to `base`, route it through `withBase()`) to the Hero portrait photo, served
-   * from `public/images/portrait.jpg`. PLACEHOLDER until the family supplies one — `Hero.astro`
-   * falls back to an "AS" medallion while it's absent (see `publicAssetExists`).
+   * from `public/images/portrait.jpg` — supplied by the family. `Hero.astro` falls back to an
+   * "AS" medallion if it's ever removed (see `publicAssetExists`).
    */
   portraitPath: string;
 }
