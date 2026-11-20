@@ -44,31 +44,31 @@ test.describe('design tokens + fonts', () => {
       };
     });
 
-    expect(tokens.bg).toBe('#fff7f5');
-    expect(tokens.bgDeep).toBe('#fbe9e7');
-    expect(tokens.rose100).toBe('#fce4e8');
-    expect(tokens.rose200).toBe('#f3c6d0');
-    expect(tokens.rose300).toBe('#e8a3b4');
-    expect(tokens.rose400).toBe('#d47f97');
-    expect(tokens.rose600).toBe('#b5617a');
-    expect(tokens.rose700).toBe('#9e4a63');
-    expect(tokens.ink).toBe('#4a2632');
-    expect(tokens.inkSoft).toBe('#7a4a58');
-    expect(tokens.leaf).toBe('#8fae8b');
-    expect(tokens.leafDeep).toBe('#5f7f5b');
+    expect(tokens.bg).toBe('#fbf7ff');
+    expect(tokens.bgDeep).toBe('#f1e6fa');
+    expect(tokens.rose100).toBe('#f1e4fa');
+    expect(tokens.rose200).toBe('#e2c8f2');
+    expect(tokens.rose300).toBe('#d7b4ea');
+    expect(tokens.rose400).toBe('#a77fc9');
+    expect(tokens.rose600).toBe('#74469a');
+    expect(tokens.rose700).toBe('#5b2f7a');
+    expect(tokens.ink).toBe('#2c2550');
+    expect(tokens.inkSoft).toBe('#5a5078');
+    expect(tokens.leaf).toBe('#a3dcc3');
+    expect(tokens.leafDeep).toBe('#6b7536');
     // CSS minification shortens #ffffff to its 3-digit equivalent at build time.
     expect(tokens.white).toBe('#fff');
     expect(tokens.error).toBe('#a3324a');
     expect(tokens.success).toBe('#3f6b47');
-    expect(tokens.champagne100).toBe('#fbf3e4');
-    expect(tokens.champagne200).toBe('#f2e0c2');
-    expect(tokens.champagne300).toBe('#e6c99a');
-    expect(tokens.champagne500).toBe('#cda869');
-    expect(tokens.champagne700).toBe('#a07e46');
-    expect(tokens.rosegold200).toBe('#f3d3c8');
-    expect(tokens.rosegold400).toBe('#dba592');
-    expect(tokens.wine500).toBe('#9a4462');
-    expect(tokens.wine700).toBe('#6e2440');
+    expect(tokens.champagne100).toBe('#fff8e6');
+    expect(tokens.champagne200).toBe('#fdefc0');
+    expect(tokens.champagne300).toBe('#fbe89a');
+    expect(tokens.champagne500).toBe('#ffb38a');
+    expect(tokens.champagne700).toBe('#d98a5f');
+    expect(tokens.rosegold200).toBe('#c9dcf2');
+    expect(tokens.rosegold400).toBe('#7fa8da');
+    expect(tokens.wine500).toBe('#8b2440');
+    expect(tokens.wine700).toBe('#6e1423');
   });
 
   test('the page body background is the rose paper token', async ({ page }) => {
@@ -79,9 +79,9 @@ test.describe('design tokens + fonts', () => {
       getComputedStyle(document.documentElement).getPropertyValue('--c-bg').trim(),
     );
 
-    // rgb(255, 247, 245) === #fff7f5
-    expect(bodyBackground).toBe('rgb(255, 247, 245)');
-    expect(bgToken).toBe('#fff7f5');
+    // rgb(251, 247, 255) === #fbf7ff
+    expect(bodyBackground).toBe('rgb(251, 247, 255)');
+    expect(bgToken).toBe('#fbf7ff');
   });
 
   test('cursive font-family applies to the representative name element', async ({ page }) => {

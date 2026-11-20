@@ -89,7 +89,7 @@ test.describe('Trivia section', () => {
     const alphaMatch = styles.backgroundColor.match(/[/,]\s*([\d.]+)\s*\)$/);
     expect(alphaMatch).not.toBeNull();
     expect(Number(alphaMatch![1])).toBeLessThanOrEqual(0.1);
-    // Ink label (--c-ink, #4a2632), not the UA's dark default button text.
-    expect(styles.color).toBe('rgb(74, 38, 50)');
+    // Ink label (--c-ink, #2c2550), not the UA's dark default button text.
+    expect(styles.color).toBe('rgb(44, 37, 80)');
   });
 });
