@@ -6,19 +6,14 @@
 // it. Tapping a slice forwards to the matching radio's own `click()` rather than
 // duplicating selection logic, and the rotor is an HTML box (not an SVG group) rotated via CSS —
 // rotating an HTML box sidesteps SVG `transform-origin` quirks across browsers.
-import { dressColors, PAGE_BACKGROUNDS } from '../data/dress-colors';
+import { dressColors } from '../data/dress-colors';
 import { slicePath } from '../lib/color-wheel';
-import { needsOutline } from '../lib/swatch-contrast';
 import Rose from '../components/Rose.astro';
 
 const CENTER = 100;
 const SLICE_RADIUS = 82;
 const RING_RADIUS = 90;
 const HUB_RADIUS = 20;
-
-// Pale swatches whose own fill can't clear 3:1 against the page backgrounds get a thin dark
-// ring instead, so their boundary (not the fill) carries the contrast — see swatch-contrast.ts.
-const sliceNeedsOutline = dressColors.map((color) => needsOutline(color.hex, PAGE_BACKGROUNDS));
 ---
 
 <div class="color-wheel" data-testid="color-wheel">
@@ -36,7 +31,6 @@ const sliceNeedsOutline = dressColors.map((color) => needsOutline(color.hex, PAG
               class="color-wheel__slice"
               data-testid="color-wheel-slice"
               data-index={i}
-              data-outline={sliceNeedsOutline[i] ? 'true' : 'false'}
               d={slicePath(i, dressColors.length, SLICE_RADIUS, CENTER)}
               style={`fill: ${color.hex}`}
             />
@@ -65,7 +59,6 @@ const sliceNeedsOutline = dressColors.map((color) => needsOutline(color.hex, PAG
               for={`color-wheel-option-${i}`}
               class="color-wheel__label"
               style={`--option-color: ${color.hex}`}
-              data-outline={sliceNeedsOutline[i] ? 'true' : 'false'}
             >
               {color.name}
             </label>
@@ -129,26 +122,9 @@ const sliceNeedsOutline = dressColors.map((color) => needsOutline(color.hex, PAG
     stroke-width: 2;
   }
 
-  /* Pale swatches (e.g. butter, peach) can't clear 3:1 against the page on fill alone — ring
-     them in the dark ink token instead, proved >=3:1 on both page backgrounds in
-     dress-colors.test.ts. */
-  .color-wheel__slice[data-outline='true'] {
-    stroke: var(--c-ink);
-    stroke-width: 2;
-  }
-
   .color-wheel__slice[data-focused='true'] {
     stroke: var(--c-ink);
     stroke-width: 3;
-  }
-
-  /* A pale slice's resting ring already borrows --c-ink to clear contrast (see above), so
-     focus needs more than +1px of the same color to read as a distinct state — switch to the
-     rose-700 token at a visibly thicker 4px stroke instead. Dark slices (no data-outline) keep
-     the plain ink/3px focus look from the rule above. */
-  .color-wheel__slice[data-outline='true'][data-focused='true'] {
-    stroke: var(--c-rose-700);
-    stroke-width: 4;
   }
 
   .color-wheel__hub {
@@ -195,18 +171,10 @@ const sliceNeedsOutline = dressColors.map((color) => needsOutline(color.hex, PAG
 
   .color-wheel__label::before {
     content: '';
-    box-sizing: border-box;
     width: 0.75rem;
     height: 0.75rem;
     border-radius: 50%;
     background: var(--option-color);
-    border: 1.5px solid transparent;
-  }
-
-  /* Same rule as the wheel slices (see swatch-contrast.ts): a pale dot's own fill can't clear
-     3:1 against the page on its own, so its boundary carries the contrast instead. */
-  .color-wheel__label[data-outline='true']::before {
-    border-color: var(--c-ink);
   }
 
   .color-wheel__radio:checked + .color-wheel__label {
@@ -241,16 +209,10 @@ const sliceNeedsOutline = dressColors.map((color) => needsOutline(color.hex, PAG
   }
 
   .color-wheel__detail-swatch {
-    box-sizing: border-box;
     width: 1.75rem;
     height: 1.75rem;
     border-radius: 50%;
     border: 1px solid var(--c-rose-300);
-  }
-
-  /* Same rule as the wheel slices and legend dot (see swatch-contrast.ts). */
-  .color-wheel__detail-swatch[data-outline='true'] {
-    border: 2px solid var(--c-ink);
   }
 
   .color-wheel__detail-name {
@@ -261,9 +223,8 @@ const sliceNeedsOutline = dressColors.map((color) => needsOutline(color.hex, PAG
 </style>
 
 <script>
-  import { dressColors, PAGE_BACKGROUNDS } from '../data/dress-colors';
+  import { dressColors } from '../data/dress-colors';
   import { nextRotation } from '../lib/color-wheel';
-  import { needsOutline } from '../lib/swatch-contrast';
 
   const COUNT = dressColors.length;
 
@@ -297,10 +258,7 @@ const sliceNeedsOutline = dressColors.map((color) => needsOutline(color.hex, PAG
     }
 
     if (detail) detail.hidden = false;
-    if (swatch) {
-      swatch.style.backgroundColor = color.hex;
-      swatch.dataset.outline = needsOutline(color.hex, PAGE_BACKGROUNDS) ? 'true' : 'false';
-    }
+    if (swatch) swatch.style.backgroundColor = color.hex;
     if (nameEl) nameEl.textContent = color.name;
     if (hint) hint.hidden = true;
 

@@ -17,13 +17,6 @@ export const dressColors: DressColor[] = [
   { name: 'Durazno', hex: '#FFB38A' },
 ];
 
-/**
- * Page backgrounds (`--c-bg` and plain white surfaces) a swatch is ever rendered against — the
- * one source of truth `swatch-contrast.ts`'s `needsOutline` checks against, so pale swatches
- * that fall under its 3:1 minimum stay ringed instead of silently drifting unreadable.
- */
-export const PAGE_BACKGROUNDS = ['#fbf7ff', '#ffffff'] as const;
-
 /** Colors the quinceañera wears, so guests should not. */
 export const reservedColors = ['blanco', 'marfil', 'champagne', 'dorado rosado', 'negro'] as const;
 

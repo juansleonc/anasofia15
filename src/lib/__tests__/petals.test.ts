@@ -10,8 +10,8 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-const PALETTE = ['#F1E4FA', '#E2C8F2', '#D7B4EA'];
-const FLECK_PALETTE = ['#FBE89A', '#FFB38A', '#D98A5F'];
+const PALETTE = ['#FCE4E8', '#F3C6D0', '#E8A3B4'];
+const FLECK_PALETTE = ['#E6C99A', '#CDA869', '#A07E46'];
 
 function shower(count: number, seed = 11): Particle[] {
   return createPetals({ count, palette: PALETTE, random: seededRandom(seed) });

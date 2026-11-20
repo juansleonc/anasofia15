@@ -189,13 +189,13 @@ test.describe('Cover section', () => {
 
     // Rose at the top deepening to wine at the bottom; palette.test.ts proves the white label's
     // contrast on every stop.
-    expect(styles.backgroundImage).toContain('rgb(91, 47, 122)');
-    expect(styles.backgroundImage).toContain('rgb(139, 36, 64)');
-    expect(styles.backgroundImage).toContain('rgb(110, 20, 35)');
-    expect(styles.borderTopColor).toBe('rgb(255, 179, 138)');
-    expect(styles.borderRightColor).toBe('rgb(255, 179, 138)');
-    expect(styles.borderBottomColor).toBe('rgb(255, 179, 138)');
-    expect(styles.borderLeftColor).toBe('rgb(255, 179, 138)');
+    expect(styles.backgroundImage).toContain('rgb(158, 74, 99)');
+    expect(styles.backgroundImage).toContain('rgb(154, 68, 98)');
+    expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
+    expect(styles.borderTopColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderRightColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderBottomColor).toBe('rgb(205, 168, 105)');
+    expect(styles.borderLeftColor).toBe('rgb(205, 168, 105)');
     expect(parseFloat(styles.borderTopWidth)).toBeGreaterThan(0);
     expect(styles.color).toBe('rgb(255, 255, 255)');
     expect(styles.boxShadow).not.toBe('none');
@@ -219,7 +219,7 @@ test.describe('Cover section', () => {
 
     const gradientCount = (styles.backgroundImage.match(/[a-z-]+-gradient\(/gi) ?? []).length;
     expect(gradientCount).toBeGreaterThanOrEqual(2);
-    expect(styles.backgroundImage).toContain('rgb(110, 20, 35)');
+    expect(styles.backgroundImage).toContain('rgb(110, 36, 64)');
 
     // Split the resolved `box-shadow` on top-level commas only — a layer's own colour may be an
     // `rgba(...)` with internal commas, so a naive `.split(',')` would cut a layer in half.
@@ -260,7 +260,7 @@ test.describe('Cover section', () => {
     });
     expect(dropLayers.length).toBeGreaterThanOrEqual(2);
     for (const layer of dropLayers) {
-      expect(layerRgb(layer)).toEqual([110, 20, 35]);
+      expect(layerRgb(layer)).toEqual([110, 36, 64]);
     }
 
     expect(styles.borderTopWidth).toBeGreaterThanOrEqual(2);
@@ -680,7 +680,7 @@ test.describe('Cover section', () => {
     const color = await page
       .getByTestId('cover-celebrant-name')
       .evaluate((el) => getComputedStyle(el).color);
-    expect(color).toBe('rgb(110, 20, 35)');
+    expect(color).toBe('rgb(110, 36, 64)');
   });
 
   test('the lead is deep wine', async ({ page }) => {
@@ -689,7 +689,7 @@ test.describe('Cover section', () => {
     const color = await page
       .getByTestId('cover-title-lead')
       .evaluate((el) => getComputedStyle(el).color);
-    expect(color).toBe('rgb(63, 11, 20)');
+    expect(color).toBe('rgb(74, 21, 37)');
   });
 
   for (const { viewport, minLeadPx } of [
