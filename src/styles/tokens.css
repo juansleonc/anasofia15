@@ -1,41 +1,54 @@
 /**
- * Design tokens — "Rosas y flores" theme: blush/rose watercolor palette.
+ * Design tokens — lilac/purple re-theme.
  * CSS custom properties consumed by every section/component; do not hardcode raw hex values
  * or font-family strings elsewhere — reference these tokens instead.
+ *
+ * The token NAMES are legacy (left as-is so every component that already references them keeps
+ * working); only their VALUES moved to the new palette:
+ *   - rose-*      now carries the lilac/purple family (Lila/Morado), lilac being dominant
+ *   - champagne-* now carries the butter-to-peach family (Amarillo mantequilla/Durazno)
+ *   - wine-*      now carries the burgundy family (Vino)
+ *   - rosegold-*  now carries the sky-blue family (Azul cielo)
  */
 
 :root {
   /* Palette */
-  --c-bg: #fff7f5;
-  --c-bg-deep: #fbe9e7;
-  --c-rose-100: #fce4e8;
-  --c-rose-200: #f3c6d0;
-  --c-rose-300: #e8a3b4;
-  --c-rose-400: #d47f97;
-  --c-rose-600: #b5617a;
-  --c-rose-700: #9e4a63;
-  --c-ink: #4a2632;
-  --c-ink-soft: #7a4a58;
-  --c-leaf: #8fae8b;
-  --c-leaf-deep: #5f7f5b;
+  --c-bg: #fbf7ff;
+  --c-bg-deep: #f1e6fa;
+  --c-rose-100: #f1e4fa;
+  --c-rose-200: #e2c8f2;
+  --c-rose-300: #d7b4ea;
+  --c-rose-400: #a77fc9;
+  --c-rose-500: #8a5cad;
+  --c-rose-600: #74469a;
+  --c-rose-700: #5b2f7a;
+  --c-ink: #2c2550;
+  /* Clears AA (4.5:1) on the darkest surface it sits on, the body wash's rose-200 circle, as
+     well as every other page/card background. */
+  --c-ink-soft: #5a5078;
+  --c-leaf: #a3dcc3;
+  --c-leaf-deep: #6b7536;
   --c-white: #ffffff;
   --c-error: #a3324a;
   --c-success: #3f6b47;
-  --c-champagne-100: #fbf3e4;
-  --c-champagne-200: #f2e0c2;
-  --c-champagne-300: #e6c99a;
-  --c-champagne-500: #cda869;
-  --c-champagne-700: #a07e46;
-  --c-rosegold-200: #f3d3c8;
-  --c-rosegold-400: #dba592;
-  --c-wine-500: #9a4462;
-  --c-wine-700: #6e2440;
-  --c-wine-900: #4a1525;
-  --c-champagne-800: #7a5c2e;
+  --c-champagne-100: #fff8e6;
+  --c-champagne-200: #fdefc0;
+  --c-champagne-300: #fbe89a;
+  --c-champagne-500: #ffb38a;
+  --c-champagne-700: #d98a5f;
+  --c-rosegold-200: #c9dcf2;
+  --c-rosegold-400: #7fa8da;
+  --c-wine-500: #8b2440;
+  --c-wine-700: #6e1423;
+  --c-wine-900: #3f0b14;
+  --c-champagne-800: #9e5a35;
 
   /* Composite surfaces */
-  --gradient-rose: linear-gradient(135deg, #f3c6d0 0%, #e8a3b4 45%, #b5617a 100%);
-  --gradient-button: linear-gradient(135deg, #b5617a 0%, #9e4a63 100%);
+  /* Celebrant-name fill (and every other --gradient-rose consumer): rose-500 through rose-700,
+     dark enough that the name reads clearly on the lilac page background — see palette.test.ts
+     for the contrast proof on each stop. */
+  --gradient-rose: linear-gradient(135deg, var(--c-rose-500) 0%, var(--c-rose-600) 45%, var(--c-rose-700) 100%);
+  --gradient-button: linear-gradient(135deg, #74469a 0%, #5b2f7a 100%);
   /* Open-invitation button fill: rose at the top deepening to wine. Gold stays on the rim and
      bevel only, so white label text clears 4.5:1 on every stop (proved in palette.test.ts). */
   --gradient-button-wine-rose: linear-gradient(
@@ -54,8 +67,8 @@
     transparent 52%
   );
   --card-bg: rgba(255, 255, 255, 0.78);
-  --card-border: 1px solid rgba(158, 74, 99, 0.18);
-  --card-shadow: 0 18px 40px -24px rgba(158, 74, 99, 0.35);
+  --card-border: 1px solid rgba(91, 47, 122, 0.18);
+  --card-shadow: 0 18px 40px -24px rgba(91, 47, 122, 0.35);
 
   /* Typography */
   --font-cursive: 'Great Vibes', cursive;

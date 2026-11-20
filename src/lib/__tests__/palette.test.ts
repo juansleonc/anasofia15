@@ -20,7 +20,38 @@ const SRC_DIR = join(PROJECT_ROOT, 'src');
 const ALLOWED_FILES = [join(SRC_DIR, 'styles', 'tokens.css'), join(SRC_DIR, 'data', 'dress-colors.ts')];
 const ALLOWED_DIR = join(SRC_DIR, 'lib', '__tests__') + sep;
 
-const RETIRED_THEME_HEXES = ['#0a0a0f', '#c9ccd1', '#d4af37', '#eef0f3', '#f0d987', '#fbf0c4'];
+const RETIRED_THEME_HEXES = [
+  '#0a0a0f',
+  '#c9ccd1',
+  '#d4af37',
+  '#eef0f3',
+  '#f0d987',
+  '#fbf0c4',
+  // Retired "rosas y flores" blush palette, superseded by the lilac/purple re-theme.
+  '#fff7f5',
+  '#fbe9e7',
+  '#fce4e8',
+  '#f3c6d0',
+  '#e8a3b4',
+  '#d47f97',
+  '#b5617a',
+  '#9e4a63',
+  '#4a2632',
+  '#7a4a58',
+  '#8fae8b',
+  '#5f7f5b',
+  '#fbf3e4',
+  '#f2e0c2',
+  '#e6c99a',
+  '#cda869',
+  '#a07e46',
+  '#f3d3c8',
+  '#dba592',
+  '#9a4462',
+  '#6e2440',
+  '#4a1525',
+  '#7a5c2e',
+];
 
 // Matches a single `--token-name: #hex;` custom-property declaration anywhere in the stylesheet.
 const CUSTOM_PROPERTY_HEX = /--([\w-]+):\s*(#[0-9a-fA-F]{3,8})\s*;/g;
@@ -121,7 +152,7 @@ describe('palette discipline', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
 
-    expect(tokens['--c-champagne-800']).toBe('#7a5c2e');
+    expect(tokens['--c-champagne-800']).toBe('#9e5a35');
     // The terminator must sit below champagne-700 so metallic gold gets a real dark edge.
     expect(relativeLuminance(hexToRgb(tokens['--c-champagne-800']))).toBeLessThan(
       relativeLuminance(hexToRgb(tokens['--c-champagne-700'])),
@@ -133,16 +164,16 @@ describe('palette discipline', () => {
     const tokens = parseCustomPropertyHexes(tokensCss);
 
     expect(tokens).toMatchObject({
-      '--c-champagne-100': '#fbf3e4',
-      '--c-champagne-200': '#f2e0c2',
-      '--c-champagne-300': '#e6c99a',
-      '--c-champagne-500': '#cda869',
-      '--c-champagne-700': '#a07e46',
-      '--c-rosegold-200': '#f3d3c8',
-      '--c-rosegold-400': '#dba592',
-      '--c-wine-500': '#9a4462',
-      '--c-wine-700': '#6e2440',
-      '--c-wine-900': '#4a1525',
+      '--c-champagne-100': '#fff8e6',
+      '--c-champagne-200': '#fdefc0',
+      '--c-champagne-300': '#fbe89a',
+      '--c-champagne-500': '#ffb38a',
+      '--c-champagne-700': '#d98a5f',
+      '--c-rosegold-200': '#c9dcf2',
+      '--c-rosegold-400': '#7fa8da',
+      '--c-wine-500': '#8b2440',
+      '--c-wine-700': '#6e1423',
+      '--c-wine-900': '#3f0b14',
     });
   });
 
@@ -150,7 +181,7 @@ describe('palette discipline', () => {
     const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
     const tokens = parseCustomPropertyHexes(tokensCss);
 
-    expect(tokens['--c-wine-900']).toBe('#4a1525');
+    expect(tokens['--c-wine-900']).toBe('#3f0b14');
     for (const background of ['--c-champagne-100', '--c-rose-100', '--c-rose-200']) {
       expect(contrastRatio(tokens['--c-wine-900'], tokens[background])).toBeGreaterThanOrEqual(7);
     }
@@ -239,5 +270,65 @@ describe('palette discipline', () => {
     expect(
       contrastRatio(tokens['--c-wine-700'], tokens['--c-champagne-100']),
     ).toBeGreaterThanOrEqual(7);
+  });
+
+  it('the soft ink text reads at least 4.5:1 (AA) on the body wash rose-200 circle', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    expect(
+      contrastRatio(tokens['--c-ink-soft'], tokens['--c-rose-200']),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // Resolves the celebrant-name gradient into its ordered stop tokens, the same way
+  // buttonFillStops() reads --gradient-button-wine-rose above. Requires every stop to be a
+  // `var(--c-*)` reference (no raw hex / rgb() / color-mix smuggled in), and requires at least
+  // two stops, so the floor tests below can't pass vacuously on an empty or partial list.
+  function nameGradientStops(tokensCss: string): string[] {
+    const declaration = tokensCss.match(/--gradient-rose:\s*linear-gradient\(([^;]*)\);/);
+    expect(declaration).not.toBeNull();
+    const body = declaration![1];
+
+    expect(body).not.toMatch(HEX_COLOR);
+    expect(body).not.toMatch(RGB_FUNCTION);
+    expect(body).not.toMatch(/color-mix\(/i);
+
+    const stops = [...body.matchAll(/var\((--c-[\w-]+)\)/g)].map((match) => match[1]);
+    expect(stops.length).toBeGreaterThanOrEqual(2);
+    return stops;
+  }
+
+  it('the name gradient runs rose-500 to rose-700, built only from palette tokens', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+
+    expect(nameGradientStops(tokensCss)).toEqual(['--c-rose-500', '--c-rose-600', '--c-rose-700']);
+  });
+
+  it('every name-gradient stop reads at least 3:1 (large decorative text) on the page background', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    for (const stop of nameGradientStops(tokensCss)) {
+      expect(contrastRatio(tokens[stop], tokens['--c-bg'])).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('every name-gradient stop reads at least 3:1 on the rose-200 wash circle', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    for (const stop of nameGradientStops(tokensCss)) {
+      expect(contrastRatio(tokens[stop], tokens['--c-rose-200'])).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('the Maps/Music white label text keeps at least 4.5:1 on every name-gradient stop', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    for (const stop of nameGradientStops(tokensCss)) {
+      expect(contrastRatio('#ffffff', tokens[stop])).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

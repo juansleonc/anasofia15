@@ -70,6 +70,55 @@ test.describe('Color wheel section', () => {
     }
   });
 
+  test('rings a pale swatch (Amarillo mantequilla) with a visible dark outline', async ({ page }) => {
+    await openInvitation(page);
+
+    // Pale fills (like butter) can't clear 3:1 contrast against the page on their own — the
+    // dress-colors unit test proves the ring color does, this proves it actually renders.
+    const paleIndex = dressColors.findIndex((color) => color.name === 'Amarillo mantequilla');
+    expect(paleIndex).toBeGreaterThanOrEqual(0);
+
+    const paleSlice = page.getByTestId('color-wheel-slice').nth(paleIndex);
+    await expect(paleSlice).toHaveCSS('stroke', 'rgb(44, 37, 80)');
+
+    // A dark/jewel swatch keeps the plain white divider stroke — no outline needed.
+    const darkIndex = dressColors.findIndex((color) => color.name === 'Vino');
+    const darkSlice = page.getByTestId('color-wheel-slice').nth(darkIndex);
+    await expect(darkSlice).toHaveCSS('stroke', 'rgb(255, 255, 255)');
+  });
+
+  test('rings a pale swatch (Amarillo mantequilla) in the legend dot and the detail swatch', async ({
+    page,
+  }) => {
+    await openInvitation(page);
+
+    const paleIndex = dressColors.findIndex((color) => color.name === 'Amarillo mantequilla');
+    const darkIndex = dressColors.findIndex((color) => color.name === 'Vino');
+
+    // The legend's color dot is drawn via `::before` — read its computed border off the
+    // pseudo-element since Playwright's `toHaveCSS` only targets the real element. Check the
+    // full shorthand (width + style + color), not just color: an invisible 0-width border would
+    // otherwise still report `currentcolor`'s resolved value and pass trivially.
+    const paleLegendBorder = await page
+      .locator('.color-wheel__label')
+      .nth(paleIndex)
+      .evaluate((el) => getComputedStyle(el, '::before').border);
+    expect(paleLegendBorder).toMatch(/^[12](\.5)?px solid rgb\(44, 37, 80\)$/);
+
+    const darkLegendBorder = await page
+      .locator('.color-wheel__label')
+      .nth(darkIndex)
+      .evaluate((el) => getComputedStyle(el, '::before').border);
+    expect(darkLegendBorder).not.toMatch(/rgb\(44, 37, 80\)$/);
+
+    // Selecting the pale color swaps the detail swatch to its outlined ring too.
+    await page.getByTestId('color-wheel-slice').nth(paleIndex).click();
+    await expect(page.getByTestId('color-wheel-swatch')).toHaveCSS(
+      'border-color',
+      'rgb(44, 37, 80)',
+    );
+  });
+
   test('renders one radio option per color labelled with each color name', async ({ page }) => {
     await openInvitation(page);
 
@@ -146,7 +195,7 @@ test.describe('Color wheel phone ergonomics', () => {
     expect(result.labels).toHaveLength(count);
     for (const label of result.labels) {
       expect(label.height).toBeGreaterThanOrEqual(24);
-      expect(label.color).toBe('rgb(74, 38, 50)');
+      expect(label.color).toBe('rgb(44, 37, 80)');
     }
 
     const { scrollWidth, innerWidth } = await page.evaluate(() => ({
@@ -220,5 +269,36 @@ test.describe('Color wheel keyboard navigation', () => {
     await page.keyboard.press(' ');
     await expect(options.nth(3)).toBeChecked();
     await expect(page.getByTestId('color-wheel-name')).toHaveText(dressColors[3].name);
+  });
+
+  test('a focused pale slice gets a stroke clearly distinct from its resting ring', async ({
+    page,
+  }) => {
+    await openInvitation(page);
+
+    // Amarillo mantequilla is one of the pale (`data-outline="true"`) swatches, whose resting
+    // ring already borrows the ink token to clear contrast — focus must still read as a distinct
+    // state, not just +1px of the same color (see dress-colors.test.ts for the outline rule).
+    const paleIndex = dressColors.findIndex((color) => color.name === 'Amarillo mantequilla');
+    expect(paleIndex).toBeGreaterThanOrEqual(0);
+
+    const paleSlice = page.getByTestId('color-wheel-slice').nth(paleIndex);
+    const resting = await paleSlice.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { stroke: style.stroke, width: style.strokeWidth };
+    });
+
+    await page.getByTestId('color-wheel-option').nth(paleIndex).focus();
+    const focused = await paleSlice.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { stroke: style.stroke, width: style.strokeWidth };
+    });
+
+    // A merely +1px bump of the same ink color (2px -> 3px) reads as effectively the same outline
+    // — require either a real color change, or a stroke-width jump of at least 2px, to count as
+    // distinct.
+    const widthGrew = parseFloat(focused.width) - parseFloat(resting.width) >= 2;
+    const colorChanged = focused.stroke !== resting.stroke;
+    expect(widthGrew || colorChanged).toBe(true);
   });
 });

@@ -50,8 +50,8 @@ test.describe('Cover falling confetti', () => {
       expect(ribbon.height / ribbon.width).toBeGreaterThanOrEqual(3);
       expect(ribbon.backgroundImage).toContain('linear-gradient');
       // champagne-300, champagne-500 and champagne-700, from tokens.css.
-      expect(ribbon.backgroundImage).toContain('rgb(230, 201, 154)');
-      expect(ribbon.backgroundImage).toContain('rgb(205, 168, 105)');
+      expect(ribbon.backgroundImage).toContain('rgb(251, 232, 154)');
+      expect(ribbon.backgroundImage).toContain('rgb(255, 179, 138)');
     }
   });
 
@@ -205,7 +205,7 @@ test.describe('Cover light flares', () => {
       expect(flare.width).toBeLessThanOrEqual(40);
       expect(flare.clipPath).toContain('polygon(');
       const gold =
-        flare.bodyImage.includes('rgb(205, 168, 105)') || flare.bodyImage.includes('rgb(160, 126, 70)');
+        flare.bodyImage.includes('rgb(255, 179, 138)') || flare.bodyImage.includes('rgb(217, 138, 95)');
       expect(gold).toBe(true);
     }
   });
@@ -385,7 +385,7 @@ test.describe('Cover drifting light', () => {
           })),
         );
       const isGold = (image: string) =>
-        image.includes('rgb(205, 168, 105)') || image.includes('rgb(160, 126, 70)');
+        image.includes('rgb(255, 179, 138)') || image.includes('rgb(217, 138, 95)');
       for (const image of goldGlitter) {
         expect(isGold(image)).toBe(true);
       }
