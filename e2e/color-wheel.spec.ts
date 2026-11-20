@@ -294,8 +294,9 @@ test.describe('Color wheel keyboard navigation', () => {
       return { stroke: style.stroke, width: style.strokeWidth };
     });
 
-    // A merely +1px bump of the same ink color (2px -> 3px) is "hardly distinguishable" — require
-    // either a real color change, or a stroke-width jump of at least 2px, to count as distinct.
+    // A merely +1px bump of the same ink color (2px -> 3px) reads as effectively the same outline
+    // — require either a real color change, or a stroke-width jump of at least 2px, to count as
+    // distinct.
     const widthGrew = parseFloat(focused.width) - parseFloat(resting.width) >= 2;
     const colorChanged = focused.stroke !== resting.stroke;
     expect(widthGrew || colorChanged).toBe(true);

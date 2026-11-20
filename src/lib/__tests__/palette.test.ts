@@ -280,4 +280,55 @@ describe('palette discipline', () => {
       contrastRatio(tokens['--c-ink-soft'], tokens['--c-rose-200']),
     ).toBeGreaterThanOrEqual(4.5);
   });
+
+  // Resolves the celebrant-name gradient into its ordered stop tokens, the same way
+  // buttonFillStops() reads --gradient-button-wine-rose above. Requires every stop to be a
+  // `var(--c-*)` reference (no raw hex / rgb() / color-mix smuggled in), and requires at least
+  // two stops, so the floor tests below can't pass vacuously on an empty or partial list.
+  function nameGradientStops(tokensCss: string): string[] {
+    const declaration = tokensCss.match(/--gradient-rose:\s*linear-gradient\(([^;]*)\);/);
+    expect(declaration).not.toBeNull();
+    const body = declaration![1];
+
+    expect(body).not.toMatch(HEX_COLOR);
+    expect(body).not.toMatch(RGB_FUNCTION);
+    expect(body).not.toMatch(/color-mix\(/i);
+
+    const stops = [...body.matchAll(/var\((--c-[\w-]+)\)/g)].map((match) => match[1]);
+    expect(stops.length).toBeGreaterThanOrEqual(2);
+    return stops;
+  }
+
+  it('the name gradient runs rose-500 to rose-700, built only from palette tokens', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+
+    expect(nameGradientStops(tokensCss)).toEqual(['--c-rose-500', '--c-rose-600', '--c-rose-700']);
+  });
+
+  it('every name-gradient stop reads at least 3:1 (large decorative text) on the page background', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    for (const stop of nameGradientStops(tokensCss)) {
+      expect(contrastRatio(tokens[stop], tokens['--c-bg'])).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('every name-gradient stop reads at least 3:1 on the rose-200 wash circle', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    for (const stop of nameGradientStops(tokensCss)) {
+      expect(contrastRatio(tokens[stop], tokens['--c-rose-200'])).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('the Maps/Music white label text keeps at least 4.5:1 on every name-gradient stop', () => {
+    const tokensCss = readFileSync(join(SRC_DIR, 'styles', 'tokens.css'), 'utf8');
+    const tokens = parseCustomPropertyHexes(tokensCss);
+
+    for (const stop of nameGradientStops(tokensCss)) {
+      expect(contrastRatio('#ffffff', tokens[stop])).toBeGreaterThanOrEqual(4.5);
+    }
+  });
 });

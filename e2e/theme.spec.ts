@@ -23,6 +23,7 @@ test.describe('design tokens + fonts', () => {
         rose200: read('--c-rose-200'),
         rose300: read('--c-rose-300'),
         rose400: read('--c-rose-400'),
+        rose500: read('--c-rose-500'),
         rose600: read('--c-rose-600'),
         rose700: read('--c-rose-700'),
         ink: read('--c-ink'),
@@ -50,6 +51,7 @@ test.describe('design tokens + fonts', () => {
     expect(tokens.rose200).toBe('#e2c8f2');
     expect(tokens.rose300).toBe('#d7b4ea');
     expect(tokens.rose400).toBe('#a77fc9');
+    expect(tokens.rose500).toBe('#8a5cad');
     expect(tokens.rose600).toBe('#74469a');
     expect(tokens.rose700).toBe('#5b2f7a');
     expect(tokens.ink).toBe('#2c2550');

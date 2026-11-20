@@ -19,11 +19,12 @@
   --c-rose-200: #e2c8f2;
   --c-rose-300: #d7b4ea;
   --c-rose-400: #a77fc9;
+  --c-rose-500: #8a5cad;
   --c-rose-600: #74469a;
   --c-rose-700: #5b2f7a;
   --c-ink: #2c2550;
-  /* Darkened from a near-miss #625880 so it still clears AA (4.5:1) on the darkest surface it
-     sits on, the body wash's rose-200 circle, as well as every other page/card background. */
+  /* Clears AA (4.5:1) on the darkest surface it sits on, the body wash's rose-200 circle, as
+     well as every other page/card background. */
   --c-ink-soft: #5a5078;
   --c-leaf: #a3dcc3;
   --c-leaf-deep: #6b7536;
@@ -43,7 +44,10 @@
   --c-champagne-800: #9e5a35;
 
   /* Composite surfaces */
-  --gradient-rose: linear-gradient(135deg, #e2c8f2 0%, #d7b4ea 45%, #74469a 100%);
+  /* Celebrant-name fill (and every other --gradient-rose consumer): rose-500 through rose-700,
+     dark enough that the name reads clearly on the lilac page background — see palette.test.ts
+     for the contrast proof on each stop. */
+  --gradient-rose: linear-gradient(135deg, var(--c-rose-500) 0%, var(--c-rose-600) 45%, var(--c-rose-700) 100%);
   --gradient-button: linear-gradient(135deg, #74469a 0%, #5b2f7a 100%);
   /* Open-invitation button fill: rose at the top deepening to wine. Gold stays on the rim and
      bevel only, so white label text clears 4.5:1 on every stop (proved in palette.test.ts). */
