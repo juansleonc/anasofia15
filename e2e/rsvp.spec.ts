@@ -8,10 +8,11 @@ import { withConfiguredAccessKey, withUnconfiguredAccessKey, TEST_ACCESS_KEY } f
 // plus the already-confirmed state on revisit (localStorage guard) and the "not configured" state
 // the form falls back to whenever the access key is empty.
 //
-// The shipped key is real, so most flows below need no seam. The "not configured" test forces
-// that branch via ./web3forms-seam's `withUnconfiguredAccessKey`; the others needing a deterministic
-// test key (not the real shipped one) use `withConfiguredAccessKey` — both swap the HTML
-// attribute, no test hook in production code.
+// The shipped key is real, so only one test below (the "configured by default" one) needs no
+// seam. The "not configured" test forces that branch via ./web3forms-seam's
+// `withUnconfiguredAccessKey`; the rest assert against a deterministic test key (not the real
+// shipped one) via `withConfiguredAccessKey` — both swap the HTML attribute, no test hook in
+// production code.
 
 const WEB3FORMS_URL = 'https://api.web3forms.com/submit';
 

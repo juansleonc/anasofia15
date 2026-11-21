@@ -4,10 +4,10 @@ import { RSVP_GUARD_STORAGE_KEY } from '../src/lib/rsvp';
 import { TEST_ACCESS_KEY, withConfiguredAccessKey, withUnconfiguredAccessKey } from './web3forms-seam';
 
 // The trivia result card carries a "send my result" form. It is revealed only when the Web3Forms
-// key is configured — the shipped key is real, so most flows below need no seam; tests needing a
-// deterministic test key (not the real shipped one) or the "not configured" branch use the
-// shared seams in ./web3forms-seam, which swap the HTML attribute (no test hook in production
-// code).
+// key is configured — the shipped key is real, so only one test below (the "is visible by
+// default" one) needs no seam; the rest assert against a deterministic test key (not the real
+// shipped one) or force the "not configured" branch via the shared seams in ./web3forms-seam,
+// which swap the HTML attribute (no test hook in production code).
 
 async function playToEnd(page: Page): Promise<void> {
   await page.goto('./');

@@ -13,10 +13,9 @@ export function isHoneypotTripped(rawForm: { botcheck?: unknown }): boolean {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * True only for a real-looking Web3Forms access key (a UUID) — false for the shipped empty
- * string, any other non-UUID string, or a non-string. Drives whether a form submits at all:
- * while false, the RSVP and trivia-send islands show a "not configured" notice and never call
- * `fetch`.
+ * True only for a real-looking Web3Forms access key (a UUID) — false for an empty string, any
+ * other non-UUID string, or a non-string. Drives whether a form submits at all: while false, the
+ * RSVP and trivia-send islands show a "not configured" notice and never call `fetch`.
  */
 export function isWeb3FormsKeyConfigured(key: unknown): boolean {
   return typeof key === 'string' && UUID_PATTERN.test(key);
