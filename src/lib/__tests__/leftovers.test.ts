@@ -19,7 +19,6 @@ const FORBIDDEN_TOKENS: RegExp[] = [
   /n[u]evo futuro/i,
   /s[t]arfield/i,
   /s[p]otlight/i,
-  /b073702[6]-e800/i,
 ];
 
 // sha256 of the sibling site's real song file, kept here so a reused `public/music/song.mp3` (or

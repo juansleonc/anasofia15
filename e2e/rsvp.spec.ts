@@ -1,22 +1,59 @@
 import { test, expect } from '@playwright/test';
 import { event } from '../src/data/event';
 import { RSVP_GUARD_STORAGE_KEY } from '../src/lib/rsvp';
-import { withConfiguredAccessKey, TEST_ACCESS_KEY } from './web3forms-seam';
+import { withConfiguredAccessKey, withUnconfiguredAccessKey, TEST_ACCESS_KEY } from './web3forms-seam';
 
 // RSVP: nombre + asistencia (sí/no) + canción sugerida, submitted to a mocked Web3Forms endpoint
 // (never the real network). Covers the full state machine: idle -> submitting -> success | error,
 // plus the already-confirmed state on revisit (localStorage guard) and the "not configured" state
-// shipped while the access key is still empty.
+// the form falls back to whenever the access key is empty.
 //
-// Success/error/revisit flows need the form to behave as "configured"; the shared seam in
-// ./web3forms-seam swaps in a test key at the HTML level (no test hook in production code).
+// The shipped key is real, so most flows below need no seam. The "not configured" test forces
+// that branch via ./web3forms-seam's `withUnconfiguredAccessKey`; the others needing a deterministic
+// test key (not the real shipped one) use `withConfiguredAccessKey` — both swap the HTML
+// attribute, no test hook in production code.
 
 const WEB3FORMS_URL = 'https://api.web3forms.com/submit';
 
-test.describe('RSVP section: not configured (shipped empty key)', () => {
+test.describe('RSVP section: not configured', () => {
   test('shows the notice, disables the submit button, and sends zero requests', async ({
     page,
   }) => {
+    let requestCount = 0;
+    await page.route(WEB3FORMS_URL, async (route) => {
+      requestCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    });
+
+    await withUnconfiguredAccessKey(page);
+    await page.goto('./');
+    await page.getByRole('button', { name: 'Abrir invitación' }).click();
+
+    const section = page.getByTestId('rsvp');
+    await expect(section).toBeVisible();
+    await expect(page.getByTestId('rsvp-not-configured')).toBeVisible();
+    await expect(page.getByTestId('rsvp-submit-button')).toBeDisabled();
+
+    await page.getByTestId('rsvp-name-input').fill('Camila Torres');
+    await page.getByTestId('rsvp-attending-yes').click();
+    // The button is disabled, but also assert a direct submit attempt sends nothing — defense
+    // in depth, not just a disabled affordance.
+    await page.getByTestId('rsvp-form').evaluate((form) => (form as HTMLFormElement).requestSubmit());
+
+    expect(requestCount).toBe(0);
+  });
+});
+
+test.describe('RSVP section: configured by default (no seam)', () => {
+  test('ships a real access key, hides the notice, and enables the submit button', async ({
+    page,
+  }) => {
+    // Defense in depth, same as the "not configured" test above: register a route mock even
+    // though this test never submits, so a real key could never reach the real network here.
     let requestCount = 0;
     await page.route(WEB3FORMS_URL, async (route) => {
       requestCount += 1;
@@ -32,14 +69,12 @@ test.describe('RSVP section: not configured (shipped empty key)', () => {
 
     const section = page.getByTestId('rsvp');
     await expect(section).toBeVisible();
-    await expect(page.getByTestId('rsvp-not-configured')).toBeVisible();
-    await expect(page.getByTestId('rsvp-submit-button')).toBeDisabled();
-
-    await page.getByTestId('rsvp-name-input').fill('Camila Torres');
-    await page.getByTestId('rsvp-attending-yes').click();
-    // The button is disabled, but also assert a direct submit attempt sends nothing — defense
-    // in depth, not just a disabled affordance.
-    await page.getByTestId('rsvp-form').evaluate((form) => (form as HTMLFormElement).requestSubmit());
+    await expect(page.getByTestId('rsvp-not-configured')).toBeHidden();
+    await expect(page.getByTestId('rsvp-submit-button')).toBeEnabled();
+    await expect(page.locator('[data-rsvp-configured]')).toHaveAttribute(
+      'data-rsvp-configured',
+      'true',
+    );
 
     expect(requestCount).toBe(0);
   });

@@ -1,10 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
 import { triviaQuestions } from '../src/data/trivia';
 import { RSVP_GUARD_STORAGE_KEY } from '../src/lib/rsvp';
-import { TEST_ACCESS_KEY, withConfiguredAccessKey } from './web3forms-seam';
+import { TEST_ACCESS_KEY, withConfiguredAccessKey, withUnconfiguredAccessKey } from './web3forms-seam';
 
 // The trivia result card carries a "send my result" form. It is revealed only when the Web3Forms
-// key is configured (the shared seam swaps in a test key) and prefilled from a prior RSVP record.
+// key is configured — the shipped key is real, so most flows below need no seam; tests needing a
+// deterministic test key (not the real shipped one) or the "not configured" branch use the
+// shared seams in ./web3forms-seam, which swap the HTML attribute (no test hook in production
+// code).
 
 async function playToEnd(page: Page): Promise<void> {
   await page.goto('./');
@@ -18,6 +21,21 @@ async function playToEnd(page: Page): Promise<void> {
 }
 
 test.describe('Trivia send form', () => {
+  test('is visible by default (no seam), proving the shipped key is configured', async ({ page }) => {
+    test.setTimeout(60_000);
+    // Defense in depth: a route mock is registered even though this test never sends, so a real
+    // key could never reach the real network here.
+    let posts = 0;
+    await page.route('https://api.web3forms.com/submit', async (route) => {
+      posts += 1;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+    });
+    await playToEnd(page);
+
+    await expect(page.getByTestId('trivia-send-form')).toBeVisible();
+    expect(posts).toBe(0);
+  });
+
   test('is visible with an empty name when there is no RSVP record', async ({ page }) => {
     test.setTimeout(60_000);
     await withConfiguredAccessKey(page);
@@ -174,6 +192,7 @@ test.describe('Trivia send form', () => {
   });
   test('without a configured key the form stays hidden, nothing is sent and the quiz restarts', async ({ page }) => {
     test.setTimeout(60_000);
+    await withUnconfiguredAccessKey(page);
     let posts = 0;
     await page.route('https://api.web3forms.com/submit', async (route) => {
       posts += 1;

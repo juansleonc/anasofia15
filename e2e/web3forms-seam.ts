@@ -27,3 +27,26 @@ export async function withConfiguredAccessKey(page: Page): Promise<void> {
     await route.fulfill({ response, body: patched });
   });
 }
+
+/**
+ * The opposite seam: blanks every `data-access-key` attribute so forms behave as "not
+ * configured", exercising that branch even once the shipped key is real. Same replacement-count
+ * guard as `withConfiguredAccessKey`.
+ */
+export async function withUnconfiguredAccessKey(page: Page): Promise<void> {
+  await page.route('**/anasofia15/', async (route) => {
+    const response = await route.fetch();
+    const body = await response.text();
+    let replacements = 0;
+    const patched = body.replace(/data-access-key(?:="[^"]*")?(?=[\s>])/g, () => {
+      replacements += 1;
+      return 'data-access-key=""';
+    });
+    if (replacements < MIN_REPLACEMENTS) {
+      throw new Error(
+        `web3forms-seam: expected at least ${MIN_REPLACEMENTS} data-access-key attribute(s), replaced ${replacements}`,
+      );
+    }
+    await route.fulfill({ response, body: patched });
+  });
+}
