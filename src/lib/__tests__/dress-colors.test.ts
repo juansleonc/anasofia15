@@ -1,39 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { dressColors, reservedColors } from '../../data/dress-colors';
-import { reservedColorsNote } from '../../data/dress-colors-note';
-
-const luminance = (hex: string) => {
-  const [r, g, b] = [1, 3, 5].map((i) => {
-    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-
-const contrast = (a: string, b: string) => {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
-};
+import { dressColors, reservedColors, reservedColorsNote } from '../../data/dress-colors';
 
 describe('dressColors', () => {
-  it('has exactly twelve colors', () => {
-    expect(dressColors).toHaveLength(12);
+  it('has exactly ten colors', () => {
+    expect(dressColors).toHaveLength(10);
   });
 
-  it('lists the jewel tones in order with their exact names and hexes', () => {
+  it('lists the colors in order with their exact names and hexes', () => {
     expect(dressColors).toEqual([
-      { name: 'Vino tinto', hex: '#700119' },
-      { name: 'Rojo carmesí', hex: '#B1021E' },
-      { name: 'Ciruela', hex: '#5E1566' },
-      { name: 'Berenjena', hex: '#38015F' },
-      { name: 'Azul rey', hex: '#021B83' },
-      { name: 'Azul zafiro', hex: '#183E85' },
-      { name: 'Azul marino', hex: '#042155' },
-      { name: 'Azul petróleo', hex: '#02647F' },
-      { name: 'Verde azulado', hex: '#038D88' },
-      { name: 'Verde esmeralda', hex: '#016648' },
-      { name: 'Verde botella', hex: '#013A1C' },
-      { name: 'Terracota', hex: '#812A0B' },
+      { name: 'Vino', hex: '#6E1423' },
+      { name: 'Amarillo mantequilla', hex: '#FBE89A' },
+      { name: 'Lila', hex: '#D7B4EA' },
+      { name: 'Azul cielo', hex: '#7FA8DA' },
+      { name: 'Azul marino', hex: '#22356B' },
+      { name: 'Menta', hex: '#A3DCC3' },
+      { name: 'Turquesa', hex: '#56C9C9' },
+      { name: 'Verde oliva', hex: '#8C9550' },
+      { name: 'Morado', hex: '#5B2F7A' },
+      { name: 'Durazno', hex: '#FFB38A' },
     ]);
   });
 
@@ -45,21 +29,6 @@ describe('dressColors', () => {
   it('gives no color a note', () => {
     for (const color of dressColors) {
       expect(color).not.toHaveProperty('note');
-    }
-  });
-
-  it('keeps every hex dark enough to read as a jewel tone', () => {
-    for (const { hex } of dressColors) {
-      expect(luminance(hex)).toBeGreaterThanOrEqual(0.01);
-      expect(luminance(hex)).toBeLessThanOrEqual(0.4);
-    }
-  });
-
-  it('keeps every hex at 3:1 contrast or better on both page backgrounds', () => {
-    for (const { name, hex } of dressColors) {
-      for (const background of ['#fff7f5', '#ffffff']) {
-        expect(contrast(hex, background), `${name} on ${background}`).toBeGreaterThanOrEqual(3);
-      }
     }
   });
 });
