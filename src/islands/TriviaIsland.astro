@@ -6,7 +6,7 @@
 //
 // The client script owns the reveal-then-advance choreography: tapping an option briefly colors
 // it correct/wrong (compared locally against the current question, before calling into the logic
-// module) and only THEN calls src/lib/trivia.ts's `answer` to atomically advance step/score — that
+// module) and only THEN calls src/lib/trivia.ts's `answer` to atomically record the answer — that
 // module stays a pure, atomic scorer; the transient "which option was just tapped" state is a DOM
 // concern owned entirely by this island.
 import { triviaQuestions } from '../data/trivia';
@@ -356,6 +356,8 @@ const totalQuestions = triviaQuestions.length;
   let state: TriviaState = createTriviaState();
   let revealing = false;
   let sending = false;
+  let sendGeneration = 0;
+  let sendAbortController: AbortController | null = null;
 
   function renderProgress(): void {
     if (!progressEl) return;
@@ -490,6 +492,9 @@ const totalQuestions = triviaQuestions.length;
   }
 
   function resetSendUi(): void {
+    sendGeneration += 1;
+    sendAbortController?.abort();
+    sendAbortController = null;
     sending = false;
     if (sendButton) sendButton.disabled = false;
     if (sendStatus) sendStatus.textContent = '';
@@ -521,8 +526,12 @@ const totalQuestions = triviaQuestions.length;
     if (sendButton) sendButton.disabled = true;
     if (sendStatus) sendStatus.textContent = 'Enviando...';
 
+    const generation = sendGeneration;
+    const controller = new AbortController();
+    sendAbortController = controller;
     const payload = buildTriviaResultPayload(sendNameInput?.value ?? '', state, sendForm.dataset.accessKey ?? '');
-    const ok = await postToWeb3Forms({ ...payload });
+    const ok = await postToWeb3Forms({ ...payload }, controller.signal);
+    if (generation !== sendGeneration) return;
 
     sending = false;
     if (sendButton) sendButton.disabled = false;

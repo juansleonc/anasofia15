@@ -6,12 +6,13 @@
 
 export interface SiteConfig {
   /**
-   * Web3Forms public access key for this event's forms. Leave it empty ('') until the family
-   * generates one at web3forms.com, then paste the UUID here. While empty, `isWeb3FormsKeyConfigured`
-   * (src/lib/web3forms.ts) keeps the forms in a visible "not configured" state and no request is
-   * ever sent. The key is public-by-design (safe in the client bundle): it only identifies which
-   * Web3Forms form to submit to. The destination address is set on Web3Forms' own dashboard, NOT
-   * here — it never appears in this codebase or the bundle.
+   * Web3Forms public access key for this event's forms, configured for delivery. If this ever
+   * needs to change, generate a new key at web3forms.com and paste the UUID here — or clear it
+   * back to `''` to fall back to a visible "not configured" state (`isWeb3FormsKeyConfigured`,
+   * src/lib/web3forms.ts), in which no request is ever sent. The key is public-by-design (safe
+   * in the client bundle): it only identifies which Web3Forms form to submit to. The destination
+   * address is set on Web3Forms' own dashboard, NOT here — it never appears in this codebase or
+   * the bundle.
    */
   web3formsAccessKey: string;
   /** Full deployed site origin (must match `site` in astro.config.mjs). */
@@ -33,14 +34,14 @@ export interface SiteConfig {
   musicSrc: string;
   /**
    * Path (relative to `base`, route it through `withBase()`) to the Hero portrait photo, served
-   * from `public/images/portrait.jpg`. PLACEHOLDER until the family supplies one — `Hero.astro`
-   * falls back to an "AS" medallion while it's absent (see `publicAssetExists`).
+   * from `public/images/portrait.jpg` — supplied by the family. `Hero.astro` falls back to an
+   * "AS" medallion if it's ever removed (see `publicAssetExists`).
    */
   portraitPath: string;
 }
 
 export const siteConfig: SiteConfig = {
-  web3formsAccessKey: '',
+  web3formsAccessKey: 'b0737026-e800-4133-bf1c-68b8ab8cd045',
   siteUrl: 'https://juansleonc.github.io',
   base: '/anasofia15/',
   og: {

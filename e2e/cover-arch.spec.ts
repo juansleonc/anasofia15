@@ -1,5 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 import { GARLAND } from '../src/lib/cover-garland';
+import { siteConfig } from '../src/data/site.config';
+
+// Known non-cover raster assets the page legitimately loads outside the cover (Hero portrait, OG
+// preview image), fetched eagerly — excluded from the cover's raster guard below, which otherwise
+// still catches any raster the cover itself requests (a CSS background, an <img>, anything new).
+const NON_COVER_IMAGE_PATHS = [siteConfig.portraitPath, siteConfig.og.imagePath];
 
 // The decorative balloon-and-flower garland that frames the cover: two hand-composed SVG layouts,
 // one per aspect ratio (see src/lib/cover-garland.ts for the data), with only one shown at a time
@@ -431,12 +437,21 @@ test.describe('Balloon arch', () => {
     expect(svgFilterElementCount).toBe(0);
   });
 
-  test('the cover loads with no raster image requests', async ({ page }) => {
+  test('the cover loads with no raster image requests', async ({ page, baseURL }) => {
+    if (!baseURL) throw new Error('playwright baseURL is required for this guard');
+    const pageOrigin = new URL(baseURL).origin;
+    const basePath = siteConfig.base.replace(/\/$/, '');
+
     const imageRequests: string[] = [];
     page.on('request', (request) => {
-      if (/\.(png|jpe?g|gif|webp|avif)(\?.*)?$/i.test(request.url())) {
-        imageRequests.push(request.url());
-      }
+      const url = request.url();
+      if (!/\.(png|jpe?g|gif|webp|avif)(\?.*)?$/i.test(url)) return;
+      const parsed = new URL(url);
+      const isKnownNonCoverAsset =
+        parsed.origin === pageOrigin &&
+        NON_COVER_IMAGE_PATHS.some((assetPath) => parsed.pathname === `${basePath}${assetPath}`);
+      if (isKnownNonCoverAsset) return;
+      imageRequests.push(url);
     });
 
     await page.goto('./');

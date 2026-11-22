@@ -5,8 +5,8 @@ import { isWeb3FormsKeyConfigured } from '../web3forms';
 describe('siteConfig.web3formsAccessKey', () => {
   const key = siteConfig.web3formsAccessKey;
 
-  it('is either empty (not configured yet) or a real UUID key', () => {
-    expect(key === '' || isWeb3FormsKeyConfigured(key)).toBe(true);
+  it('is configured with a real-looking Web3Forms key for production delivery', () => {
+    expect(isWeb3FormsKeyConfigured(key)).toBe(true);
   });
 
   it('is not the old placeholder literal', () => {

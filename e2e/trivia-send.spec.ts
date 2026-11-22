@@ -1,10 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
 import { triviaQuestions } from '../src/data/trivia';
 import { RSVP_GUARD_STORAGE_KEY } from '../src/lib/rsvp';
-import { TEST_ACCESS_KEY, withConfiguredAccessKey } from './web3forms-seam';
+import { TEST_ACCESS_KEY, withConfiguredAccessKey, withUnconfiguredAccessKey } from './web3forms-seam';
 
 // The trivia result card carries a "send my result" form. It is revealed only when the Web3Forms
-// key is configured (the shared seam swaps in a test key) and prefilled from a prior RSVP record.
+// key is configured — the shipped key is real, so only one test below (the "is visible by
+// default" one) needs no seam; the rest assert against a deterministic test key (not the real
+// shipped one) or force the "not configured" branch via the shared seams in ./web3forms-seam,
+// which swap the HTML attribute (no test hook in production code).
 
 async function playToEnd(page: Page): Promise<void> {
   await page.goto('./');
@@ -18,6 +21,21 @@ async function playToEnd(page: Page): Promise<void> {
 }
 
 test.describe('Trivia send form', () => {
+  test('is visible by default (no seam), proving the shipped key is configured', async ({ page }) => {
+    test.setTimeout(60_000);
+    // Defense in depth: a route mock is registered even though this test never sends, so a real
+    // key could never reach the real network here.
+    let posts = 0;
+    await page.route('https://api.web3forms.com/submit', async (route) => {
+      posts += 1;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+    });
+    await playToEnd(page);
+
+    await expect(page.getByTestId('trivia-send-form')).toBeVisible();
+    expect(posts).toBe(0);
+  });
+
   test('is visible with an empty name when there is no RSVP record', async ({ page }) => {
     test.setTimeout(60_000);
     await withConfiguredAccessKey(page);
@@ -174,6 +192,7 @@ test.describe('Trivia send form', () => {
   });
   test('without a configured key the form stays hidden, nothing is sent and the quiz restarts', async ({ page }) => {
     test.setTimeout(60_000);
+    await withUnconfiguredAccessKey(page);
     let posts = 0;
     await page.route('https://api.web3forms.com/submit', async (route) => {
       posts += 1;
@@ -212,4 +231,126 @@ test.describe('Trivia send form', () => {
     await expect(page.getByTestId('trivia-send-error')).toHaveText('');
     await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
   });
+
+  test('cancels a pending trivia send when the quiz restarts, then sends once from the next playthrough', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await withConfiguredAccessKey(page);
+    let posts = 0;
+    let releaseFirst: () => void = () => undefined;
+    const firstHeld = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const failedSubmits: string[] = [];
+    page.on('requestfailed', (request) => {
+      if (request.url() === 'https://api.web3forms.com/submit') {
+        failedSubmits.push(request.failure()?.errorText ?? 'unknown');
+      }
+    });
+    await page.route('https://api.web3forms.com/submit', async (route) => {
+      posts += 1;
+      if (posts === 1) {
+        await firstHeld;
+        await route
+          .fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' })
+          .catch(() => undefined);
+      } else {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+      }
+    });
+    await playToEnd(page);
+
+    await page.getByTestId('trivia-send-name').fill('Camila Torres');
+    await page.getByTestId('trivia-send-button').click();
+    await expect(page.getByTestId('trivia-send-status')).toHaveText('Enviando...');
+
+    await page.getByTestId('trivia-restart').click();
+    await expect.poll(() => failedSubmits.length).toBeGreaterThan(0);
+
+    await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta 1 de ${triviaQuestions.length}`);
+    await expect(page.getByTestId('trivia-result')).toBeHidden();
+
+    for (let i = 0; i < triviaQuestions.length; i += 1) {
+      await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta ${i + 1} de`);
+      await page.getByTestId(`trivia-option-${triviaQuestions[i].correctIndex}`).click();
+    }
+    await expect(page.getByTestId('trivia-result')).toBeVisible();
+
+    await expect(page.getByTestId('trivia-send-form')).toBeVisible();
+    await expect(page.getByTestId('trivia-send-button')).toBeEnabled();
+    await expect(page.getByTestId('trivia-send-status')).toHaveText('');
+    await expect(page.getByTestId('trivia-send-error')).toHaveText('');
+    await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
+
+    await page.getByTestId('trivia-send-name').fill('Camila Torres');
+    await page.getByTestId('trivia-send-button').click();
+    await expect(page.getByTestId('trivia-send-sent')).toBeVisible();
+    expect(posts).toBe(2);
+
+    releaseFirst();
+  });
+
+  for (const [label, response] of [
+    ['success', { status: 200, body: JSON.stringify({ success: true }) }],
+    ['HTTP 500', { status: 500, body: '{}' }],
+  ] as const) {
+    test(`ignores a stale ${label} response after restarting mid-send when the abort loses the race`, async ({
+      page,
+    }) => {
+      test.setTimeout(60_000);
+      // Abort is best-effort: a request the server already answered by the time abort() runs
+      // can still resolve, so simulate that by stripping `signal` before the real fetch runs —
+      // the generation-token guard, not cancellation, is what this proves.
+      await page.addInitScript(() => {
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+          const rest = { ...init };
+          delete rest.signal;
+          return originalFetch(input, rest);
+        };
+      });
+      await withConfiguredAccessKey(page);
+      let posts = 0;
+      let releaseFirst: () => void = () => undefined;
+      const firstHeld = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      await page.route('https://api.web3forms.com/submit', async (route) => {
+        posts += 1;
+        if (posts === 1) {
+          await firstHeld;
+          await route.fulfill({ status: response.status, contentType: 'application/json', body: response.body });
+        } else {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' });
+        }
+      });
+      await playToEnd(page);
+
+      await page.getByTestId('trivia-send-name').fill('Camila Torres');
+      await page.getByTestId('trivia-send-button').click();
+      await expect(page.getByTestId('trivia-send-status')).toHaveText('Enviando...');
+
+      await page.getByTestId('trivia-restart').click();
+      releaseFirst();
+      await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta 1 de ${triviaQuestions.length}`);
+
+      for (let i = 0; i < triviaQuestions.length; i += 1) {
+        await expect(page.getByTestId('trivia-counter')).toContainText(`Pregunta ${i + 1} de`);
+        await page.getByTestId(`trivia-option-${triviaQuestions[i].correctIndex}`).click();
+      }
+      await expect(page.getByTestId('trivia-result')).toBeVisible();
+
+      await expect(page.getByTestId('trivia-send-form')).toBeVisible();
+      await expect(page.getByTestId('trivia-send-button')).toBeEnabled();
+      await expect(page.getByTestId('trivia-send-status')).toHaveText('');
+      await expect(page.getByTestId('trivia-send-error')).toHaveText('');
+      await expect(page.getByTestId('trivia-send-sent')).toBeHidden();
+
+      await page.getByTestId('trivia-send-name').fill('Camila Torres');
+      await page.getByTestId('trivia-send-button').click();
+      await expect(page.getByTestId('trivia-send-sent')).toBeVisible();
+      expect(posts).toBe(2);
+    });
+  }
 });

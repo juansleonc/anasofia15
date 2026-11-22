@@ -1,8 +1,8 @@
 /**
  * Pure trivia game logic: given the current state and a chosen option index, returns a NEW state
  * (immutable) reflecting the answer. Reveal timing, confetti, and any other DOM/animation concern
- * belong to the consuming island — this module derives progress/score/done from the ordered answers against the questions
- * in `src/data/trivia.ts`.
+ * belong to the consuming island — this module derives progress/score/done from the ordered
+ * answers against the questions in `src/data/trivia.ts`.
  */
 
 import { triviaQuestions, resultMessages } from '../data/trivia';

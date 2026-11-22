@@ -1,4 +1,7 @@
-/** Web3Forms transport helpers shared by the site's forms: endpoint, key check, honeypot check. */
+/**
+ * Web3Forms transport helpers shared by the site's forms: endpoint, key check, honeypot check,
+ * and the POST itself.
+ */
 
 export const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
 
@@ -10,9 +13,9 @@ export function isHoneypotTripped(rawForm: { botcheck?: unknown }): boolean {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * True only for a real-looking Web3Forms access key (a UUID) — false for the shipped placeholder
- * literal, an empty value, or anything non-string. Drives whether the RSVP form submits at all:
- * while false, the island shows a "not configured" notice and never calls `fetch`.
+ * True only for a real-looking Web3Forms access key (a UUID) — false for an empty string, any
+ * other non-UUID string, or a non-string. Drives whether a form submits at all: while false, the
+ * RSVP and trivia-send islands show a "not configured" notice and never call `fetch`.
  */
 export function isWeb3FormsKeyConfigured(key: unknown): boolean {
   return typeof key === 'string' && UUID_PATTERN.test(key);
@@ -21,16 +24,18 @@ export function isWeb3FormsKeyConfigured(key: unknown): boolean {
 /**
  * POSTs a payload to Web3Forms. Resolves true only when the HTTP status is OK and the JSON body
  * confirms `success: true`; any other outcome (non-2xx, `success:false`, unparseable body, network
- * failure) resolves false. Never throws.
+ * failure, or an aborted `signal`) resolves false. Never throws.
  */
 export async function postToWeb3Forms(
   payload: { access_key: string; subject: string; botcheck: string } & Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<boolean> {
   try {
     const response = await fetch(WEB3FORMS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload),
+      signal,
     });
     const body: unknown = await response.json().catch(() => null);
     return (
